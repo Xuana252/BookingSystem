@@ -505,4 +505,3 @@ next-env.d.ts
 ## Local secrets
 #####################
 appsettings.*.local.json
-appsettings.Development.json
