@@ -7,7 +7,7 @@ Next.js.
 
 ## Repository layout
 
-- `src/` — .NET solution (`BookingSystem.sln`)
+- `src/` — .NET solution (`BookingSystem.slnx`)
   - `Booking.Domain` — entities, interfaces, DTOs (no external dependencies)
   - `Booking.Infrastructure` — EF Core persistence, SNS/SQS clients, caching, hubs
   - `Booking.Api` — ASP.NET Core Web API (controllers, auth, health)
