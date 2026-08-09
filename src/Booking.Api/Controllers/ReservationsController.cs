@@ -21,7 +21,7 @@ public class ReservationsController(BookingDbContext db, IEventPublisher eventPu
     [HttpPost]
     public async Task<ActionResult<Reservation>> Create(CreateReservationRequest request, CancellationToken ct)
     {
-        if (request.EndTime <= request.StartTime)
+        if (!Reservation.IsValidTimeRange(request.StartTime, request.EndTime))
         {
             return BadRequest("EndTime must be after StartTime.");
         }

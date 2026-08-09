@@ -27,4 +27,7 @@ public class Reservation
     public DateTime EndTime { get; set; }
     public ReservationStatus Status { get; set; } = ReservationStatus.Confirmed;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>True if the slot is well-formed (end strictly after start).</summary>
+    public static bool IsValidTimeRange(DateTime startTime, DateTime endTime) => endTime > startTime;
 }
