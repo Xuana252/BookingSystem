@@ -1,0 +1,5 @@
+# Scripts executed inside Linux containers must keep LF line endings,
+# otherwise Windows checkouts (core.autocrlf=true) break them with CRLF.
+*.sh text eol=lf
+Dockerfile text eol=lf
+*.dockerfile text eol=lf

@@ -1,27 +1,22 @@
 <Project>
-
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
-
   <ItemGroup>
     <!-- EF Core / Postgres -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-
     <!-- AWS (SNS/SQS, mocked locally via Moto) -->
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.7" />
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.100.7" />
-
     <!-- Hosting -->
     <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
-
     <!-- Logging -->
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Extensions.Hosting" Version="10.0.0" />
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.1.1" />
-
     <!-- Testing -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.8.1" />
     <PackageVersion Include="coverlet.collector" Version="10.0.1" />
@@ -30,5 +25,4 @@
     <!-- Pinned to 7.2.2: FluentAssertions 8+ requires a paid commercial license. -->
     <PackageVersion Include="FluentAssertions" Version="7.2.2" />
   </ItemGroup>
-
 </Project>
