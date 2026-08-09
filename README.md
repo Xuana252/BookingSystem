@@ -36,8 +36,7 @@ dotnet run --project src/Booking.Api
 dotnet run --project src/Booking.Worker
 ```
 
-- API health: `http://localhost:5080/health` *(placeholder — confirm actual port once
-  `launchSettings.json` is scaffolded)*
+- API health: `http://localhost:5133/health`
 
 ### 3) Frontend (UI)
 
