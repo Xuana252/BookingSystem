@@ -16,8 +16,10 @@ Next.js.
   - `test/` — `Booking.UnitTests`, `Booking.IntegrationTests`
   - `docker-compose.yml` — local infra (Postgres, Redis, Moto)
 - `ui/Booking.UI` — Next.js frontend
-- `doc/research/` — short write-ups for OJT topics not merged into the app (Sidecar pattern,
-  DynamoDB, AWS-cloud services, AI/process topics)
+- `doc/notes/` — one file per OJT tracker topic, following `doc/notes/_TEMPLATE.md`: summary, key
+  concepts, cheatsheet, and — critically — where (if anywhere) it's actually applied in this
+  project. Covers both applied topics (Docker, PostgreSQL, xUnit, ...) and research-only ones
+  (Sidecar pattern, Spec Kit, ...).
 - `doc/phase-outputs/` — one summary per sprint phase (what was built, verification results, demo steps)
 
 ## Quick start (development)
