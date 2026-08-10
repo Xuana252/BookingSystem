@@ -37,6 +37,7 @@ dotnet run --project src/Booking.Worker
 ```
 
 - API health: `http://localhost:5133/health`
+- Interactive API reference (Scalar, dev only): `http://localhost:5133/scalar/v1`
 
 ### 3) Frontend (UI)
 
