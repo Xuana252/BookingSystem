@@ -12,6 +12,7 @@
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Binder" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
     <!-- Pinned explicitly: the default 2.0.0 has a known high-severity DoS vulnerability
          (GHSA-v5pm-xwqc-g5wc); patched in the 2.x line at 2.7.5+. Stay on 2.x — 3.x has
          breaking API changes incompatible with Microsoft.AspNetCore.OpenApi's source generator. -->
