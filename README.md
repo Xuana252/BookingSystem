@@ -7,16 +7,18 @@ Next.js.
 
 ## Repository layout
 
-- `src/` — .NET solution (`BookingSystem.slnx`)
-  - `Booking.Domain` — entities, interfaces, DTOs (no external dependencies)
-  - `Booking.Infrastructure` — EF Core persistence, SNS/SQS clients, caching, hubs
-  - `Booking.Api` — ASP.NET Core Web API (controllers, auth, health)
+- `src/` — .NET solution (`BookingSystem.slnx`), layered Domain -> Application -> Infrastructure -> Api/Worker
+  - `Booking.Domain` — entities, repository/publisher interfaces, events, config (no external dependencies)
+  - `Booking.Application` — use-case services (validation, orchestration), request/response DTOs. Depends only on Domain.
+  - `Booking.Infrastructure` — EF Core persistence (repositories), SNS/SQS clients, caching, hubs. Implements Domain interfaces.
+  - `Booking.Api` — ASP.NET Core Web API (thin controllers calling Application services, auth, health)
   - `Booking.Worker` — background host (SQS consumer, Hangfire scheduled jobs)
   - `test/` — `Booking.UnitTests`, `Booking.IntegrationTests`
   - `docker-compose.yml` — local infra (Postgres, Redis, Moto)
 - `ui/Booking.UI` — Next.js frontend
 - `doc/research/` — short write-ups for OJT topics not merged into the app (Sidecar pattern,
   DynamoDB, AWS-cloud services, AI/process topics)
+- `doc/phase-outputs/` — one summary per sprint phase (what was built, verification results, demo steps)
 
 ## Quick start (development)
 
