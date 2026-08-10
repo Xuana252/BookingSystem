@@ -1,3 +1,4 @@
+using Booking.Application;
 using Booking.Infrastructure;
 using Scalar.AspNetCore;
 using Serilog;
@@ -12,6 +13,7 @@ builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi();
 builder.Services.AddBookingInfrastructure(builder.Configuration);
+builder.Services.AddBookingApplication();
 
 var app = builder.Build();
 

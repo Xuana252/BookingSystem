@@ -5,6 +5,7 @@ using Booking.Domain.Configuration;
 using Booking.Domain.Interfaces;
 using Booking.Infrastructure.Messaging;
 using Booking.Infrastructure.Persistence;
+using Booking.Infrastructure.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -48,6 +49,10 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IEventPublisher, SnsEventPublisher>();
+
+        services.AddScoped<IRoomRepository, RoomRepository>();
+        services.AddScoped<IUserRepository, UserRepository>();
+        services.AddScoped<IReservationRepository, ReservationRepository>();
 
         return services;
     }
