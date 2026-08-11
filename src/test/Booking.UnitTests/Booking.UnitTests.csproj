@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Moq" />
     <PackageReference Include="xunit" />
     <PackageReference Include="xunit.runner.visualstudio" />
     <PackageReference Include="FluentAssertions" />
@@ -22,6 +23,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\Booking.Domain\Booking.Domain.csproj" />
     <ProjectReference Include="..\..\Booking.Infrastructure\Booking.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\Booking.Application\Booking.Application.csproj" />
   </ItemGroup>
 
 </Project>
