@@ -17,6 +17,7 @@
          (GHSA-v5pm-xwqc-g5wc); patched in the 2.x line at 2.7.5+. Stay on 2.x — 3.x has
          breaking API changes incompatible with Microsoft.AspNetCore.OpenApi's source generator. -->
     <PackageVersion Include="Microsoft.OpenApi" Version="2.11.0" />
+    <PackageVersion Include="Moq" Version="4.20.72" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <!-- AWS (SNS/SQS, mocked locally via Moto) -->
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.7" />
