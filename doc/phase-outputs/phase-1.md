@@ -154,9 +154,8 @@ Domain and Infrastructure (`Domain → Application → Infrastructure → Api/Wo
 `IRoomRepository`/`IUserRepository`/`IReservationRepository` interfaces to Domain, implemented in
 Infrastructure. `RoomService`/`UserService`/`ReservationService` in Application now hold the
 validation + orchestration logic (previously inline in the controllers); controllers were thinned
-down to DTO binding + HTTP status mapping only. This diverges from the reference project's own
-convention (which puts this logic directly in `Api/Services`) in favor of a cleaner layered
-architecture.
+down to DTO binding + HTTP status mapping only — a cleaner layered architecture than putting that
+logic directly in the controllers.
 
 **Output:** `Booking.Application/{DTOs,Interfaces,Services}/*.cs`,
 `Booking.Domain/Interfaces/{IRoomRepository,IUserRepository,IReservationRepository}.cs`,

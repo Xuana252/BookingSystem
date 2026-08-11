@@ -136,5 +136,4 @@ docker compose ps
 ## Open Questions / Next Steps
 
 - No `Dockerfile` for `Booking.Api`/`Booking.Worker` yet — those land in a later phase when the
-  Api/Worker services themselves get containerized (the reference project's own
-  `docker-compose.yml` builds them from per-project `Dockerfile`s).
+  Api/Worker services themselves get containerized, each building from its own `Dockerfile`.

@@ -14,10 +14,6 @@ SignalR, React, xUnit/WireMock, Git Flow, and CI/CD — driven by a real OJT spr
 **Frontend note:** `ui/Booking.UI` is plain React (Vite + TypeScript + Tailwind), not Next.js —
 no SSR, file-based routing, or API routes. The Api is the only backend.
 
-It was scaffolded from scratch using an older reference project
-(`InventoryManagementSystem`/`InventoryAlert`, a stock-alert app) purely as an *architectural*
-reference — no code was copied, only patterns.
-
 ## Architecture
 
 Strictly layered, dependencies point one direction only:
@@ -34,9 +30,7 @@ Booking.Domain  →  Booking.Application  →  Booking.Infrastructure  →  Book
   Depends only on `Booking.Domain`. **Controllers should not contain business logic** — if a
   controller action does more than bind a DTO and call a service, that logic belongs here.
 - **`Booking.Infrastructure`** — implements Domain's interfaces: EF Core (`BookingDbContext`,
-  migrations, repositories), SNS/SQS clients (`SnsEventPublisher`). This is deliberately not the
-  reference project's own convention (which puts services directly in `Api/Services`) — this repo
-  has a real Application layer instead.
+  migrations, repositories), SNS/SQS clients (`SnsEventPublisher`).
 - **`Booking.Api`** / **`Booking.Worker`** — composition roots. Thin controllers / background
   jobs that call Application services; `Program.cs` wires up DI via each layer's own
   `AddBookingXxx()` extension method.
@@ -111,7 +105,6 @@ at this project's scale. Merge to `main` at sprint milestones (see PRs).
 
 ## Where the phased plan lives
 
-The sprint-by-sprint build plan (mapped to the user's OJT tracker dates/milestones) isn't checked
-into this repo — it was maintained as a Claude Code plan-mode document during development. If it's
-not available in a future session, `doc/phase-outputs/` + the git history are the source of truth
-for what's been built and why.
+`doc/plan.md` — the sprint-by-sprint build plan (mapped to the OJT tracker's dates/milestones),
+key architectural decisions, and current status. Update its "Current status" section as phases
+complete. `doc/phase-outputs/` has the detailed task-by-task record of what was actually built.

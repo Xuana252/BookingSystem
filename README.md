@@ -4,6 +4,8 @@ A room/facility reservation system: users browse available rooms, book time slot
 availability updates as other users book or cancel. Built as an OJT learning project, layered on
 .NET, PostgreSQL, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto), SignalR, and React.
 
+See [`doc/plan.md`](doc/plan.md) for the full sprint-by-sprint build plan and current status.
+
 ## Repository layout
 
 - `src/` — .NET solution (`BookingSystem.slnx`), layered Domain -> Application -> Infrastructure -> Api/Worker
@@ -15,6 +17,7 @@ availability updates as other users book or cancel. Built as an OJT learning pro
   - `test/` — `Booking.UnitTests`, `Booking.IntegrationTests`
   - `docker-compose.yml` — local infra (Postgres, Redis, Moto)
 - `ui/Booking.UI` — React (Vite) frontend
+- `doc/plan.md` — sprint-by-sprint build plan, key architectural decisions, current status
 - `doc/notes/` — one file per OJT tracker topic, following `doc/notes/_TEMPLATE.md`: summary, key
   concepts, cheatsheet, and — critically — where (if anywhere) it's actually applied in this
   project. Covers both applied topics (Docker, PostgreSQL, xUnit, ...) and research-only ones
