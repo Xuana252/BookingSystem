@@ -8,8 +8,11 @@ the codebase is organized and the non-obvious decisions behind it.
 
 A room/facility booking system (`BookingSystem`, namespace root `Booking.*`), built as a vehicle
 to learn: .NET 10, EF Core/Postgres, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto),
-SignalR, Next.js, xUnit/WireMock, Git Flow, and CI/CD — driven by a real OJT sprint schedule (see
+SignalR, React, xUnit/WireMock, Git Flow, and CI/CD — driven by a real OJT sprint schedule (see
 `doc/phase-outputs/` for what's been built phase by phase).
+
+**Frontend note:** `ui/Booking.UI` is plain React (Vite + TypeScript + Tailwind), not Next.js —
+no SSR, file-based routing, or API routes. The Api is the only backend.
 
 It was scaffolded from scratch using an older reference project
 (`InventoryManagementSystem`/`InventoryAlert`, a stock-alert app) purely as an *architectural*

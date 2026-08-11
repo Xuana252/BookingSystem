@@ -2,8 +2,7 @@
 
 A room/facility reservation system: users browse available rooms, book time slots, and see live
 availability updates as other users book or cancel. Built as an OJT learning project, layered on
-.NET, PostgreSQL, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto), SignalR, and
-Next.js.
+.NET, PostgreSQL, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto), SignalR, and React.
 
 ## Repository layout
 
@@ -15,7 +14,7 @@ Next.js.
   - `Booking.Worker` — background host (SQS consumer, Hangfire scheduled jobs)
   - `test/` — `Booking.UnitTests`, `Booking.IntegrationTests`
   - `docker-compose.yml` — local infra (Postgres, Redis, Moto)
-- `ui/Booking.UI` — Next.js frontend
+- `ui/Booking.UI` — React (Vite) frontend
 - `doc/notes/` — one file per OJT tracker topic, following `doc/notes/_TEMPLATE.md`: summary, key
   concepts, cheatsheet, and — critically — where (if anywhere) it's actually applied in this
   project. Covers both applied topics (Docker, PostgreSQL, xUnit, ...) and research-only ones
@@ -51,7 +50,7 @@ npm install
 npm run dev
 ```
 
-- UI: `http://localhost:3000`
+- UI: `http://localhost:5173` (Vite default)
 
 ## Branching convention (Git Flow, lightweight)
 
@@ -63,6 +62,6 @@ npm run dev
 ## Tech stack
 
 - Backend: C# 13, .NET 10, EF Core, Hangfire, AWSSDK (SNS/SQS via Moto), SignalR
-- Frontend: React 19, Next.js, TypeScript, Tailwind CSS
+- Frontend: React 19, Vite, TypeScript, Tailwind CSS
 - Infra: PostgreSQL, Redis, Moto (AWS emulator)
 - Testing: xUnit, WireMock.Net
