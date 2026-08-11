@@ -100,9 +100,15 @@ Unit-test layer only so far, the base of the pyramid:
 - `test/Booking.UnitTests/Entities/ReservationTests.cs` — three `[Fact]` tests for
   `Reservation.IsValidTimeRange`, following the AAA pattern (arrange the start/end times, act by
   calling the method, assert with FluentAssertions' `.Should().BeTrue()`/`.BeFalse()` instead of
-  raw `Assert.Equal` — same idea, different assertion library).
-- No mocking yet — `Reservation.IsValidTimeRange` is a pure static method with no dependencies to
-  fake.
+  raw `Assert.Equal` — same idea, different assertion library). Pure static method, no mocking
+  needed.
+- `test/Booking.UnitTests/Services/{RoomServiceTests,UserServiceTests,ReservationServiceTests}.cs`
+  — `Moq`-based tests for the Application services, each mocking its repository interface(s) (and
+  `IEventPublisher` for `ReservationService`) so nothing touches EF Core or the AWS SDK. Covers
+  `GetAllAsync` delegating to the repository, `CreateAsync` persisting the requested fields, and
+  for `ReservationService` specifically: a valid reservation both persists *and* publishes
+  `ReservationCreated` (`mock.Verify(..., Times.Once)`), while an invalid time range throws
+  without touching the repository or publisher at all (`Times.Never`).
 - `dotnet test` run as part of every phase's verification pass (see `doc/phase-outputs/`).
 
 ## Open Questions / Next Steps
@@ -110,6 +116,3 @@ Unit-test layer only so far, the base of the pyramid:
 - No integration or end-to-end tests yet. Phase 2's plan calls for a `Booking.IntegrationTests`
   project using WireMock to mock an external notification-sending API — that's the middle layer
   of the pyramid landing next, once there's an external dependency worth testing against.
-- No mocking library wired up yet (e.g. `Moq`) — will be needed once Application services have
-  real dependencies worth faking in a unit test (e.g. testing `ReservationService` without a real
-  `IReservationRepository`/`IEventPublisher`).
