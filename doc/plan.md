@@ -89,7 +89,7 @@ responds; SNS/SQS producer(Api)/consumer(Worker) POC works.
   `Reservation` via the API → message lands on SQS → Worker logs it · `dotnet test` passes.
 
 **Status: Complete** (2026-08-09), merged into `develop`. Full task-by-task breakdown in
-`doc/phase-outputs/phase-1.md`. Two follow-on hardening items landed after the initial cut:
+`doc/phase-outputs/phase-1.md`. Four follow-on hardening items landed after the initial cut:
 - **`Booking.Application` layer** — use-case services (`RoomService`/`UserService`/
   `ReservationService`) + repository interfaces, thinning controllers down to DTO binding + HTTP
   status mapping only.
@@ -97,6 +97,12 @@ responds; SNS/SQS producer(Api)/consumer(Worker) POC works.
   transient outage (verified live by killing Moto mid-poll) logs and retries instead of crashing
   the host; failed message processing is left undeleted for redelivery/dead-lettering instead of
   silently dropped.
+- **Application service unit tests** — `Moq`-based tests for `RoomService`/`UserService`/
+  `ReservationService`, mocking the repository/publisher interfaces.
+- **Dockerized Api and Worker** — `Dockerfile`s for both, wired into `docker-compose.yml` so the
+  whole stack (infra + app) runs via `docker compose up`, plus startup `Database.Migrate()` so it
+  self-provisions its schema. Build/run itself wasn't confirmed in the session it was added —
+  verify with `docker compose up -d --build` before relying on it.
 
 ---
 
