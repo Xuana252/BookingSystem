@@ -165,6 +165,59 @@ logic directly in the controllers.
 (Room → User → Reservation → SNS → SQS → Worker, plus the 400-on-invalid-range case) after the
 refactor — identical behavior to before.
 
+### 12. SQS polling resilience
+
+**What:** `SqsConsumerWorker`'s `ReceiveMessageAsync` call is now wrapped in try/catch with a 5s
+backoff on failure, instead of letting an unhandled exception stop the whole `BackgroundService`
+(and, by default, the host). Per-message processing (`HandleMessage` + delete) is its own unit:
+a message that fails to process is left undeleted for redelivery/eventual dead-lettering via the
+queue's existing `RedrivePolicy`, instead of always being deleted regardless of outcome.
+
+**Output:** `Booking.Worker/SqsConsumerWorker.cs`.
+
+**Verification:** live fault injection, not just a build check — stopped `local-moto` mid-poll:
+the Worker logged 6+ consecutive `retrying in 5s` errors over ~2 minutes, same process, never
+crashed. Restarting Moto revealed it keeps SNS/SQS state in-memory only (`QueueDoesNotExistException`
+after restart, since `moto-init` is one-shot and doesn't rerun automatically) — re-ran `moto-init`
+manually, and the *same still-running Worker instance* picked up a brand-new reservation event
+without needing to be restarted.
+
+### 13. Application service unit tests
+
+**What:** Added `Moq` and unit tests for `RoomService`/`UserService`/`ReservationService`, mocking
+`IRoomRepository`/`IUserRepository`/`IReservationRepository`/`IEventPublisher` so each service is
+tested in isolation from EF Core and the AWS SDK. Covers `GetAllAsync` delegation, `CreateAsync`
+persisting the requested fields, and for `ReservationService` specifically: a valid reservation
+both persists *and* publishes `ReservationCreated` (`Times.Once`), while an invalid time range
+throws without touching the repository or publisher at all (`Times.Never`).
+
+**Output:** `test/Booking.UnitTests/Services/{RoomServiceTests,UserServiceTests,
+ReservationServiceTests}.cs`.
+
+**Verification:** `dotnet test` — 10/10 passing (3 existing `Reservation` tests + 7 new).
+
+### 14. Dockerize Api and Worker
+
+**What:** `Dockerfile`s for `Booking.Api` (multi-stage `sdk:10.0` → `aspnet:10.0`) and
+`Booking.Worker` (`sdk:10.0` → plain `runtime:10.0`, since it has no ASP.NET Core dependency),
+plus `api`/`worker` services in `docker-compose.yml` so the whole stack — infra *and* app — can
+run via `docker compose up`. Build context is `src/` so each Dockerfile can `COPY` its sibling
+`ProjectReference`s; csproj files are restored before the rest of the source is copied, so
+`dotnet restore` is its own cached layer. Containerized `api`/`worker` get
+`ConnectionStrings__DefaultConnection`/`Aws__EndpointUrl`/etc. overridden via `environment:` to
+use in-network service names (`postgres`, `moto`) instead of the `localhost` defaults in
+`appsettings.json` (which remain correct for running via `dotnet run` on the host). Also added
+`Database.Migrate()` on Api startup so the fully-dockerized stack self-provisions its schema, the
+same way `moto-init` self-provisions SNS/SQS, instead of requiring a manual `dotnet ef database
+update` from the host first.
+
+**Output:** `src/Booking.Api/Dockerfile`, `src/Booking.Worker/Dockerfile`, `src/.dockerignore`,
+`src/docker-compose.yml` (`api`/`worker` services), `Booking.Api/Program.cs` (startup migration).
+
+**Verification:** `dotnet build` clean. Container build/run itself was kicked off but not
+completed in this session — worth a `docker compose up -d --build` sanity check before relying on
+it for a demo.
+
 ---
 
 ## Notable decisions (cross-cutting)
@@ -176,3 +229,5 @@ refactor — identical behavior to before.
   generator expects (see Task 9).
 - `Booking.Application` added after the initial Phase 1 cut (see Task 11) — not part of the
   original plan, but a deliberate architectural improvement once the gap was noticed.
+- Moto keeps SNS/SQS state in-memory only — a container restart wipes it, and `moto-init` won't
+  automatically rerun to reprovision it (see Task 12).

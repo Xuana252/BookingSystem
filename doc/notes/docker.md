@@ -126,14 +126,22 @@ docker compose ps
 ## Applied In This Project
 
 - `src/docker-compose.yml` — the whole local infra stack: `postgres:16` (with a named volume,
-  `postgres_data`), `redis:7.2-alpine`, `motoserver/moto` (with a health check), and a one-shot
-  `moto-init` container that provisions AWS resources on startup.
+  `postgres_data`), `redis:7.2-alpine`, `motoserver/moto` (with a health check), a one-shot
+  `moto-init` container that provisions AWS resources on startup, plus `api`/`worker` services
+  that build the app itself from its own `Dockerfile`s.
 - `src/moto-init/init-all.sh` — mounted into the `moto-init` container as a bind mount
   (`./moto-init:/moto-init:ro`), run via a fixed `entrypoint`.
 - Health checks used to sequence startup: `moto-init` has `depends_on: moto: condition:
-  service_healthy`, so it only runs once Moto is actually ready, not just started.
-
-## Open Questions / Next Steps
-
-- No `Dockerfile` for `Booking.Api`/`Booking.Worker` yet — those land in a later phase when the
-  Api/Worker services themselves get containerized, each building from its own `Dockerfile`.
+  service_healthy`, so it only runs once Moto is actually ready, not just started; `api` similarly
+  waits on `postgres: service_healthy` and `moto-init: service_completed_successfully`.
+- `src/Booking.Api/Dockerfile`, `src/Booking.Worker/Dockerfile` — multi-stage builds (`sdk:10.0`
+  → `aspnet:10.0` for Api, `sdk:10.0` → plain `runtime:10.0` for Worker, since it has no ASP.NET
+  Core dependency). Build context is `src/` so each Dockerfile can `COPY` its sibling
+  `ProjectReference`s (`Booking.Domain`, `Booking.Application`, `Booking.Infrastructure`) — csproj
+  files are copied and restored before the rest of the source, so `dotnet restore` is its own
+  cached layer, only invalidated when a dependency actually changes.
+- `src/.dockerignore` — keeps `bin/`/`obj/`/git files out of the build context.
+- Containers talk to each other by **service name**, not `localhost` — `api`/`worker` get
+  `ConnectionStrings__DefaultConnection`/`Aws__EndpointUrl`/etc. overridden via `environment:` in
+  compose to point at `postgres`/`moto` instead of the `localhost` defaults in `appsettings.json`
+  (which are for running via `dotnet run` directly on the host).
