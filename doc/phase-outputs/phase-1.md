@@ -214,9 +214,11 @@ update` from the host first.
 **Output:** `src/Booking.Api/Dockerfile`, `src/Booking.Worker/Dockerfile`, `src/.dockerignore`,
 `src/docker-compose.yml` (`api`/`worker` services), `Booking.Api/Program.cs` (startup migration).
 
-**Verification:** `dotnet build` clean. Container build/run itself was kicked off but not
-completed in this session — worth a `docker compose up -d --build` sanity check before relying on
-it for a demo.
+**Verification:** `dotnet build` clean. `docker compose build` (user-run) completed successfully
+for both `api` and `worker` images — no build errors. Full containerized runtime flow (both
+services actually starting, talking to `postgres`/`moto` over the compose network, and completing
+a live demo end-to-end) not yet separately confirmed — worth one `docker compose up -d --build`
+pass through the demo flow when convenient.
 
 ---
 

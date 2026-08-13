@@ -101,8 +101,8 @@ responds; SNS/SQS producer(Api)/consumer(Worker) POC works.
   `ReservationService`, mocking the repository/publisher interfaces.
 - **Dockerized Api and Worker** — `Dockerfile`s for both, wired into `docker-compose.yml` so the
   whole stack (infra + app) runs via `docker compose up`, plus startup `Database.Migrate()` so it
-  self-provisions its schema. Build/run itself wasn't confirmed in the session it was added —
-  verify with `docker compose up -d --build` before relying on it.
+  self-provisions its schema. `docker compose build` confirmed working (both images build clean);
+  a full live-demo pass through the running containers is still worth doing once.
 
 ---
 
