@@ -132,16 +132,15 @@ recurring job); core domain logic covered by tests.
    catching unhandled exceptions and returning a consistent error response shape (status code +
    problem-details-style body), instead of relying solely on ad-hoc per-controller `try/catch`
    (currently only `ReservationsController` has one, for the time-range validation). Becomes the
-   natural hook point for the Splunk/PagerDuty logging below.
+   natural hook point for the Splunk logging below.
 8. **Splunk logging** — self-hosted `splunk/splunk` container added to `docker-compose.yml`
    (no external account needed), with a Serilog HTTP Event Collector (HEC) sink added alongside
    the existing console sink, so structured logs — including anything the exception middleware
    catches — actually flow into Splunk. A real integration, not just a research write-up.
-9. **Side research** (not merged into the solution) — short write-ups for Sidecar pattern,
-   DynamoDB, and PagerDuty in `doc/notes/`, each marked "Research only" with an "Applied In This
-   Project" section explaining why nothing's wired up yet. (PagerDuty and New Relic both need a
-   signed-up external SaaS account to genuinely integrate, unlike Splunk's self-hosted option —
-   staying research-only for now; revisit if that changes.)
+9. **Side research** (not merged into the solution) — short write-ups for Sidecar pattern and
+   DynamoDB in `doc/notes/`, each marked "Research only" with an "Applied In This Project"
+   section explaining why nothing's wired up yet. (New Relic + PagerDuty move to Phase 3 — see
+   below, they're one combined topic, not two separate ones.)
 10. **Frontend kickoff** — scaffold `ui/Booking.UI` (Vite + React + TypeScript + Tailwind,
     `package.json` name `booking-ui`), basic pages/layout, API client stub. Real feature pages
     (room calendar, booking form, live availability) land in Phase 4.
@@ -161,9 +160,15 @@ recurring job); core domain logic covered by tests.
 ## Phase 3 — Sprint 3: Research only (Sep 1–14, present Sep 15)
 
 **No BookingSystem build work this sprint** — domain-agnostic. Deliverable is summarized research
-notes under `doc/notes/`: SpecKit, AI workflow/skills basics, MCP (server/client), New Relic, plus
-AWS reading (ECS, Parameter Store, CloudWatch, EC2, VPC — the ones assigned to this window).
-Nothing here touches the running app.
+notes under `doc/notes/`: SpecKit, AI workflow/skills basics, MCP (server/client), plus AWS
+reading (ECS, Parameter Store, CloudWatch, EC2, VPC — the ones assigned to this window). Nothing
+here touches the running app.
+
+One combined write-up (not two separate ones): **New Relic + PagerDuty as a single detect →
+escalate pipeline** — New Relic evaluates alert conditions on metrics/logs (error rate, latency,
+service down) and hands off to PagerDuty via its native integration, which owns who gets paged
+and how escalation works. Both need a signed-up external SaaS account to genuinely wire in
+(unlike Splunk's self-hosted option from Phase 2), so this stays research-only for now.
 
 ---
 
