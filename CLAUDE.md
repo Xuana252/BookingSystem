@@ -44,6 +44,31 @@ literally named `Booking` inside the `Booking.*` namespace tree causes a real C#
 that is itself in a `Booking.X` namespace. Confirmed with a throwaway repro before this was ever
 built — don't reintroduce a `Booking` class/type anywhere in this solution.
 
+## Coding conventions
+
+Mechanical style (indentation, brace placement, `I`-prefix on interfaces, etc.) is enforced by
+`.editorconfig` — this section only covers conventions that aren't (or can't be) linted:
+
+- **DTOs are records** — every request/response DTO in `Booking.Application/DTOs/` is a
+  `public record`, not a class (e.g. `CreateRoomRequest`). Immutable by default, matches their
+  actual usage (bind once from the request body, never mutated).
+- **DI via primary constructors** — services and repositories take their dependencies as C#
+  primary-constructor parameters (`public class RoomService(IRoomRepository rooms) : IRoomService`),
+  not a traditional constructor body with field assignments. Keep new services/repositories
+  consistent with this.
+- **Async methods take a trailing `CancellationToken ct = default`** — every repository and
+  service method follows this signature shape; don't drop the parameter or reorder it.
+- **File-scoped namespaces** (`namespace Booking.Domain.Entities;`) everywhere, never the
+  block-brace style.
+- **Minimal comments** — default to none. Only add a comment when it explains a non-obvious
+  *why* (a workaround, a subtle invariant, a gotcha) — not what the code already says through
+  naming. Most files in this repo have zero comments; that's intentional, not an oversight.
+- **Tests**: xUnit `[Fact]`/`[Theory]` + FluentAssertions (`.Should()...`), never raw
+  `Assert.Equal`. Every test body is explicitly split into `// Arrange` / `// Act` / `// Assert`
+  comment blocks, even when a section is one line. Mocks (`Moq`) are named after the concept they
+  stand in for (`_rooms`, `_eventPublisher`), not prefixed `_mock...`. Test classes expose a
+  `CreateSut()` helper rather than constructing the system-under-test inline in every test.
+
 ## Package pins (don't casually bump these)
 
 `src/Directory.Packages.props` uses central package management. A few versions are pinned below
