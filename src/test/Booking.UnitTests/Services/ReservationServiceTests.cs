@@ -24,21 +24,27 @@ public class ReservationServiceTests
     [Fact]
     public async Task GetAllAsync_DelegatesToRepository()
     {
+        // Arrange
         var expected = new List<Reservation> { new() };
         _reservations.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(expected);
 
+        // Act
         var result = await CreateSut().GetAllAsync();
 
+        // Assert
         result.Should().BeEquivalentTo(expected);
     }
 
     [Fact]
     public async Task CreateAsync_ValidRange_PersistsAndPublishesReservationCreated()
     {
+        // Arrange
         var request = ValidRequest();
 
+        // Act
         var reservation = await CreateSut().CreateAsync(request);
 
+        // Assert
         reservation.RoomId.Should().Be(request.RoomId);
         reservation.UserId.Should().Be(request.UserId);
         reservation.StartTime.Should().Be(request.StartTime);
@@ -54,11 +60,14 @@ public class ReservationServiceTests
     [Fact]
     public async Task CreateAsync_EndBeforeStart_ThrowsAndDoesNotPersistOrPublish()
     {
+        // Arrange
         var baseRequest = ValidRequest();
         var request = baseRequest with { EndTime = baseRequest.StartTime.AddHours(-1) };
 
+        // Act
         var act = () => CreateSut().CreateAsync(request);
 
+        // Assert
         await act.Should().ThrowAsync<ArgumentException>();
         _reservations.Verify(r => r.AddAsync(It.IsAny<Reservation>(), It.IsAny<CancellationToken>()), Times.Never);
         _reservations.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);

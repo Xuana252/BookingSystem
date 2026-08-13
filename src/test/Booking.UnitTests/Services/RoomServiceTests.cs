@@ -16,21 +16,27 @@ public class RoomServiceTests
     [Fact]
     public async Task GetAllAsync_DelegatesToRepository()
     {
+        // Arrange
         var expected = new List<Room> { new() { Name = "Conference A" } };
         _rooms.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(expected);
 
+        // Act
         var result = await CreateSut().GetAllAsync();
 
+        // Assert
         result.Should().BeEquivalentTo(expected);
     }
 
     [Fact]
     public async Task CreateAsync_PersistsRoomWithRequestedFields()
     {
+        // Arrange
         var request = new CreateRoomRequest("Conference A", "Floor 3", 8);
 
+        // Act
         var room = await CreateSut().CreateAsync(request);
 
+        // Assert
         room.Name.Should().Be(request.Name);
         room.Location.Should().Be(request.Location);
         room.Capacity.Should().Be(request.Capacity);
