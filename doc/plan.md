@@ -111,41 +111,63 @@ responds; SNS/SQS producer(Api)/consumer(Worker) POC works.
 **Goal (matches tracker milestone):** Worker running on a schedule (Hangfire dashboard shows the
 recurring job); core domain logic covered by tests.
 
-1. **Expand domain** — add `Notification` and `BookingHold` (a short-lived, unconfirmed
+1. **Auth flow (JWT)** — `POST /api/auth/register` and `POST /api/auth/login` on a new
+   `AuthController`, replacing `UsersController.Create` (removed; `GET /api/users` stays for
+   listing). `IPasswordHasher` (Domain interface, `BCrypt.Net-Next`-backed implementation in
+   Infrastructure) hashes on register and verifies on login; `IJwtTokenGenerator` (same split)
+   issues a signed JWT on success. `IUserRepository` gains a `GetByUsernameAsync` lookup — it
+   currently only has `GetAllAsync`/`AddAsync`/`SaveChangesAsync`, no single-user lookup exists
+   yet. `Program.cs` adds `AddAuthentication().AddJwtBearer(...)` + `UseAuthentication()` (today
+   only `UseAuthorization()` runs, with no `[Authorize]` anywhere for it to enforce, and no
+   authentication scheme registered for it to check against).
+   - **Enforcement**: `[Authorize]` on `RoomsController.Create` and all of
+     `ReservationsController`. `RoomsController.GetAll`/`UsersController.GetAll` stay open for
+     browsing.
+   - **Reservation ownership**: `CreateReservationRequest` drops `UserId` — the Api takes it from
+     the authenticated user's token claims instead of trusting a client-supplied value, closing
+     the current gap where any caller can create a reservation under any `UserId`.
+2. **Expand domain** — add `Notification` and `BookingHold` (a short-lived, unconfirmed
    reservation lock created while a user is mid-checkout) entities + migration.
-2. **Booking rules engine** — `IBookingRuleEngine` in Domain (no double-booking/overlap for the
+3. **Booking rules engine** — `IBookingRuleEngine` in Domain (no double-booking/overlap for the
    same room, business-hours window, max-duration check), implemented in Application, invoked
    synchronously on reservation creation and reused by the Worker's expiry job.
-3. **Hangfire recurring jobs** in `Booking.Worker/ScheduledJobs/`:
+4. **Hangfire recurring jobs** in `Booking.Worker/ScheduledJobs/`:
    - Expire unconfirmed `BookingHold`s past their timeout, releasing the slot.
    - Scan for upcoming reservations and publish `ReservationReminderDue` events through the
      SNS/SQS pipe from Phase 1, resulting in a `Notification` row.
-4. **Redis caching** wired into the Api — cache room-availability lookups
+5. **Redis caching** wired into the Api — cache room-availability lookups
    (room + time-range → free/busy), invalidated on reservation create/cancel.
-5. **External notification client + WireMock-based integration tests** — a small
+6. **External notification client + WireMock-based integration tests** — a small
    `INotificationSender` HTTP client in Infrastructure (stubbed email/SMS provider), called by
    the Worker when a reminder fires; new `test/Booking.IntegrationTests` project mocks that HTTP
    call with WireMock.
-6. **Unit tests** covering the booking rules engine specifically (overlap detection,
-   business-hours enforcement) — this is the "core domain logic covered by tests" deliverable.
-7. **Global exception handling middleware** — a `GlobalExceptionMiddleware` in `Booking.Api`
+7. **Unit tests** covering the booking rules engine (overlap detection, business-hours
+   enforcement) and the new `AuthService` (register/login, mocking `IUserRepository`/
+   `IPasswordHasher`/`IJwtTokenGenerator` the same way `RoomService`/`UserService`/
+   `ReservationService` are tested today) — this is the "core domain logic covered by tests"
+   deliverable.
+8. **Global exception handling middleware** — a `GlobalExceptionMiddleware` in `Booking.Api`
    catching unhandled exceptions and returning a consistent error response shape (status code +
    problem-details-style body), instead of relying solely on ad-hoc per-controller `try/catch`
-   (currently only `ReservationsController` has one, for the time-range validation). Becomes the
-   natural hook point for the Splunk logging below.
-8. **Splunk logging** — self-hosted `splunk/splunk` container added to `docker-compose.yml`
+   (currently only `ReservationsController` has one, for the time-range validation). Also needs
+   to map auth failures (bad login, missing/expired token) to sensible 401s. Becomes the natural
+   hook point for the Splunk logging below.
+9. **Splunk logging** — self-hosted `splunk/splunk` container added to `docker-compose.yml`
    (no external account needed), with a Serilog HTTP Event Collector (HEC) sink added alongside
    the existing console sink, so structured logs — including anything the exception middleware
    catches — actually flow into Splunk. A real integration, not just a research write-up.
-9. **Side research** (not merged into the solution) — short write-ups for Sidecar pattern and
-   DynamoDB in `doc/notes/`, each marked "Research only" with an "Applied In This Project"
-   section explaining why nothing's wired up yet. (New Relic + PagerDuty move to Phase 3 — see
-   below, they're one combined topic, not two separate ones.)
-10. **Frontend kickoff** — scaffold `ui/Booking.UI` (Vite + React + TypeScript + Tailwind,
-    `package.json` name `booking-ui`), basic pages/layout, API client stub. Real feature pages
-    (room calendar, booking form, live availability) land in Phase 4.
+10. **Side research** (not merged into the solution) — short write-ups for Sidecar pattern and
+    DynamoDB in `doc/notes/`, each marked "Research only" with an "Applied In This Project"
+    section explaining why nothing's wired up yet. (New Relic + PagerDuty move to Phase 3 — see
+    below, they're one combined topic, not two separate ones.)
+11. **Frontend kickoff** — scaffold `ui/Booking.UI` (Vite + React + TypeScript + Tailwind,
+    `package.json` name `booking-ui`), basic pages/layout, API client stub, plus a login page and
+    token storage since the Api now requires auth for booking. Real feature pages (room calendar,
+    booking form, live availability) land in Phase 4.
 
 **Phase 2 verification**
+- Register a user → login → receive a JWT → call `POST /api/reservations` with it → 201, owned
+  by the authenticated user (not a client-supplied `UserId`). Same call without a token → 401.
 - Hangfire dashboard (Worker) shows both recurring jobs executing on schedule.
 - Create a `Reservation` starting soon → confirm a reminder `Notification` row is created
   end-to-end through the SNS/SQS pipeline; create a `BookingHold` and let it time out → confirm
