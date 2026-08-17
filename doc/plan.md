@@ -126,15 +126,21 @@ recurring job); core domain logic covered by tests.
    - **Reservation ownership**: `CreateReservationRequest` drops `UserId` — the Api takes it from
      the authenticated user's token claims instead of trusting a client-supplied value, closing
      the current gap where any caller can create a reservation under any `UserId`.
-2. **Expand domain** — add `Notification` and `BookingHold` (a short-lived, unconfirmed
-   reservation lock created while a user is mid-checkout) entities + migration.
+2. **Expand domain** — add a `Notification` entity + migration.
+   - **Dropped from scope**: `BookingHold` (a short-lived, unconfirmed reservation lock) was
+     originally planned here too, but doesn't earn its place — the current `Reservation` shape
+     (`RoomId`/`UserId`/`StartTime`/`EndTime`, no payment or multi-step checkout) means a direct
+     create-and-check-overlap on `POST /api/reservations` already prevents double-booking with no
+     intermediate hold state needed. Its only other justification — practicing a Hangfire
+     recurring job — is already covered by the reminder-scan job below, so it added a second job
+     with no independent product or learning value. Revisit only if a real multi-step booking flow
+     (payment, approval, etc.) gets added later.
 3. **Booking rules engine** — `IBookingRuleEngine` in Domain (no double-booking/overlap for the
    same room, business-hours window, max-duration check), implemented in Application, invoked
-   synchronously on reservation creation and reused by the Worker's expiry job.
-4. **Hangfire recurring jobs** in `Booking.Worker/ScheduledJobs/`:
-   - Expire unconfirmed `BookingHold`s past their timeout, releasing the slot.
-   - Scan for upcoming reservations and publish `ReservationReminderDue` events through the
-     SNS/SQS pipe from Phase 1, resulting in a `Notification` row.
+   synchronously on reservation creation.
+4. **Hangfire recurring job** in `Booking.Worker/ScheduledJobs/`: scan for upcoming reservations
+   and publish `ReservationReminderDue` events through the SNS/SQS pipe from Phase 1, resulting in
+   a `Notification` row.
 5. **Redis caching** wired into the Api — cache room-availability lookups
    (room + time-range → free/busy), invalidated on reservation create/cancel.
 6. **External notification client + WireMock-based integration tests** — a small
@@ -168,10 +174,9 @@ recurring job); core domain logic covered by tests.
 **Phase 2 verification**
 - Register a user → login → receive a JWT → call `POST /api/reservations` with it → 201, owned
   by the authenticated user (not a client-supplied `UserId`). Same call without a token → 401.
-- Hangfire dashboard (Worker) shows both recurring jobs executing on schedule.
+- Hangfire dashboard (Worker) shows the recurring job executing on schedule.
 - Create a `Reservation` starting soon → confirm a reminder `Notification` row is created
-  end-to-end through the SNS/SQS pipeline; create a `BookingHold` and let it time out → confirm
-  it's expired and the slot is free again.
+  end-to-end through the SNS/SQS pipeline.
 - `dotnet test` (both Unit and Integration projects) passes, including WireMock-backed tests.
 - Trigger an unhandled exception → confirm the middleware returns a consistent error shape and
   the entry shows up in Splunk.

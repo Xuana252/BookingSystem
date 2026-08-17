@@ -17,7 +17,6 @@ public class ReservationServiceTests
 
     private static CreateReservationRequest ValidRequest() => new(
         RoomId: Guid.NewGuid(),
-        UserId: Guid.NewGuid(),
         StartTime: new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
         EndTime: new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
 
@@ -40,13 +39,14 @@ public class ReservationServiceTests
     {
         // Arrange
         var request = ValidRequest();
+        var userId = Guid.NewGuid();
 
         // Act
-        var reservation = await CreateSut().CreateAsync(request);
+        var reservation = await CreateSut().CreateAsync(request, userId);
 
         // Assert
         reservation.RoomId.Should().Be(request.RoomId);
-        reservation.UserId.Should().Be(request.UserId);
+        reservation.UserId.Should().Be(userId);
         reservation.StartTime.Should().Be(request.StartTime);
         reservation.EndTime.Should().Be(request.EndTime);
 
@@ -65,7 +65,7 @@ public class ReservationServiceTests
         var request = baseRequest with { EndTime = baseRequest.StartTime.AddHours(-1) };
 
         // Act
-        var act = () => CreateSut().CreateAsync(request);
+        var act = () => CreateSut().CreateAsync(request, Guid.NewGuid());
 
         // Assert
         await act.Should().ThrowAsync<ArgumentException>();

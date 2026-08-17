@@ -9,6 +9,9 @@ public class UserRepository(BookingDbContext db) : IUserRepository
     public async Task<IReadOnlyList<User>> GetAllAsync(CancellationToken ct = default)
         => await db.Users.AsNoTracking().ToListAsync(ct);
 
+    public async Task<User?> GetByUsernameAsync(string username, CancellationToken ct = default)
+        => await db.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Username == username, ct);
+
     public async Task AddAsync(User user, CancellationToken ct = default)
         => await db.Users.AddAsync(user, ct);
 

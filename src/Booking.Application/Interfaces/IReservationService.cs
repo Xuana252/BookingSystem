@@ -8,5 +8,5 @@ public interface IReservationService
     Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default);
 
     /// <exception cref="ArgumentException">EndTime is not after StartTime.</exception>
-    Task<Reservation> CreateAsync(CreateReservationRequest request, CancellationToken ct = default);
+    Task<Reservation> CreateAsync(CreateReservationRequest request, Guid userId, CancellationToken ct = default);
 }
