@@ -1,7 +1,11 @@
+using System.Text;
 using Booking.Application;
+using Booking.Domain.Configuration;
 using Booking.Infrastructure;
 using Booking.Infrastructure.Persistence;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Scalar.AspNetCore;
 using Serilog;
 
@@ -17,6 +21,25 @@ builder.Services.AddOpenApi();
 builder.Services.AddBookingInfrastructure(builder.Configuration);
 builder.Services.AddBookingApplication();
 
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
+builder.Services
+    .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.MapInboundClaims = false;
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidIssuer = jwtSettings.Issuer,
+            ValidateAudience = true,
+            ValidAudience = jwtSettings.Audience,
+            ValidateIssuerSigningKey = true,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
+            ValidateLifetime = true
+        };
+    });
+builder.Services.AddAuthorization();
+
 var app = builder.Build();
 
 // Applies any pending migrations on startup (idempotent — no-op once the DB is current).
@@ -27,6 +50,7 @@ using (var scope = app.Services.CreateScope())
 }
 
 app.UseHttpsRedirection();
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

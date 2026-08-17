@@ -1,6 +1,7 @@
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Booking.Api.Controllers;
@@ -14,6 +15,7 @@ public class RoomsController(IRoomService roomService) : ControllerBase
         => Ok(await roomService.GetAllAsync(ct));
 
     [HttpPost]
+    [Authorize]
     public async Task<ActionResult<Room>> Create(CreateRoomRequest request, CancellationToken ct)
     {
         var room = await roomService.CreateAsync(request, ct);

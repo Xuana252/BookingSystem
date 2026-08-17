@@ -12,7 +12,7 @@ public class ReservationService(IReservationRepository reservations, IEventPubli
     public Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
         => reservations.GetAllAsync(ct);
 
-    public async Task<Reservation> CreateAsync(CreateReservationRequest request, CancellationToken ct = default)
+    public async Task<Reservation> CreateAsync(CreateReservationRequest request, Guid userId, CancellationToken ct = default)
     {
         if (!Reservation.IsValidTimeRange(request.StartTime, request.EndTime))
         {
@@ -22,7 +22,7 @@ public class ReservationService(IReservationRepository reservations, IEventPubli
         var reservation = new Reservation
         {
             RoomId = request.RoomId,
-            UserId = request.UserId,
+            UserId = userId,
             StartTime = request.StartTime,
             EndTime = request.EndTime
         };

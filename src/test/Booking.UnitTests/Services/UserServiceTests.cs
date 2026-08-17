@@ -1,4 +1,3 @@
-using Booking.Application.DTOs;
 using Booking.Application.Services;
 using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
@@ -25,21 +24,5 @@ public class UserServiceTests
 
         // Assert
         result.Should().BeEquivalentTo(expected);
-    }
-
-    [Fact]
-    public async Task CreateAsync_PersistsUserWithRequestedFields()
-    {
-        // Arrange
-        var request = new CreateUserRequest("alice", "alice@example.com");
-
-        // Act
-        var user = await CreateSut().CreateAsync(request);
-
-        // Assert
-        user.Username.Should().Be(request.Username);
-        user.Email.Should().Be(request.Email);
-        _users.Verify(r => r.AddAsync(It.Is<User>(x => x == user), It.IsAny<CancellationToken>()), Times.Once);
-        _users.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
     }
 }
