@@ -1,4 +1,5 @@
 using System.Text;
+using Booking.Api.Configuration;
 using Booking.Application;
 using Booking.Domain.Configuration;
 using Booking.Infrastructure;
@@ -17,7 +18,11 @@ builder.Host.UseSerilog((context, config) => config
 
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
-builder.Services.AddOpenApi();
+builder.Services.AddOpenApi(options =>
+{
+    options.AddDocumentTransformer<BearerSecuritySchemeDocumentTransformer>();
+    options.AddOperationTransformer<BearerSecurityRequirementOperationTransformer>();
+});
 builder.Services.AddBookingInfrastructure(builder.Configuration);
 builder.Services.AddBookingApplication();
 
