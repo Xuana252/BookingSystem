@@ -2,21 +2,27 @@
 
 A room/facility reservation system: users browse available rooms, book time slots, and see live
 availability updates as other users book or cancel. Built as an OJT learning project, layered on
-.NET, PostgreSQL, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto), SignalR, and
-Next.js.
+.NET, PostgreSQL, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto), SignalR, and React.
+
+See [`doc/plan.md`](doc/plan.md) for the full sprint-by-sprint build plan and current status.
 
 ## Repository layout
 
-- `src/` — .NET solution (`BookingSystem.sln`)
-  - `Booking.Domain` — entities, interfaces, DTOs (no external dependencies)
-  - `Booking.Infrastructure` — EF Core persistence, SNS/SQS clients, caching, hubs
-  - `Booking.Api` — ASP.NET Core Web API (controllers, auth, health)
+- `src/` — .NET solution (`BookingSystem.slnx`), layered Domain -> Application -> Infrastructure -> Api/Worker
+  - `Booking.Domain` — entities, repository/publisher interfaces, events, config (no external dependencies)
+  - `Booking.Application` — use-case services (validation, orchestration), request/response DTOs. Depends only on Domain.
+  - `Booking.Infrastructure` — EF Core persistence (repositories), SNS/SQS clients, caching, hubs. Implements Domain interfaces.
+  - `Booking.Api` — ASP.NET Core Web API (thin controllers calling Application services, auth, health)
   - `Booking.Worker` — background host (SQS consumer, Hangfire scheduled jobs)
   - `test/` — `Booking.UnitTests`, `Booking.IntegrationTests`
   - `docker-compose.yml` — local infra (Postgres, Redis, Moto)
-- `ui/Booking.UI` — Next.js frontend
-- `doc/research/` — short write-ups for OJT topics not merged into the app (Sidecar pattern,
-  DynamoDB, AWS-cloud services, AI/process topics)
+- `ui/Booking.UI` — React (Vite) frontend
+- `doc/plan.md` — sprint-by-sprint build plan, key architectural decisions, current status
+- `doc/notes/` — one file per OJT tracker topic, following `doc/notes/_TEMPLATE.md`: summary, key
+  concepts, cheatsheet, and — critically — where (if anywhere) it's actually applied in this
+  project. Covers both applied topics (Docker, PostgreSQL, xUnit, ...) and research-only ones
+  (Sidecar pattern, Spec Kit, ...).
+- `doc/phase-outputs/` — one summary per sprint phase (what was built, verification results, demo steps)
 
 ## Quick start (development)
 
@@ -36,8 +42,8 @@ dotnet run --project src/Booking.Api
 dotnet run --project src/Booking.Worker
 ```
 
-- API health: `http://localhost:5080/health` *(placeholder — confirm actual port once
-  `launchSettings.json` is scaffolded)*
+- API health: `http://localhost:5133/health`
+- Interactive API reference (Scalar, dev only): `http://localhost:5133/scalar/v1`
 
 ### 3) Frontend (UI)
 
@@ -47,7 +53,7 @@ npm install
 npm run dev
 ```
 
-- UI: `http://localhost:3000`
+- UI: `http://localhost:5173` (Vite default)
 
 ## Branching convention (Git Flow, lightweight)
 
@@ -59,6 +65,6 @@ npm run dev
 ## Tech stack
 
 - Backend: C# 13, .NET 10, EF Core, Hangfire, AWSSDK (SNS/SQS via Moto), SignalR
-- Frontend: React 19, Next.js, TypeScript, Tailwind CSS
+- Frontend: React 19, Vite, TypeScript, Tailwind CSS
 - Infra: PostgreSQL, Redis, Moto (AWS emulator)
 - Testing: xUnit, WireMock.Net
