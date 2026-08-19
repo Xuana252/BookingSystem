@@ -12,12 +12,24 @@ public sealed class HttpNotificationSender(HttpClient httpClient, ILogger<HttpNo
 {
     public async Task<bool> SendAsync(string recipientEmail, string subject, string message, CancellationToken ct = default)
     {
-        var response = await httpClient.PostAsJsonAsync("notifications", new
+        HttpResponseMessage response;
+        try
         {
-            to = recipientEmail,
-            subject,
-            message
-        }, ct);
+            response = await httpClient.PostAsJsonAsync("notifications", new
+            {
+                to = recipientEmail,
+                subject,
+                message
+            }, ct);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        {
+            // Provider unreachable (connection refused, DNS failure, timeout) — degrade to a
+            // logged failure like a non-2xx response, instead of throwing out of a "send a
+            // notification" call and failing the whole message being processed for it.
+            logger.LogWarning(ex, "[HttpNotificationSender] Provider unreachable for {Recipient}.", recipientEmail);
+            return false;
+        }
 
         if (!response.IsSuccessStatusCode)
         {
