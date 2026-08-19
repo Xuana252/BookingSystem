@@ -1,5 +1,6 @@
 using System.Text;
 using Booking.Api.Configuration;
+using Booking.Api.Filters;
 using Booking.Api.Middleware;
 using Booking.Application;
 using Booking.Domain.Configuration;
@@ -17,7 +18,7 @@ builder.Host.UseSerilog((context, config) => config
     .ReadFrom.Configuration(context.Configuration)
     .WriteTo.Console());
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.Filters.Add<FluentValidationActionFilter>());
 builder.Services.AddHealthChecks();
 builder.Services.AddOpenApi(options =>
 {
