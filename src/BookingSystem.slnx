@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/test/">
     <Project Path="test/Booking.UnitTests/Booking.UnitTests.csproj" />
+    <Project Path="test/Booking.IntegrationTests/Booking.IntegrationTests.csproj" />
   </Folder>
   <Project Path="Booking.Api/Booking.Api.csproj" />
   <Project Path="Booking.Application/Booking.Application.csproj" />

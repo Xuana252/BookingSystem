@@ -1,10 +1,10 @@
 using System.Text.Json;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Booking.Application.Interfaces;
 using Booking.Domain.Configuration;
 using Booking.Domain.Entities;
 using Booking.Domain.Events;
-using Booking.Domain.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Booking.Worker;
@@ -118,25 +118,9 @@ public class SqsConsumerWorker(
         }
 
         using var scope = scopeFactory.CreateScope();
-        var notifications = scope.ServiceProvider.GetRequiredService<INotificationRepository>();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<INotificationDispatchService>();
+        await dispatcher.DispatchReminderAsync(reservation, ct);
 
-        var alreadyNotified = await notifications.ExistsForReservationAsync(reservation.Id, NotificationType.ReservationReminder, ct);
-        if (alreadyNotified)
-        {
-            return;
-        }
-
-        var notification = new Notification
-        {
-            UserId = reservation.UserId,
-            ReservationId = reservation.Id,
-            Type = NotificationType.ReservationReminder,
-            Message = $"Reminder: your reservation for room {reservation.RoomId} starts at {reservation.StartTime:u}."
-        };
-
-        await notifications.AddAsync(notification, ct);
-        await notifications.SaveChangesAsync(ct);
-
-        logger.LogInformation("[SqsConsumerWorker] Created reminder notification for Reservation {ReservationId}.", reservation.Id);
+        logger.LogInformation("[SqsConsumerWorker] Dispatched reminder notification for Reservation {ReservationId}.", reservation.Id);
     }
 }

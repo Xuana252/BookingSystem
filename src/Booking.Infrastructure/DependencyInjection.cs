@@ -3,6 +3,7 @@ using Amazon.SimpleNotificationService;
 using Amazon.SQS;
 using Booking.Domain.Configuration;
 using Booking.Domain.Interfaces;
+using Booking.Infrastructure.External;
 using Booking.Infrastructure.Messaging;
 using Booking.Infrastructure.Persistence;
 using Booking.Infrastructure.Persistence.Repositories;
@@ -60,6 +61,14 @@ public static class DependencyInjection
         services.AddSingleton(jwtSettings);
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
+
+        var notificationProviderSettings = configuration.GetSection("NotificationProvider").Get<NotificationProviderSettings>()
+            ?? new NotificationProviderSettings();
+        services.AddSingleton(notificationProviderSettings);
+        services.AddHttpClient<INotificationSender, HttpNotificationSender>(client =>
+        {
+            client.BaseAddress = new Uri(notificationProviderSettings.BaseUrl);
+        });
 
         return services;
     }
