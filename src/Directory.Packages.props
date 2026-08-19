@@ -28,6 +28,8 @@
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.100.7" />
     <!-- Notification provider HttpClient (Booking.Infrastructure/External) -->
     <PackageVersion Include="Microsoft.Extensions.Http" Version="10.0.11" />
+    <!-- Redis caching (room-availability lookups) -->
+    <PackageVersion Include="StackExchange.Redis" Version="3.1.13" />
     <!-- Background jobs (Hangfire recurring job in Booking.Worker) -->
     <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.24" />
     <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
