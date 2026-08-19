@@ -14,6 +14,7 @@ public static class DependencyInjection
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IBookingRuleEngine, BookingRuleEngine>();
+        services.AddScoped<IReservationReminderService, ReservationReminderService>();
 
         return services;
     }

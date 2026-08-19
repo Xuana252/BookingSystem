@@ -1,9 +1,11 @@
-﻿{
+{
   "$schema": "https://json.schemastore.org/launchsettings.json",
   "profiles": {
     "Booking.Worker": {
       "commandName": "Project",
       "dotnetRunMessages": true,
+      "launchBrowser": false,
+      "applicationUrl": "http://localhost:5134",
       "environmentVariables": {
         "DOTNET_ENVIRONMENT": "Development"
       }

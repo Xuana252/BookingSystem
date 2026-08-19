@@ -84,10 +84,18 @@ services:
       dockerfile: Booking.Worker/Dockerfile
     container_name: local-worker
     restart: unless-stopped
+    ports:
+      - "8081:8080"
     environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=devdb;Username=dev;Password=dev
       - Aws__EndpointUrl=http://moto:5000
       - Aws__SqsQueueUrl=http://moto:5000/123456789012/booking-events-queue
+      - Aws__SnsTopicArn=arn:aws:sns:us-east-1:123456789012:booking-events
     depends_on:
+      postgres:
+        condition: service_healthy
       moto-init:
         condition: service_completed_successfully
 

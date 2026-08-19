@@ -22,8 +22,12 @@
     <!-- AWS (SNS/SQS, mocked locally via Moto) -->
     <PackageVersion Include="AWSSDK.SimpleNotificationService" Version="4.0.100.7" />
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.100.7" />
-    <!-- Hosting -->
-    <PackageVersion Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <!-- Background jobs (Hangfire recurring job in Booking.Worker) -->
+    <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.24" />
+    <PackageVersion Include="Hangfire.PostgreSql" Version="1.21.1" />
+    <!-- Pinned explicitly: Hangfire.Core transitively brings Newtonsoft.Json 11.0.1, which has a
+         known high-severity ReDoS vulnerability (GHSA-5crp-9r3c-p9vr). -->
+    <PackageVersion Include="Newtonsoft.Json" Version="13.0.3" />
     <!-- Auth (JWT + BCrypt password hashing) -->
     <PackageVersion Include="BCrypt.Net-Next" Version="4.2.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.11" />
