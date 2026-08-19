@@ -26,6 +26,9 @@ builder.Services.AddOpenApi(options =>
 builder.Services.AddBookingInfrastructure(builder.Configuration);
 builder.Services.AddBookingApplication();
 
+var reservationRuleSettings = builder.Configuration.GetSection("ReservationRules").Get<ReservationRuleSettings>() ?? new ReservationRuleSettings();
+builder.Services.AddSingleton(reservationRuleSettings);
+
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

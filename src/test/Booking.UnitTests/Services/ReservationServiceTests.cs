@@ -12,8 +12,15 @@ public class ReservationServiceTests
 {
     private readonly Mock<IReservationRepository> _reservations = new();
     private readonly Mock<IEventPublisher> _eventPublisher = new();
+    private readonly Mock<IBookingRuleEngine> _ruleEngine = new();
 
-    private ReservationService CreateSut() => new(_reservations.Object, _eventPublisher.Object);
+    public ReservationServiceTests()
+    {
+        _reservations.Setup(r => r.GetByRoomIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new List<Reservation>());
+    }
+
+    private ReservationService CreateSut() => new(_reservations.Object, _eventPublisher.Object, _ruleEngine.Object);
 
     private static CreateReservationRequest ValidRequest() => new(
         RoomId: Guid.NewGuid(),
@@ -55,6 +62,9 @@ public class ReservationServiceTests
         _eventPublisher.Verify(p => p.PublishAsync(
             It.Is<EventEnvelope>(e => e.EventType == EventTypes.ReservationCreated && e.Source == "Booking.Api"),
             It.IsAny<CancellationToken>()), Times.Once);
+        _ruleEngine.Verify(e => e.Validate(
+            It.Is<Reservation>(x => x.RoomId == request.RoomId),
+            It.IsAny<IReadOnlyList<Reservation>>()), Times.Once);
     }
 
     [Fact]
@@ -63,6 +73,24 @@ public class ReservationServiceTests
         // Arrange
         var baseRequest = ValidRequest();
         var request = baseRequest with { EndTime = baseRequest.StartTime.AddHours(-1) };
+
+        // Act
+        var act = () => CreateSut().CreateAsync(request, Guid.NewGuid());
+
+        // Assert
+        await act.Should().ThrowAsync<ArgumentException>();
+        _reservations.Verify(r => r.AddAsync(It.IsAny<Reservation>(), It.IsAny<CancellationToken>()), Times.Never);
+        _reservations.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _eventPublisher.Verify(p => p.PublishAsync(It.IsAny<EventEnvelope>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RuleEngineRejects_ThrowsAndDoesNotPersistOrPublish()
+    {
+        // Arrange
+        var request = ValidRequest();
+        _ruleEngine.Setup(e => e.Validate(It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>()))
+            .Throws(new ArgumentException("Room is already booked for an overlapping time range."));
 
         // Act
         var act = () => CreateSut().CreateAsync(request, Guid.NewGuid());
