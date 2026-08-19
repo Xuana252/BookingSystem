@@ -8,6 +8,7 @@ public class BookingDbContext(DbContextOptions<BookingDbContext> options) : DbCo
     public DbSet<User> Users => Set<User>();
     public DbSet<Room> Rooms => Set<Room>();
     public DbSet<Reservation> Reservations => Set<Reservation>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
