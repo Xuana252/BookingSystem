@@ -1,10 +1,15 @@
-using Amazon.Runtime;
-using Amazon.SQS;
+using Booking.Application;
+using Booking.Application.Interfaces;
 using Booking.Domain.Configuration;
+using Booking.Infrastructure;
+using Booking.Infrastructure.Persistence;
 using Booking.Worker;
+using Hangfire;
+using Hangfire.PostgreSql;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
@@ -12,22 +17,35 @@ Log.Logger = new LoggerConfiguration()
     .CreateLogger();
 builder.Services.AddSerilog();
 
-var awsSettings = builder.Configuration.GetSection("Aws").Get<AwsSettings>() ?? new AwsSettings();
-builder.Services.AddSingleton(awsSettings);
+builder.Services.AddBookingInfrastructure(builder.Configuration);
+builder.Services.AddBookingApplication();
 
-var isLocal = awsSettings.EndpointUrl.Contains("localhost") || awsSettings.EndpointUrl.Contains("moto");
-builder.Services.AddSingleton<IAmazonSQS>(_ =>
-{
-    var config = new AmazonSQSConfig { ServiceURL = awsSettings.EndpointUrl };
-    if (!isLocal)
-    {
-        return new AmazonSQSClient(config);
-    }
-    config.AuthenticationRegion = "us-east-1";
-    return new AmazonSQSClient(new BasicAWSCredentials("test", "test"), config);
-});
+var reminderSettings = builder.Configuration.GetSection("ReservationReminder").Get<ReservationReminderSettings>() ?? new ReservationReminderSettings();
+builder.Services.AddSingleton(reminderSettings);
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection.");
+
+builder.Services.AddHangfire(config => config
+    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString)));
+builder.Services.AddHangfireServer();
 
 builder.Services.AddHostedService<SqsConsumerWorker>();
 
-var host = builder.Build();
-host.Run();
+var app = builder.Build();
+
+// Applies any pending migrations on startup, same as Booking.Api — keeps the fully-dockerized
+// stack self-provisioning regardless of which of the two starts first.
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<BookingDbContext>().Database.Migrate();
+}
+
+app.UseHangfireDashboard();
+
+app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<IReservationReminderService>(
+    "reservation-reminder-scan",
+    svc => svc.ScanAndPublishDueRemindersAsync(CancellationToken.None),
+    reminderSettings.CronExpression);
+
+app.Run();
