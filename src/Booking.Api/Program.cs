@@ -1,5 +1,6 @@
 using System.Text;
 using Booking.Api.Configuration;
+using Booking.Api.Middleware;
 using Booking.Application;
 using Booking.Domain.Configuration;
 using Booking.Infrastructure;
@@ -57,6 +58,7 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<BookingDbContext>().Database.Migrate();
 }
 
+app.UseGlobalExceptionHandling();
 app.UseHttpsRedirection();
 app.UseAuthentication();
 app.UseAuthorization();

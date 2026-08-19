@@ -21,15 +21,7 @@ public class ReservationsController(IReservationService reservationService) : Co
     public async Task<ActionResult<Reservation>> Create(CreateReservationRequest request, CancellationToken ct)
     {
         var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
-
-        try
-        {
-            var reservation = await reservationService.CreateAsync(request, userId, ct);
-            return CreatedAtAction(nameof(GetAll), new { id = reservation.Id }, reservation);
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(ex.Message);
-        }
+        var reservation = await reservationService.CreateAsync(request, userId, ct);
+        return CreatedAtAction(nameof(GetAll), new { id = reservation.Id }, reservation);
     }
 }
