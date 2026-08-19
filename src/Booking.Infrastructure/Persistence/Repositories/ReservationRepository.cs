@@ -9,6 +9,9 @@ public class ReservationRepository(BookingDbContext db) : IReservationRepository
     public async Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
         => await db.Reservations.AsNoTracking().ToListAsync(ct);
 
+    public async Task<IReadOnlyList<Reservation>> GetByRoomIdAsync(Guid roomId, CancellationToken ct = default)
+        => await db.Reservations.AsNoTracking().Where(r => r.RoomId == roomId).ToListAsync(ct);
+
     public async Task AddAsync(Reservation reservation, CancellationToken ct = default)
         => await db.Reservations.AddAsync(reservation, ct);
 

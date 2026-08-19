@@ -7,7 +7,7 @@ using Booking.Domain.Interfaces;
 
 namespace Booking.Application.Services;
 
-public class ReservationService(IReservationRepository reservations, IEventPublisher eventPublisher) : IReservationService
+public class ReservationService(IReservationRepository reservations, IEventPublisher eventPublisher, IBookingRuleEngine ruleEngine) : IReservationService
 {
     public Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
         => reservations.GetAllAsync(ct);
@@ -26,6 +26,9 @@ public class ReservationService(IReservationRepository reservations, IEventPubli
             StartTime = request.StartTime,
             EndTime = request.EndTime
         };
+
+        var existingForRoom = await reservations.GetByRoomIdAsync(request.RoomId, ct);
+        ruleEngine.Validate(reservation, existingForRoom);
 
         await reservations.AddAsync(reservation, ct);
         await reservations.SaveChangesAsync(ct);
