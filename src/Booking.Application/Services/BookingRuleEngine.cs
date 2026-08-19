@@ -24,6 +24,7 @@ public class BookingRuleEngine(ReservationRuleSettings settings) : IBookingRuleE
 
         var overlaps = existingReservationsForRoom.Any(r =>
             r.Id != candidate.Id
+            && r.RoomId == candidate.RoomId
             && r.Status == ReservationStatus.Confirmed
             && r.StartTime < candidate.EndTime
             && candidate.StartTime < r.EndTime);
