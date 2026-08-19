@@ -52,5 +52,20 @@ public class HttpNotificationSenderTests : IDisposable
         result.Should().BeFalse();
     }
 
+    [Fact]
+    public async Task SendAsync_ProviderUnreachable_ReturnsFalseInsteadOfThrowing()
+    {
+        // Arrange
+        var sut = CreateSut();
+        _server.Stop();
+
+        // Act
+        var act = async () => await sut.SendAsync("user@example.com", "Reservation Reminder", "Your reservation starts soon.");
+
+        // Assert
+        var result = await act.Should().NotThrowAsync();
+        result.Which.Should().BeFalse();
+    }
+
     public void Dispose() => _server.Dispose();
 }

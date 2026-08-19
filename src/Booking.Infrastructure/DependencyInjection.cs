@@ -70,13 +70,9 @@ public static class DependencyInjection
         services.AddSingleton<IPasswordHasher, BCryptPasswordHasher>();
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
-        var notificationProviderSettings = configuration.GetSection("NotificationProvider").Get<NotificationProviderSettings>()
-            ?? new NotificationProviderSettings();
-        services.AddSingleton(notificationProviderSettings);
-        services.AddHttpClient<INotificationSender, HttpNotificationSender>(client =>
-        {
-            client.BaseAddress = new Uri(notificationProviderSettings.BaseUrl);
-        });
+        var gmailSettings = configuration.GetSection("Gmail").Get<GmailSmtpSettings>() ?? new GmailSmtpSettings();
+        services.AddSingleton(gmailSettings);
+        services.AddScoped<INotificationSender, SmtpNotificationSender>();
 
         return services;
     }

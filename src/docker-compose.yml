@@ -97,6 +97,8 @@ services:
       - Aws__SqsQueueUrl=http://moto:5000/123456789012/booking-events-queue
       - Aws__SnsTopicArn=arn:aws:sns:us-east-1:123456789012:booking-events
       - Redis__ConnectionString=redis:6379
+      - Gmail__Username=${GMAIL_USERNAME:-}
+      - Gmail__AppPassword=${GMAIL_APP_PASSWORD:-}
     depends_on:
       postgres:
         condition: service_healthy
