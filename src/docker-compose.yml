@@ -72,8 +72,11 @@ services:
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=devdb;Username=dev;Password=dev
       - Aws__EndpointUrl=http://moto:5000
       - Aws__SnsTopicArn=arn:aws:sns:us-east-1:123456789012:booking-events
+      - Redis__ConnectionString=redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       moto-init:
         condition: service_completed_successfully
@@ -93,8 +96,11 @@ services:
       - Aws__EndpointUrl=http://moto:5000
       - Aws__SqsQueueUrl=http://moto:5000/123456789012/booking-events-queue
       - Aws__SnsTopicArn=arn:aws:sns:us-east-1:123456789012:booking-events
+      - Redis__ConnectionString=redis:6379
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       moto-init:
         condition: service_completed_successfully

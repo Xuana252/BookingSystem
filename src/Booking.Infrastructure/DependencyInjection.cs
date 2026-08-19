@@ -11,6 +11,7 @@ using Booking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using StackExchange.Redis;
 
 namespace Booking.Infrastructure;
 
@@ -54,8 +55,15 @@ public static class DependencyInjection
 
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
-        services.AddScoped<IReservationRepository, ReservationRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+
+        var redisSettings = configuration.GetSection("Redis").Get<RedisSettings>() ?? new RedisSettings();
+        services.AddSingleton(redisSettings);
+        services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisSettings.ConnectionString));
+        services.AddScoped<ReservationRepository>();
+        services.AddScoped<IReservationRepository>(sp => new CachedReservationRepository(
+            sp.GetRequiredService<ReservationRepository>(),
+            sp.GetRequiredService<IConnectionMultiplexer>()));
 
         var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
         services.AddSingleton(jwtSettings);
