@@ -32,7 +32,7 @@ Prereqs: Docker, .NET 10 SDK, Node.js 20.
 
 ```powershell
 cd src
-docker compose up -d
+docker compose up -d postgres redis moto moto-init splunk fluent-bit
 ```
 
 ### 2) Backend (API + Worker)
@@ -54,6 +54,19 @@ npm run dev
 ```
 
 - UI: `http://localhost:5173` (Vite default)
+
+### Fully dockerized (alternative)
+
+`api`, `worker`, and `ui` are also real `docker-compose.yml` services (each with its own
+Dockerfile) — to run the whole stack as containers instead of local processes:
+
+```powershell
+cd src
+docker compose up -d --build
+```
+
+- UI: `http://localhost:5173` (nginx-served production build, not Vite's dev server)
+- API: `http://localhost:8080`
 
 ## Branching convention (Git Flow, lightweight)
 
