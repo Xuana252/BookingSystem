@@ -11,9 +11,12 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// JSON, not the human-readable text template — the Splunk log-shipping pipeline (see
+// docker-compose.yml's fluent-bit service) parses stdout as structured JSON. No app code
+// knows Splunk exists; it just writes structured logs, same as local `dotnet run`.
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
-    .WriteTo.Console()
+    .WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter())
     .CreateLogger();
 builder.Services.AddSerilog();
 

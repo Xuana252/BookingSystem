@@ -66,5 +66,5 @@ npm run dev
 
 - Backend: C# 13, .NET 10, EF Core, Hangfire, AWSSDK (SNS/SQS via Moto), SignalR
 - Frontend: React 19, Vite, TypeScript, Tailwind CSS
-- Infra: PostgreSQL, Redis, Moto (AWS emulator)
+- Infra: PostgreSQL, Redis, Moto (AWS emulator), Splunk + Fluent Bit (log shipping)
 - Testing: xUnit, WireMock.Net
