@@ -72,3 +72,12 @@ sidecar meaningful — there's no natural place to attach one yet.
 
 - If BookingSystem ever moves to a container-orchestration platform, revisit for log
   shipping/observability (see `docker.md` for the current, sidecar-free container setup).
+- Concrete candidate surfaced while scoping the Phase 2 Splunk logging item: instead of a
+  Serilog HTTP Event Collector sink pushing logs directly from `Booking.Api`/`Booking.Worker` to
+  Splunk, a **Fluent Bit** container could tail each app's stdout and ship to Splunk's HEC
+  endpoint, so the app code never knows Splunk exists. Docker Compose has no true pod-level
+  sidecar semantics (shared network namespace, coupled lifecycle) the way Kubernetes does, so
+  this would only be an approximation of the pattern (e.g. via `network_mode: "service:api"` or a
+  shared log volume) — worth naming honestly if it's ever built, not presented as textbook. The
+  Splunk logging item itself was deferred (not started this phase), so this stays a documented
+  option rather than something applied.
