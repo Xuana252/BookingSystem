@@ -59,6 +59,47 @@ services:
       - AWS_ENDPOINT_URL=http://moto:5000
     entrypoint: ["/bin/sh", "-c", "sh /moto-init/init-all.sh"]
 
+  # Self-hosted log destination — no external Splunk account needed. SPLUNK_HEC_TOKEN
+  # auto-provisions a matching HTTP Event Collector input at first boot.
+  splunk:
+    image: splunk/splunk:latest
+    container_name: local-splunk
+    restart: unless-stopped
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      - SPLUNK_PASSWORD=ChangeMe123!
+      - SPLUNK_HEC_TOKEN=00000000-0000-0000-0000-000000000000
+      - SPLUNK_HEC_SSL=False
+    ports:
+      - "8000:8000" # web UI
+      - "8088:8088" # HTTP Event Collector
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  # Log-shipping sidecar (see doc/notes/sidecar-pattern.md): api/worker only ever write
+  # structured JSON to stdout and know nothing about Splunk. Docker's `fluentd` logging
+  # driver on those two services forwards each line here; this container parses it and
+  # ships it on to Splunk's HEC. One shared instance for both services rather than a
+  # strict one-per-container sidecar — see the notes file for why that's an honest
+  # simplification, not the textbook pattern.
+  fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: local-fluent-bit
+    restart: unless-stopped
+    volumes:
+      - ./fluent-bit:/fluent-bit/etc:ro
+    ports:
+      - "24224:24224"
+    environment:
+      - SPLUNK_HEC_TOKEN=00000000-0000-0000-0000-000000000000
+    depends_on:
+      splunk:
+        condition: service_healthy
+
   api:
     build:
       context: .
@@ -73,6 +114,14 @@ services:
       - Aws__EndpointUrl=http://moto:5000
       - Aws__SnsTopicArn=arn:aws:sns:us-east-1:123456789012:booking-events
       - Redis__ConnectionString=redis:6379
+    logging:
+      driver: fluentd
+      options:
+        # The fluentd log driver runs inside the Docker daemon, not this container's own
+        # network namespace, so it can't resolve the `fluent-bit` service name — reach it
+        # via the port fluent-bit publishes to the host instead.
+        fluentd-address: "localhost:24224"
+        tag: "booking.api"
     depends_on:
       postgres:
         condition: service_healthy
@@ -80,6 +129,8 @@ services:
         condition: service_healthy
       moto-init:
         condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
 
   worker:
     build:
@@ -99,6 +150,11 @@ services:
       - Redis__ConnectionString=redis:6379
       - Gmail__Username=${GMAIL_USERNAME:-}
       - Gmail__AppPassword=${GMAIL_APP_PASSWORD:-}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "booking.worker"
     depends_on:
       postgres:
         condition: service_healthy
@@ -106,6 +162,8 @@ services:
         condition: service_healthy
       moto-init:
         condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
 
 volumes:
   postgres_data:

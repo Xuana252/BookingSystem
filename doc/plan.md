@@ -159,9 +159,14 @@ recurring job); core domain logic covered by tests.
    to map auth failures (bad login, missing/expired token) to sensible 401s. Becomes the natural
    hook point for the Splunk logging below.
 9. **Splunk logging** — self-hosted `splunk/splunk` container added to `docker-compose.yml`
-   (no external account needed), with a Serilog HTTP Event Collector (HEC) sink added alongside
-   the existing console sink, so structured logs — including anything the exception middleware
-   catches — actually flow into Splunk. A real integration, not just a research write-up.
+   (no external account needed). **Revised from a direct Serilog HEC sink to a log-shipping
+   sidecar** (see `doc/notes/sidecar-pattern.md`): Api/Worker switch their console sink to
+   structured JSON and know nothing about Splunk; Docker's `fluentd` logging driver forwards
+   each container's stdout to a `fluent-bit` container, which parses the JSON and ships it to
+   Splunk's HEC. One shared Fluent Bit instance handles both services rather than a strict
+   one-per-container sidecar — architecturally closer to a node-level agent, an honest
+   simplification for local Docker Compose (no real pod-level sidecar semantics there) rather
+   than the textbook pattern. Still a real integration, not just a research write-up.
 10. **Side research** (not merged into the solution) — short write-ups for Sidecar pattern and
     DynamoDB in `doc/notes/`, each marked "Research only" with an "Applied In This Project"
     section explaining why nothing's wired up yet. (New Relic + PagerDuty move to Phase 3 — see
@@ -232,5 +237,7 @@ review fundamentals for the company test.
 
 ## Current status
 
-Phase 1 complete and merged into `develop` (see above). Next: Phase 2 (Sprint 2 — Core domain),
+Phase 1 and Phase 2 complete, merged into `develop` (see above; all 11 Phase 2 items landed,
+Splunk logging last via the sidecar design noted in item 9). Next: Phase 3 (Sprint 3 —
+research only, no build work) or Phase 4 (Sprint 4 — Integration + CI/CD + UI completion),
 worked on new `feature/*` branches off `develop`.
