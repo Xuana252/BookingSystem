@@ -13,6 +13,7 @@
     <!-- Direct reference needed so the Directory.Packages.props pin actually overrides the
          vulnerable transitive version Hangfire.Core brings in (see comment there). -->
     <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Extensions.Hosting" />
     <PackageReference Include="Serilog.Settings.Configuration" />
     <PackageReference Include="Serilog.Sinks.Console" />

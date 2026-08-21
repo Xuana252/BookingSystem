@@ -17,9 +17,12 @@ var builder = WebApplication.CreateBuilder(args);
 // JSON, not the human-readable text template — the Splunk log-shipping pipeline (see
 // docker-compose.yml's fluent-bit service) parses stdout as structured JSON. No app code
 // knows Splunk exists; it just writes structured logs, same as local `dotnet run`.
+// renderMessage: true adds a RenderedMessage field with the template's placeholders already
+// substituted in, so a reader doesn't have to cross-reference MessageTemplate against Properties
+// by hand — the raw template and properties are still there too, nothing lost.
 builder.Host.UseSerilog((context, config) => config
     .ReadFrom.Configuration(context.Configuration)
-    .WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter()));
+    .WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter(renderMessage: true)));
 
 builder.Services.AddControllers(options => options.Filters.Add<FluentValidationActionFilter>());
 builder.Services.AddHealthChecks();
@@ -75,6 +78,10 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<BookingDbContext>().Database.Migrate();
 }
 
+// Replaces ASP.NET Core's built-in two-line-per-request Hosting.Diagnostics logging with one
+// clean Serilog-native line. Placed first so it wraps GlobalExceptionHandling too, capturing the
+// final mapped status code (400/401/etc.) rather than whatever it was before that middleware ran.
+app.UseSerilogRequestLogging();
 app.UseGlobalExceptionHandling();
 app.UseHttpsRedirection();
 app.UseCors(uiCorsPolicy);
