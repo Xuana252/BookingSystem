@@ -23,6 +23,19 @@ builder.Host.UseSerilog((context, config) => config
 
 builder.Services.AddControllers(options => options.Filters.Add<FluentValidationActionFilter>());
 builder.Services.AddHealthChecks();
+
+// Booking.UI is served from a different origin (Vite dev server or the dockerized nginx build
+// both land on localhost:5173 — see docker-compose.yml's ui service) than the Api (5133/8080),
+// so browser fetch() calls need an explicit CORS policy or they're blocked client-side even
+// though the Api itself responds fine. Bearer-token auth (no cookies), so no AllowCredentials.
+const string uiCorsPolicy = "BookingUi";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(uiCorsPolicy, policy => policy
+        .WithOrigins("http://localhost:5173")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecuritySchemeDocumentTransformer>();
@@ -64,6 +77,7 @@ using (var scope = app.Services.CreateScope())
 
 app.UseGlobalExceptionHandling();
 app.UseHttpsRedirection();
+app.UseCors(uiCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 
