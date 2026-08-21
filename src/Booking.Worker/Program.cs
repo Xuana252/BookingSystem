@@ -1,5 +1,5 @@
-using Booking.Application;
 using Booking.Application.Interfaces;
+using Booking.Application.Services;
 using Booking.Domain.Configuration;
 using Booking.Infrastructure;
 using Booking.Infrastructure.Persistence;
@@ -21,7 +21,13 @@ Log.Logger = new LoggerConfiguration()
 builder.Services.AddSerilog();
 
 builder.Services.AddBookingInfrastructure(builder.Configuration);
-builder.Services.AddBookingApplication();
+
+// Not Booking.Application's AddBookingApplication() — that method registers Api-only services
+// (RoomService/UserService/ReservationService/AuthService/BookingRuleEngine + validators), none
+// of which Worker uses, and BookingRuleEngine needs ReservationRuleSettings, which Worker never
+// binds. Worker only needs these two, registered directly here.
+builder.Services.AddScoped<IReservationReminderService, ReservationReminderService>();
+builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
 
 var reminderSettings = builder.Configuration.GetSection("ReservationReminder").Get<ReservationReminderSettings>() ?? new ReservationReminderSettings();
 builder.Services.AddSingleton(reminderSettings);
