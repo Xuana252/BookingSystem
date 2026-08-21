@@ -67,6 +67,8 @@ services:
     restart: unless-stopped
     environment:
       - SPLUNK_START_ARGS=--accept-license
+      # Newer splunk/splunk images gate startup on this too, separate from --accept-license.
+      - SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com
       - SPLUNK_PASSWORD=ChangeMe123!
       - SPLUNK_HEC_TOKEN=00000000-0000-0000-0000-000000000000
       - SPLUNK_HEC_SSL=False
