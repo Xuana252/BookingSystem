@@ -13,9 +13,17 @@ public class ReservationReminderServiceTests
     private readonly Mock<IReservationRepository> _reservations = new();
     private readonly Mock<INotificationRepository> _notifications = new();
     private readonly Mock<IEventPublisher> _eventPublisher = new();
+    private readonly Mock<ICorrelationIdAccessor> _correlationIdAccessor = new();
     private readonly ReservationReminderSettings _settings = new() { WindowMinutes = 30 };
 
-    private ReservationReminderService CreateSut() => new(_reservations.Object, _notifications.Object, _eventPublisher.Object, _settings);
+    private const string TestCorrelationId = "test-correlation-id";
+
+    public ReservationReminderServiceTests()
+    {
+        _correlationIdAccessor.Setup(c => c.CorrelationId).Returns(TestCorrelationId);
+    }
+
+    private ReservationReminderService CreateSut() => new(_reservations.Object, _notifications.Object, _eventPublisher.Object, _settings, _correlationIdAccessor.Object);
 
     private static Reservation UpcomingReservation() => new()
     {
@@ -38,7 +46,8 @@ public class ReservationReminderServiceTests
 
         // Assert
         _eventPublisher.Verify(p => p.PublishAsync(
-            It.Is<EventEnvelope>(e => e.EventType == EventTypes.ReservationReminderDue && e.Source == "Booking.Worker"),
+            It.Is<EventEnvelope>(e => e.EventType == EventTypes.ReservationReminderDue && e.Source == "Booking.Worker"
+                && e.CorrelationId == TestCorrelationId),
             It.IsAny<CancellationToken>()), Times.Once);
     }
 

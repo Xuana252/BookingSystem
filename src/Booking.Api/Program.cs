@@ -78,6 +78,11 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<BookingDbContext>().Database.Migrate();
 }
 
+// First of all — generates/accepts the request's CorrelationId and pushes it into a logging
+// scope, so UseSerilogRequestLogging's own log line (and everything downstream) carries it too,
+// not just the one line at the point ReservationService eventually publishes an event.
+app.UseCorrelationId();
+
 // Replaces ASP.NET Core's built-in two-line-per-request Hosting.Diagnostics logging with one
 // clean Serilog-native line. Placed first so it wraps GlobalExceptionHandling too, capturing the
 // final mapped status code (400/401/etc.) rather than whatever it was before that middleware ran.

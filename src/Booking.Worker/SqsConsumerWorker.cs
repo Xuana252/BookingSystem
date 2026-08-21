@@ -98,6 +98,15 @@ public class SqsConsumerWorker(
         }
 
         var envelope = JsonSerializer.Deserialize<EventEnvelope>(body);
+
+        // Every log line for the rest of this message's processing — including inside
+        // NotificationDispatchService, several calls deep — picks up CorrelationId automatically
+        // via this ambient scope, without threading it through every method signature by hand.
+        using var _ = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["CorrelationId"] = envelope?.CorrelationId ?? "unknown"
+        });
+
         logger.LogInformation(
             "[SqsConsumerWorker] Received {EventType} | MessageId={MessageId} | Source={Source} | Payload={Payload}",
             envelope?.EventType, envelope?.MessageId, envelope?.Source, envelope?.Payload);
