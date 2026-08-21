@@ -15,9 +15,12 @@ var builder = WebApplication.CreateBuilder(args);
 // JSON, not the human-readable text template — the Splunk log-shipping pipeline (see
 // docker-compose.yml's fluent-bit service) parses stdout as structured JSON. No app code
 // knows Splunk exists; it just writes structured logs, same as local `dotnet run`.
+// renderMessage: true adds a RenderedMessage field with the template's placeholders already
+// substituted in, so a reader doesn't have to cross-reference MessageTemplate against Properties
+// by hand — the raw template and properties are still there too, nothing lost.
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
-    .WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter())
+    .WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter(renderMessage: true))
     .CreateLogger();
 builder.Services.AddSerilog();
 
@@ -50,6 +53,11 @@ using (var scope = app.Services.CreateScope())
 {
     scope.ServiceProvider.GetRequiredService<BookingDbContext>().Database.Migrate();
 }
+
+// Replaces ASP.NET Core's built-in two-line-per-request Hosting.Diagnostics logging (Worker
+// hosts the Hangfire dashboard, so it does have real HTTP traffic) with one clean Serilog-native
+// line.
+app.UseSerilogRequestLogging();
 
 // UseHangfireDashboard() with no options defaults to a local-requests-only authorization
 // filter. That check is against the *container's* view of the connecting IP — a browser on

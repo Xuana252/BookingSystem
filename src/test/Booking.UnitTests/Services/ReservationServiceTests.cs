@@ -13,14 +13,18 @@ public class ReservationServiceTests
     private readonly Mock<IReservationRepository> _reservations = new();
     private readonly Mock<IEventPublisher> _eventPublisher = new();
     private readonly Mock<IBookingRuleEngine> _ruleEngine = new();
+    private readonly Mock<ICorrelationIdAccessor> _correlationIdAccessor = new();
+
+    private const string TestCorrelationId = "test-correlation-id";
 
     public ReservationServiceTests()
     {
         _reservations.Setup(r => r.GetByRoomIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Reservation>());
+        _correlationIdAccessor.Setup(c => c.CorrelationId).Returns(TestCorrelationId);
     }
 
-    private ReservationService CreateSut() => new(_reservations.Object, _eventPublisher.Object, _ruleEngine.Object);
+    private ReservationService CreateSut() => new(_reservations.Object, _eventPublisher.Object, _ruleEngine.Object, _correlationIdAccessor.Object);
 
     private static CreateReservationRequest ValidRequest() => new(
         RoomId: Guid.NewGuid(),
@@ -60,7 +64,8 @@ public class ReservationServiceTests
         _reservations.Verify(r => r.AddAsync(It.Is<Reservation>(x => x == reservation), It.IsAny<CancellationToken>()), Times.Once);
         _reservations.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _eventPublisher.Verify(p => p.PublishAsync(
-            It.Is<EventEnvelope>(e => e.EventType == EventTypes.ReservationCreated && e.Source == "Booking.Api"),
+            It.Is<EventEnvelope>(e => e.EventType == EventTypes.ReservationCreated && e.Source == "Booking.Api"
+                && e.CorrelationId == TestCorrelationId),
             It.IsAny<CancellationToken>()), Times.Once);
         _ruleEngine.Verify(e => e.Validate(
             It.Is<Reservation>(x => x.RoomId == request.RoomId),

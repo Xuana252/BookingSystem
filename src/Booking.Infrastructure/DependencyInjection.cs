@@ -4,6 +4,7 @@ using Amazon.SQS;
 using Booking.Domain.Configuration;
 using Booking.Domain.Interfaces;
 using Booking.Infrastructure.External;
+using Booking.Infrastructure.Http;
 using Booking.Infrastructure.Messaging;
 using Booking.Infrastructure.Persistence;
 using Booking.Infrastructure.Persistence.Repositories;
@@ -52,6 +53,9 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IEventPublisher, SnsEventPublisher>();
+
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICorrelationIdAccessor, HttpContextCorrelationIdAccessor>();
 
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IUserRepository, UserRepository>();

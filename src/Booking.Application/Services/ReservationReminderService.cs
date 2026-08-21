@@ -11,7 +11,8 @@ public class ReservationReminderService(
     IReservationRepository reservations,
     INotificationRepository notifications,
     IEventPublisher eventPublisher,
-    ReservationReminderSettings settings) : IReservationReminderService
+    ReservationReminderSettings settings,
+    ICorrelationIdAccessor correlationIdAccessor) : IReservationReminderService
 {
     public async Task ScanAndPublishDueRemindersAsync(CancellationToken ct = default)
     {
@@ -31,7 +32,8 @@ public class ReservationReminderService(
             {
                 EventType = EventTypes.ReservationReminderDue,
                 Source = "Booking.Worker",
-                Payload = JsonSerializer.Serialize(reservation)
+                Payload = JsonSerializer.Serialize(reservation),
+                CorrelationId = correlationIdAccessor.CorrelationId
             };
             await eventPublisher.PublishAsync(envelope, ct);
         }

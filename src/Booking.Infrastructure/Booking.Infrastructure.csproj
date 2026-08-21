@@ -5,6 +5,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- Needed for IHttpContextAccessor (HttpContextCorrelationIdAccessor) — this is a plain
+         class library (not Sdk.Web), so ASP.NET Core types aren't available without this. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="AWSSDK.SimpleNotificationService" />
     <PackageReference Include="AWSSDK.SQS" />
     <PackageReference Include="BCrypt.Net-Next" />
@@ -16,9 +22,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Configuration.Binder" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Json" />
-    <PackageReference Include="Microsoft.Extensions.Http" />
+    <!-- Microsoft.Extensions.Configuration.Binder/.Json and Microsoft.Extensions.Http used to be
+         explicit here; now redundant (NU1510) since FrameworkReference above already brings them
+         in transitively via the ASP.NET Core shared framework. -->
     <PackageReference Include="Microsoft.IdentityModel.Tokens" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="StackExchange.Redis" />

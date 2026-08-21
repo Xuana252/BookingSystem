@@ -7,7 +7,11 @@ using Booking.Domain.Interfaces;
 
 namespace Booking.Application.Services;
 
-public class ReservationService(IReservationRepository reservations, IEventPublisher eventPublisher, IBookingRuleEngine ruleEngine) : IReservationService
+public class ReservationService(
+    IReservationRepository reservations,
+    IEventPublisher eventPublisher,
+    IBookingRuleEngine ruleEngine,
+    ICorrelationIdAccessor correlationIdAccessor) : IReservationService
 {
     public Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
         => reservations.GetAllAsync(ct);
@@ -37,7 +41,8 @@ public class ReservationService(IReservationRepository reservations, IEventPubli
         {
             EventType = EventTypes.ReservationCreated,
             Source = "Booking.Api",
-            Payload = JsonSerializer.Serialize(reservation)
+            Payload = JsonSerializer.Serialize(reservation),
+            CorrelationId = correlationIdAccessor.CorrelationId
         };
         await eventPublisher.PublishAsync(envelope, ct);
 
