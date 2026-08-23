@@ -237,7 +237,12 @@ review fundamentals for the company test.
 
 ## Current status
 
-Phase 1 and Phase 2 complete, merged into `develop` (see above; all 11 Phase 2 items landed,
-Splunk logging last via the sidecar design noted in item 9). Next: Phase 3 (Sprint 3 —
-research only, no build work) or Phase 4 (Sprint 4 — Integration + CI/CD + UI completion),
-worked on new `feature/*` branches off `develop`.
+Phase 1 and Phase 2 complete, merged into `develop`, finished ahead of the Aug 31 target
+(2026-08-23). Full task-by-task breakdown — including six real bugs found and fixed via live
+verification against the running stack, beyond the original 11-item plan — in
+`doc/phase-outputs/phase-2.md`. Two Phase 2 verification-checklist items (reminder → Notification
+row end-to-end, exception → visible in Splunk) are flagged there as not yet independently
+exercised, though everything each depends on is confirmed working.
+
+Next: Phase 3 (Sprint 3 — research only, no build work) or Phase 4 (Sprint 4 — Integration +
+CI/CD + SignalR + real frontend pages), worked on new `feature/*` branches off `develop`.
