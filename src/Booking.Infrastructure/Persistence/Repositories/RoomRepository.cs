@@ -9,6 +9,9 @@ public class RoomRepository(BookingDbContext db) : IRoomRepository
     public async Task<IReadOnlyList<Room>> GetAllAsync(CancellationToken ct = default)
         => await db.Rooms.AsNoTracking().ToListAsync(ct);
 
+    public async Task<Room?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => await db.Rooms.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, ct);
+
     public async Task AddAsync(Room room, CancellationToken ct = default)
         => await db.Rooms.AddAsync(room, ct);
 

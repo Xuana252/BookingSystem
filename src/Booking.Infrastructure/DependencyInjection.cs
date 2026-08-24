@@ -61,6 +61,11 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
 
+        // Shared here (not one composition root's own Program.cs) since both BookingRuleEngine
+        // (Api) and NotificationDispatchService (Worker) need it.
+        var businessSettings = configuration.GetSection("Business").Get<BusinessSettings>() ?? new BusinessSettings();
+        services.AddSingleton(businessSettings);
+
         var redisSettings = configuration.GetSection("Redis").Get<RedisSettings>() ?? new RedisSettings();
         services.AddSingleton(redisSettings);
         services.AddSingleton<IConnectionMultiplexer>(_ => ConnectionMultiplexer.Connect(redisSettings.ConnectionString));
