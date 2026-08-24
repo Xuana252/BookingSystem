@@ -14,7 +14,12 @@ public class BookingRuleEngineTests
         MaxDurationHours = 4
     };
 
-    private static BookingRuleEngine CreateSut(ReservationRuleSettings? settings = null) => new(settings ?? DefaultSettings);
+    // UTC here so every existing test's DateTimeKind.Utc literals keep meaning exactly what they
+    // say — the timezone-conversion behavior itself gets its own dedicated tests below.
+    private static readonly BusinessSettings DefaultBusinessSettings = new() { TimeZoneId = "UTC" };
+
+    private static BookingRuleEngine CreateSut(ReservationRuleSettings? settings = null, BusinessSettings? businessSettings = null)
+        => new(settings ?? DefaultSettings, businessSettings ?? DefaultBusinessSettings);
 
     private static Reservation Candidate(DateTime start, DateTime end) => new()
     {
@@ -226,5 +231,39 @@ public class BookingRuleEngineTests
 
         // Assert
         act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Validate_UtcTimeOutsideRawHoursButWithinConfiguredTimeZone_DoesNotThrow()
+    {
+        // Arrange — 02:00-03:00 UTC is 09:00-10:00 in Asia/Ho_Chi_Minh (UTC+7), a valid slot
+        // there even though it looks well outside 08:00-18:00 read as raw UTC.
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 2, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 3, 0, 0, DateTimeKind.Utc));
+        var businessSettings = new BusinessSettings { TimeZoneId = "Asia/Ho_Chi_Minh" };
+
+        // Act
+        var act = () => CreateSut(businessSettings: businessSettings).Validate(candidate, []);
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Validate_UtcTimeWithinRawHoursButOutsideConfiguredTimeZone_Throws()
+    {
+        // Arrange — 12:00-13:00 UTC looks like a normal midday slot, but is 19:00-20:00 in
+        // Asia/Ho_Chi_Minh (UTC+7) — after that zone's 18:00 cutoff.
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 12, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 13, 0, 0, DateTimeKind.Utc));
+        var businessSettings = new BusinessSettings { TimeZoneId = "Asia/Ho_Chi_Minh" };
+
+        // Act
+        var act = () => CreateSut(businessSettings: businessSettings).Validate(candidate, []);
+
+        // Assert
+        act.Should().Throw<ArgumentException>().WithMessage("*business hours*");
     }
 }

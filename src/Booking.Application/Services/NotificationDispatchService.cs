@@ -1,4 +1,5 @@
 using Booking.Application.Interfaces;
+using Booking.Domain.Configuration;
 using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
@@ -8,7 +9,9 @@ namespace Booking.Application.Services;
 public class NotificationDispatchService(
     INotificationRepository notifications,
     IUserRepository users,
+    IRoomRepository rooms,
     INotificationSender sender,
+    BusinessSettings businessSettings,
     ILogger<NotificationDispatchService> logger) : INotificationDispatchService
 {
     public async Task DispatchReminderAsync(Reservation reservation, CancellationToken ct = default)
@@ -20,12 +23,18 @@ public class NotificationDispatchService(
             return;
         }
 
+        var room = await rooms.GetByIdAsync(reservation.RoomId, ct);
+        var roomLabel = room?.Name ?? reservation.RoomId.ToString();
+
+        var businessTimeZone = TimeZoneInfo.FindSystemTimeZoneById(businessSettings.TimeZoneId);
+        var localStart = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(reservation.StartTime, DateTimeKind.Utc), businessTimeZone);
+
         var notification = new Notification
         {
             UserId = reservation.UserId,
             ReservationId = reservation.Id,
             Type = NotificationType.ReservationReminder,
-            Message = $"Reminder: your reservation for room {reservation.RoomId} starts at {reservation.StartTime:u}."
+            Message = $"Reminder: your reservation for {roomLabel} starts at {localStart:dddd, MMMM d 'at' h:mm tt} ({businessSettings.TimeZoneId})."
         };
 
         await notifications.AddAsync(notification, ct);
