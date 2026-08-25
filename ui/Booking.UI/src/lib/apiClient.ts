@@ -12,6 +12,19 @@ export class ApiError extends Error {
   }
 }
 
+function extractErrorMessage(body: string): string {
+  if (!body) {
+    return "";
+  }
+
+  try {
+    const parsed = JSON.parse(body) as { detail?: string; title?: string };
+    return parsed.detail ?? parsed.title ?? body;
+  } catch {
+    return body;
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers = new Headers(options.headers);
@@ -24,7 +37,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const body = await response.text();
-    throw new ApiError(response.status, body || response.statusText);
+    throw new ApiError(response.status, extractErrorMessage(body) || response.statusText);
   }
 
   if (response.status === 204) {
