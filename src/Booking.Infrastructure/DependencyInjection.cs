@@ -1,3 +1,4 @@
+using Amazon;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
@@ -28,27 +29,49 @@ public static class DependencyInjection
         var awsSettings = configuration.GetSection("Aws").Get<AwsSettings>() ?? new AwsSettings();
         services.AddSingleton(awsSettings);
 
+        // Toggle between Moto and real AWS purely via config: Aws:EndpointUrl set (contains
+        // "localhost"/"moto") -> Moto, with dummy creds and ServiceURL overridden to point at
+        // it; Aws:EndpointUrl empty -> real AWS, using RegionEndpoint (never ServiceURL — an
+        // empty ServiceURL isn't the same as "unset" to the SDK, it tries to hit a blank host)
+        // and the default credential provider chain (env vars / shared credentials file / IAM
+        // role), never hardcoded credentials.
         var isLocal = awsSettings.EndpointUrl.Contains("localhost") || awsSettings.EndpointUrl.Contains("moto");
 
         services.AddSingleton<IAmazonSimpleNotificationService>(_ =>
         {
-            var config = new AmazonSimpleNotificationServiceConfig { ServiceURL = awsSettings.EndpointUrl };
             if (!isLocal)
             {
-                return new AmazonSimpleNotificationServiceClient(config);
+                var realConfig = new AmazonSimpleNotificationServiceConfig
+                {
+                    RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region)
+                };
+                return new AmazonSimpleNotificationServiceClient(realConfig);
             }
-            config.AuthenticationRegion = "us-east-1";
+
+            var config = new AmazonSimpleNotificationServiceConfig
+            {
+                ServiceURL = awsSettings.EndpointUrl,
+                AuthenticationRegion = awsSettings.Region
+            };
             return new AmazonSimpleNotificationServiceClient(new BasicAWSCredentials("test", "test"), config);
         });
 
         services.AddSingleton<IAmazonSQS>(_ =>
         {
-            var config = new AmazonSQSConfig { ServiceURL = awsSettings.EndpointUrl };
             if (!isLocal)
             {
-                return new AmazonSQSClient(config);
+                var realConfig = new AmazonSQSConfig
+                {
+                    RegionEndpoint = RegionEndpoint.GetBySystemName(awsSettings.Region)
+                };
+                return new AmazonSQSClient(realConfig);
             }
-            config.AuthenticationRegion = "us-east-1";
+
+            var config = new AmazonSQSConfig
+            {
+                ServiceURL = awsSettings.EndpointUrl,
+                AuthenticationRegion = awsSettings.Region
+            };
             return new AmazonSQSClient(new BasicAWSCredentials("test", "test"), config);
         });
 

@@ -57,7 +57,39 @@ Standalone-server mode, since this is .NET (not Python) — no in-process `@mock
 - Verified live: the Api published an event and the Worker consumed it, entirely through Moto,
   with zero real AWS account or network calls involved.
 
+## Switching SNS/SQS from Moto to real AWS
+
+Both SNS and SQS have a generous perpetual free tier (1M requests/month each, not a 12-month
+trial), so this is a real, cheap option for practicing against actual AWS — the toggle is
+config-only, no code change needed:
+
+- `Booking.Infrastructure/DependencyInjection.cs` picks Moto vs. real AWS purely from whether
+  `Aws:EndpointUrl` looks local (`Contains("localhost")`/`Contains("moto")`). Moto path: sets
+  `ServiceURL` + dummy `BasicAWSCredentials`. Real-AWS path: sets `RegionEndpoint` (never
+  `ServiceURL` — an *empty* `ServiceURL` isn't the same as "unset" to the SDK, it tries to hit a
+  blank host) and passes no explicit credentials at all, so the SDK's default credential
+  provider chain (env vars → shared credentials file → IAM role) resolves them.
+- `src/.env.example` documents the switch: `AWS_ENDPOINT_URL=` (blank, on purpose) plus
+  `AWS_REGION`/`AWS_SNS_TOPIC_ARN`/`AWS_SQS_QUEUE_URL` for a real topic/queue you've created,
+  and `AWS_ACCESS_KEY_ID`/`AWS_SECRET_ACCESS_KEY` — the AWS SDK's own recognized env var names
+  (not bound through the `Aws__` config prefix), ignored entirely while still pointed at Moto.
+  `src/docker-compose.yml`'s `api`/`worker` services read all of these with `${VAR:-<moto-default>}`
+  fallbacks, so the default `docker compose up` behavior is unchanged unless `.env` sets them.
+- **The one gotcha Moto hides**: `moto-init/init-all.sh` subscribes the queue to the topic but
+  never sets a queue *access policy* — Moto doesn't enforce SNS→SQS delivery permissions. Real
+  AWS does. Without a resource policy on the real SQS queue granting `sns.amazonaws.com`
+  `sqs:SendMessage`, scoped via a `SourceArn` condition to the topic's ARN, the subscription
+  looks "confirmed" but published messages never arrive — no error, they just silently don't
+  show up. Set this in the SQS console (Access Policy) or via CLI/Terraform when provisioning
+  the real queue; it has no local equivalent to catch it earlier.
+- Also worth doing for real AWS that Moto didn't require: scope the IAM user/role down to just
+  `sns:Publish` on that one topic ARN and `sqs:ReceiveMessage`/`DeleteMessage`/`GetQueueAttributes`/
+  `GetQueueUrl` on that one queue ARN, not admin credentials.
+
 ## Open Questions / Next Steps
 
 - DynamoDB isn't used yet even though `MOTO_SERVICE` enables it — reserved for the Phase 2
   DynamoDB research topic (per the OJT plan, that stays research-only, not merged into the app).
+- The real-AWS toggle above is implemented and builds/tests clean, but hasn't actually been
+  exercised against a real AWS account yet — worth a live pass (create a real topic/queue, flip
+  `.env`, confirm a reservation event round-trips) before relying on it for a demo.
