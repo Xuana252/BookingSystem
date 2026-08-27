@@ -113,8 +113,15 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=devdb;Username=dev;Password=dev
-      - Aws__EndpointUrl=http://moto:5000
-      - Aws__SnsTopicArn=arn:aws:sns:us-east-1:123456789012:booking-events
+      # Defaults point at Moto. To switch this container to real AWS: set AWS_ENDPOINT_URL=
+      # (blank) plus the other AWS_* vars below in .env (see .env.example) — no compose edit
+      # needed. AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY are the SDK's own recognized names,
+      # picked up by its default credential provider chain; ignored entirely on the Moto path.
+      - Aws__EndpointUrl=${AWS_ENDPOINT_URL:-http://moto:5000}
+      - Aws__Region=${AWS_REGION:-us-east-1}
+      - Aws__SnsTopicArn=${AWS_SNS_TOPIC_ARN:-arn:aws:sns:us-east-1:123456789012:booking-events}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
       - Redis__ConnectionString=redis:6379
     logging:
       driver: fluentd
@@ -146,9 +153,13 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=http://+:8080
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=devdb;Username=dev;Password=dev
-      - Aws__EndpointUrl=http://moto:5000
-      - Aws__SqsQueueUrl=http://moto:5000/123456789012/booking-events-queue
-      - Aws__SnsTopicArn=arn:aws:sns:us-east-1:123456789012:booking-events
+      # See the api service's comment above — same Moto/real-AWS toggle via .env.
+      - Aws__EndpointUrl=${AWS_ENDPOINT_URL:-http://moto:5000}
+      - Aws__Region=${AWS_REGION:-us-east-1}
+      - Aws__SqsQueueUrl=${AWS_SQS_QUEUE_URL:-http://moto:5000/123456789012/booking-events-queue}
+      - Aws__SnsTopicArn=${AWS_SNS_TOPIC_ARN:-arn:aws:sns:us-east-1:123456789012:booking-events}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
       - Redis__ConnectionString=redis:6379
       - Gmail__Username=${GMAIL_USERNAME:-}
       - Gmail__AppPassword=${GMAIL_APP_PASSWORD:-}
