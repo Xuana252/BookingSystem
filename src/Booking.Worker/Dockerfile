@@ -6,17 +6,20 @@ WORKDIR /src
 # invalidated only when a dependency changes, not on every source edit.
 COPY Directory.Packages.props .
 COPY Booking.Domain/Booking.Domain.csproj Booking.Domain/
+COPY Booking.Application/Booking.Application.csproj Booking.Application/
 COPY Booking.Infrastructure/Booking.Infrastructure.csproj Booking.Infrastructure/
 COPY Booking.Worker/Booking.Worker.csproj Booking.Worker/
 RUN dotnet restore Booking.Worker/Booking.Worker.csproj
 
 COPY Booking.Domain/ Booking.Domain/
+COPY Booking.Application/ Booking.Application/
 COPY Booking.Infrastructure/ Booking.Infrastructure/
 COPY Booking.Worker/ Booking.Worker/
 RUN dotnet publish Booking.Worker/Booking.Worker.csproj -c Release -o /app --no-restore
 
-# Plain runtime image, not aspnet — Booking.Worker is a Worker Service, not a web app.
-FROM mcr.microsoft.com/dotnet/runtime:10.0 AS final
+# aspnet base image, not plain runtime — Booking.Worker now also hosts the Hangfire dashboard.
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 COPY --from=build /app .
+EXPOSE 8080
 ENTRYPOINT ["dotnet", "Booking.Worker.dll"]

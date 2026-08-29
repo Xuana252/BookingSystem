@@ -1,5 +1,7 @@
 using System.Text;
 using Booking.Api.Configuration;
+using Booking.Api.Filters;
+using Booking.Api.Middleware;
 using Booking.Application;
 using Booking.Domain.Configuration;
 using Booking.Infrastructure;
@@ -12,12 +14,31 @@ using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// JSON, not the human-readable text template — the Splunk log-shipping pipeline (see
+// docker-compose.yml's fluent-bit service) parses stdout as structured JSON. No app code
+// knows Splunk exists; it just writes structured logs, same as local `dotnet run`.
+// renderMessage: true adds a RenderedMessage field with the template's placeholders already
+// substituted in, so a reader doesn't have to cross-reference MessageTemplate against Properties
+// by hand — the raw template and properties are still there too, nothing lost.
 builder.Host.UseSerilog((context, config) => config
     .ReadFrom.Configuration(context.Configuration)
-    .WriteTo.Console());
+    .WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter(renderMessage: true)));
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options => options.Filters.Add<FluentValidationActionFilter>());
 builder.Services.AddHealthChecks();
+
+// Booking.UI is served from a different origin (Vite dev server or the dockerized nginx build
+// both land on localhost:5173 — see docker-compose.yml's ui service) than the Api (5133/8080),
+// so browser fetch() calls need an explicit CORS policy or they're blocked client-side even
+// though the Api itself responds fine. Bearer-token auth (no cookies), so no AllowCredentials.
+const string uiCorsPolicy = "BookingUi";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy(uiCorsPolicy, policy => policy
+        .WithOrigins("http://localhost:5173")
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
 builder.Services.AddOpenApi(options =>
 {
     options.AddDocumentTransformer<BearerSecuritySchemeDocumentTransformer>();
@@ -25,6 +46,9 @@ builder.Services.AddOpenApi(options =>
 });
 builder.Services.AddBookingInfrastructure(builder.Configuration);
 builder.Services.AddBookingApplication();
+
+var reservationRuleSettings = builder.Configuration.GetSection("ReservationRules").Get<ReservationRuleSettings>() ?? new ReservationRuleSettings();
+builder.Services.AddSingleton(reservationRuleSettings);
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
 builder.Services
@@ -54,7 +78,18 @@ using (var scope = app.Services.CreateScope())
     scope.ServiceProvider.GetRequiredService<BookingDbContext>().Database.Migrate();
 }
 
+// First of all — generates/accepts the request's CorrelationId and pushes it into a logging
+// scope, so UseSerilogRequestLogging's own log line (and everything downstream) carries it too,
+// not just the one line at the point ReservationService eventually publishes an event.
+app.UseCorrelationId();
+
+// Replaces ASP.NET Core's built-in two-line-per-request Hosting.Diagnostics logging with one
+// clean Serilog-native line. Placed first so it wraps GlobalExceptionHandling too, capturing the
+// final mapped status code (400/401/etc.) rather than whatever it was before that middleware ran.
+app.UseSerilogRequestLogging();
+app.UseGlobalExceptionHandling();
 app.UseHttpsRedirection();
+app.UseCors(uiCorsPolicy);
 app.UseAuthentication();
 app.UseAuthorization();
 

@@ -59,6 +59,49 @@ services:
       - AWS_ENDPOINT_URL=http://moto:5000
     entrypoint: ["/bin/sh", "-c", "sh /moto-init/init-all.sh"]
 
+  # Self-hosted log destination — no external Splunk account needed. SPLUNK_HEC_TOKEN
+  # auto-provisions a matching HTTP Event Collector input at first boot.
+  splunk:
+    image: splunk/splunk:latest
+    container_name: local-splunk
+    restart: unless-stopped
+    environment:
+      - SPLUNK_START_ARGS=--accept-license
+      # Newer splunk/splunk images gate startup on this too, separate from --accept-license.
+      - SPLUNK_GENERAL_TERMS=--accept-sgt-current-at-splunk-com
+      - SPLUNK_PASSWORD=ChangeMe123!
+      - SPLUNK_HEC_TOKEN=00000000-0000-0000-0000-000000000000
+      - SPLUNK_HEC_SSL=False
+    ports:
+      - "8000:8000" # web UI
+      - "8088:8088" # HTTP Event Collector
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000"]
+      interval: 30s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+
+  # Log-shipping sidecar (see doc/notes/sidecar-pattern.md): api/worker only ever write
+  # structured JSON to stdout and know nothing about Splunk. Docker's `fluentd` logging
+  # driver on those two services forwards each line here; this container parses it and
+  # ships it on to Splunk's HEC. One shared instance for both services rather than a
+  # strict one-per-container sidecar — see the notes file for why that's an honest
+  # simplification, not the textbook pattern.
+  fluent-bit:
+    image: fluent/fluent-bit:latest
+    container_name: local-fluent-bit
+    restart: unless-stopped
+    volumes:
+      - ./fluent-bit:/fluent-bit/etc:ro
+    ports:
+      - "24224:24224"
+    environment:
+      - SPLUNK_HEC_TOKEN=00000000-0000-0000-0000-000000000000
+    depends_on:
+      splunk:
+        condition: service_healthy
+
   api:
     build:
       context: .
@@ -70,13 +113,33 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=devdb;Username=dev;Password=dev
-      - Aws__EndpointUrl=http://moto:5000
-      - Aws__SnsTopicArn=arn:aws:sns:us-east-1:123456789012:booking-events
+      # Defaults point at Moto. To switch this container to real AWS: set AWS_ENDPOINT_URL=
+      # (blank) plus the other AWS_* vars below in .env (see .env.example) — no compose edit
+      # needed. AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY are the SDK's own recognized names,
+      # picked up by its default credential provider chain; ignored entirely on the Moto path.
+      - Aws__EndpointUrl=${AWS_ENDPOINT_URL:-http://moto:5000}
+      - Aws__Region=${AWS_REGION:-us-east-1}
+      - Aws__SnsTopicArn=${AWS_SNS_TOPIC_ARN:-arn:aws:sns:us-east-1:123456789012:booking-events}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - Redis__ConnectionString=redis:6379
+    logging:
+      driver: fluentd
+      options:
+        # The fluentd log driver runs inside the Docker daemon, not this container's own
+        # network namespace, so it can't resolve the `fluent-bit` service name — reach it
+        # via the port fluent-bit publishes to the host instead.
+        fluentd-address: "localhost:24224"
+        tag: "booking.api"
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_healthy
       moto-init:
         condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
 
   worker:
     build:
@@ -84,12 +147,49 @@ services:
       dockerfile: Booking.Worker/Dockerfile
     container_name: local-worker
     restart: unless-stopped
+    ports:
+      - "8081:8080"
     environment:
-      - Aws__EndpointUrl=http://moto:5000
-      - Aws__SqsQueueUrl=http://moto:5000/123456789012/booking-events-queue
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=devdb;Username=dev;Password=dev
+      # See the api service's comment above — same Moto/real-AWS toggle via .env.
+      - Aws__EndpointUrl=${AWS_ENDPOINT_URL:-http://moto:5000}
+      - Aws__Region=${AWS_REGION:-us-east-1}
+      - Aws__SqsQueueUrl=${AWS_SQS_QUEUE_URL:-http://moto:5000/123456789012/booking-events-queue}
+      - Aws__SnsTopicArn=${AWS_SNS_TOPIC_ARN:-arn:aws:sns:us-east-1:123456789012:booking-events}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - Redis__ConnectionString=redis:6379
+      - Gmail__Username=${GMAIL_USERNAME:-}
+      - Gmail__AppPassword=${GMAIL_APP_PASSWORD:-}
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: "localhost:24224"
+        tag: "booking.worker"
     depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
       moto-init:
         condition: service_completed_successfully
+      fluent-bit:
+        condition: service_started
+
+  # Built static bundle served by nginx — not something the browser reaches over the compose
+  # network, so VITE_API_BASE_URL (baked in at build time) points at api's host-published port,
+  # same as this service's own published port below.
+  ui:
+    build:
+      context: ../ui/Booking.UI
+      args:
+        VITE_API_BASE_URL: http://localhost:8080/api
+    container_name: local-ui
+    restart: unless-stopped
+    ports:
+      - "5173:80"
 
 volumes:
   postgres_data:

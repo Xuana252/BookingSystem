@@ -100,7 +100,7 @@ committing it** — don't assume an automated edit is safe.
 cd src
 docker compose up -d              # Postgres, Redis, Moto (+ moto-init provisions SNS/SQS/DLQ)
 dotnet run --project Booking.Api      # http://localhost:5133 — /health, /scalar/v1
-dotnet run --project Booking.Worker   # long-polls SQS, logs consumed events
+dotnet run --project Booking.Worker   # http://localhost:5134/hangfire — SQS consumer + Hangfire reminder job
 ```
 
 ```powershell
@@ -113,9 +113,11 @@ Worker's terminal log the `ReservationCreated` event arrive via SNS → SQS mome
 
 ## Git workflow
 
-Lightweight Git Flow: `main` (stable) + `develop` (integration) + short-lived `feature/*`
-branches merged into `develop` with `--no-ff`. No `release/*`/`hotfix/*` or tags yet — not needed
-at this project's scale. Merge to `main` at sprint milestones (see PRs).
+Git Flow: `main` (stable) + `develop` (integration) + short-lived `feature/*` branches merged
+into `develop` with `--no-ff`. At each sprint milestone, cut a `release/*` branch off `develop`
+(e.g. `release/phase-1`), PR that into `main`, then merge it back into `develop` too so any
+release-branch fixes aren't lost. No `hotfix/*` branches or tags yet — not needed at this
+project's scale.
 
 ## Documentation conventions
 

@@ -1,18 +1,22 @@
 using System.Text.Json;
 using Amazon.SQS;
 using Amazon.SQS.Model;
+using Booking.Application.Interfaces;
 using Booking.Domain.Configuration;
+using Booking.Domain.Entities;
 using Booking.Domain.Events;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Booking.Worker;
 
 /// <summary>
-/// Long-polls the booking-events SQS queue (fed by SNS) and logs each event.
-/// Phase-1 event-pattern POC — no business logic yet, that lands in Phase 2.
+/// Long-polls the booking-events SQS queue (fed by SNS) and reacts to each event:
+/// ReservationCreated is just logged, ReservationReminderDue creates a Notification row.
 /// </summary>
 public class SqsConsumerWorker(
     IAmazonSQS sqs,
     AwsSettings settings,
+    IServiceScopeFactory scopeFactory,
     ILogger<SqsConsumerWorker> logger) : BackgroundService
 {
     private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(5);
@@ -66,7 +70,7 @@ public class SqsConsumerWorker(
     {
         try
         {
-            HandleMessage(message);
+            await HandleMessageAsync(message, ct);
             await sqs.DeleteMessageAsync(settings.SqsQueueUrl, message.ReceiptHandle, ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
@@ -82,7 +86,7 @@ public class SqsConsumerWorker(
         }
     }
 
-    private void HandleMessage(Message message)
+    private async Task HandleMessageAsync(Message message, CancellationToken ct)
     {
         // SNS delivers to SQS wrapped in a notification envelope; unwrap it to get our EventEnvelope.
         var body = message.Body;
@@ -94,8 +98,38 @@ public class SqsConsumerWorker(
         }
 
         var envelope = JsonSerializer.Deserialize<EventEnvelope>(body);
+
+        // Every log line for the rest of this message's processing — including inside
+        // NotificationDispatchService, several calls deep — picks up CorrelationId automatically
+        // via this ambient scope, without threading it through every method signature by hand.
+        using var _ = logger.BeginScope(new Dictionary<string, object>
+        {
+            ["CorrelationId"] = envelope?.CorrelationId ?? "unknown"
+        });
+
         logger.LogInformation(
             "[SqsConsumerWorker] Received {EventType} | MessageId={MessageId} | Source={Source} | Payload={Payload}",
             envelope?.EventType, envelope?.MessageId, envelope?.Source, envelope?.Payload);
+
+        if (envelope?.EventType == EventTypes.ReservationReminderDue)
+        {
+            await CreateReminderNotificationAsync(envelope, ct);
+        }
+    }
+
+    private async Task CreateReminderNotificationAsync(EventEnvelope envelope, CancellationToken ct)
+    {
+        var reservation = JsonSerializer.Deserialize<Reservation>(envelope.Payload);
+        if (reservation is null)
+        {
+            logger.LogWarning("[SqsConsumerWorker] Could not deserialize Reservation payload for {EventType}.", envelope.EventType);
+            return;
+        }
+
+        using var scope = scopeFactory.CreateScope();
+        var dispatcher = scope.ServiceProvider.GetRequiredService<INotificationDispatchService>();
+        await dispatcher.DispatchReminderAsync(reservation, ct);
+
+        logger.LogInformation("[SqsConsumerWorker] Dispatched reminder notification for Reservation {ReservationId}.", reservation.Id);
     }
 }

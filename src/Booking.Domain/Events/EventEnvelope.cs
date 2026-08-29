@@ -9,6 +9,17 @@ public record EventEnvelope
     /// <summary>Unique identifier for this event instance. Used for deduplication.</summary>
     public string MessageId { get; init; } = Guid.NewGuid().ToString();
 
+    /// <summary>
+    /// Groups every log line involved in producing and processing this event, across the
+    /// Api/Worker boundary — deliberately not the same thing as ASP.NET Core's per-request
+    /// TraceId/SpanId (which stay as free, automatic, single-service correlation). A plain,
+    /// independent field rather than reused/propagated trace context: Worker's SQS polling loop
+    /// has no ambient Activity to parent a real child span from, and stamping TraceId onto an
+    /// event without properly parenting a new Activity from it would look like real distributed
+    /// tracing data to any tool that later tries to visualize it, while actually being wrong.
+    /// </summary>
+    public string CorrelationId { get; init; } = Guid.NewGuid().ToString();
+
     /// <summary>Canonical event type. Must match an EventTypes constant.</summary>
     public string EventType { get; init; } = string.Empty;
 

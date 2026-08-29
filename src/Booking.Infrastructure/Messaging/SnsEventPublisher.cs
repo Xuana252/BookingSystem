@@ -33,7 +33,7 @@ public sealed class SnsEventPublisher(
 
         var response = await sns.PublishAsync(request, ct);
         logger.LogInformation(
-            "[SnsEventPublisher] Published {EventType} | SnsMessageId={SnsId}",
-            envelope.EventType, response.MessageId);
+            "[SnsEventPublisher] Published {EventType} | SnsMessageId={SnsId} | CorrelationId={CorrelationId}",
+            envelope.EventType, response.MessageId, envelope.CorrelationId);
     }
 }

@@ -1,33 +1,79 @@
-using Amazon.Runtime;
-using Amazon.SQS;
+using Booking.Application.Interfaces;
+using Booking.Application.Services;
 using Booking.Domain.Configuration;
+using Booking.Infrastructure;
+using Booking.Infrastructure.Persistence;
 using Booking.Worker;
+using Hangfire;
+using Hangfire.Dashboard;
+using Hangfire.PostgreSql;
+using Microsoft.EntityFrameworkCore;
 using Serilog;
 
-var builder = Host.CreateApplicationBuilder(args);
+var builder = WebApplication.CreateBuilder(args);
 
+// JSON, not the human-readable text template — the Splunk log-shipping pipeline (see
+// docker-compose.yml's fluent-bit service) parses stdout as structured JSON. No app code
+// knows Splunk exists; it just writes structured logs, same as local `dotnet run`.
+// renderMessage: true adds a RenderedMessage field with the template's placeholders already
+// substituted in, so a reader doesn't have to cross-reference MessageTemplate against Properties
+// by hand — the raw template and properties are still there too, nothing lost.
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(builder.Configuration)
-    .WriteTo.Console()
+    .WriteTo.Console(new Serilog.Formatting.Json.JsonFormatter(renderMessage: true))
     .CreateLogger();
 builder.Services.AddSerilog();
 
-var awsSettings = builder.Configuration.GetSection("Aws").Get<AwsSettings>() ?? new AwsSettings();
-builder.Services.AddSingleton(awsSettings);
+builder.Services.AddBookingInfrastructure(builder.Configuration);
 
-var isLocal = awsSettings.EndpointUrl.Contains("localhost") || awsSettings.EndpointUrl.Contains("moto");
-builder.Services.AddSingleton<IAmazonSQS>(_ =>
-{
-    var config = new AmazonSQSConfig { ServiceURL = awsSettings.EndpointUrl };
-    if (!isLocal)
-    {
-        return new AmazonSQSClient(config);
-    }
-    config.AuthenticationRegion = "us-east-1";
-    return new AmazonSQSClient(new BasicAWSCredentials("test", "test"), config);
-});
+// Not Booking.Application's AddBookingApplication() — that method registers Api-only services
+// (RoomService/UserService/ReservationService/AuthService/BookingRuleEngine + validators), none
+// of which Worker uses, and BookingRuleEngine needs ReservationRuleSettings, which Worker never
+// binds. Worker only needs these two, registered directly here.
+builder.Services.AddScoped<IReservationReminderService, ReservationReminderService>();
+builder.Services.AddScoped<INotificationDispatchService, NotificationDispatchService>();
+
+var reminderSettings = builder.Configuration.GetSection("ReservationReminder").Get<ReservationReminderSettings>() ?? new ReservationReminderSettings();
+builder.Services.AddSingleton(reminderSettings);
+
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
+    ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection.");
+
+builder.Services.AddHangfire(config => config
+    .UsePostgreSqlStorage(options => options.UseNpgsqlConnection(connectionString)));
+builder.Services.AddHangfireServer();
 
 builder.Services.AddHostedService<SqsConsumerWorker>();
 
-var host = builder.Build();
-host.Run();
+var app = builder.Build();
+
+// Applies any pending migrations on startup, same as Booking.Api — keeps the fully-dockerized
+// stack self-provisioning regardless of which of the two starts first.
+using (var scope = app.Services.CreateScope())
+{
+    scope.ServiceProvider.GetRequiredService<BookingDbContext>().Database.Migrate();
+}
+
+// Replaces ASP.NET Core's built-in two-line-per-request Hosting.Diagnostics logging (Worker
+// hosts the Hangfire dashboard, so it does have real HTTP traffic) with one clean Serilog-native
+// line.
+app.UseSerilogRequestLogging();
+
+// UseHangfireDashboard() with no options defaults to a local-requests-only authorization
+// filter. That check is against the *container's* view of the connecting IP — a browser on
+// the host hitting the docker-compose-published port arrives at the container via the Docker
+// bridge network, not 127.0.0.1, so the default filter rejects it as "not local" (401) even
+// for genuinely local dev access. No real auth here — fine for local dev, but this dashboard
+// exposes job internals and should never be reachable unauthenticated anywhere real; a proper
+// IDashboardAuthorizationFilter belongs here before this is ever deployed anywhere but a dev box.
+app.UseHangfireDashboard("/hangfire", new DashboardOptions
+{
+    Authorization = []
+});
+
+app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<IReservationReminderService>(
+    "reservation-reminder-scan",
+    svc => svc.ScanAndPublishDueRemindersAsync(CancellationToken.None),
+    reminderSettings.CronExpression);
+
+app.Run();
