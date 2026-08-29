@@ -37,7 +37,7 @@ Booking.Domain  →  Booking.Application  →  Booking.Infrastructure  →  Book
 
 ## Naming: `Reservation`, never `Booking`
 
-The core entity, events, and rules are named `Reservation` (`Reservation`, `ReservationHold`,
+The core entity, events, and rules are named `Reservation` (`Reservation`,
 `ReservationCreated`/`ReservationCancelled`/`ReservationReminderDue`), **not** `Booking` — a class
 literally named `Booking` inside the `Booking.*` namespace tree causes a real C# compiler error
 (`CS0118: 'Booking' is a namespace but is used like a type`) anywhere it's referenced from code
