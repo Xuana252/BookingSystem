@@ -31,8 +31,8 @@ Key decisions:
   class literally named `Booking` inside the `Booking.*` namespace tree causes a real C# compiler
   error (`CS0118: 'Booking' is a namespace but is used like a type`) anywhere it's referenced
   from code that is itself in a `Booking.X` namespace. Confirmed with a throwaway repro.
-  `Reservation`, `ReservationHold`, `ReservationCreated`/`ReservationCancelled`/
-  `ReservationReminderDue` events, `IReservationRuleEngine`. The product/solution name
+  `Reservation`, `ReservationCreated`/`ReservationCancelled`/`ReservationReminderDue` events,
+  `IReservationRuleEngine`. The product/solution name
   (`BookingSystem`) and namespace root (`Booking.*`) are unaffected.
 - **Layering:** `Domain → Application → Infrastructure → Api/Worker`, dependencies point one
   direction only. `Booking.Application` holds use-case services (validation + orchestration) and
@@ -215,8 +215,10 @@ and how escalation works. Both need a signed-up external SaaS account to genuine
    creation/cancellation pushes live room-availability changes to connected clients, and
    `Notification` creation pushes to the notified user, backed by the Redis-backplane already
    provisioned from Phase 2.
-3. **React UI completion** — room calendar/availability view, booking flow (hold → confirm),
-   live availability updates and notification feed via `@microsoft/signalr`, consuming the Api.
+3. **React UI completion** — room calendar/availability view, booking flow (direct create, same
+   as the Api's existing `POST /api/reservations` — no hold/checkout state, per the Phase 2
+   decision to drop `BookingHold`), live availability updates and notification feed via
+   `@microsoft/signalr`, consuming the Api.
 4. **Nginx reverse proxy** — only if actually exposing a local endpoint; skip otherwise.
 5. Remaining AWS reading (CloudWatch, EC2, VPC, Codeship) — notes only, same as Phase 3.
 6. Final backend/frontend polish so the whole stack demos cleanly via `docker compose up`.
