@@ -14,6 +14,7 @@ public class NotificationDispatchServiceTests
     private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<IRoomRepository> _rooms = new();
     private readonly Mock<INotificationSender> _sender = new();
+    private readonly Mock<IRealtimeNotifier> _realtimeNotifier = new();
     private readonly Mock<ILogger<NotificationDispatchService>> _logger = new();
     private readonly BusinessSettings _businessSettings = new() { TimeZoneId = "UTC" };
 
@@ -23,7 +24,7 @@ public class NotificationDispatchServiceTests
     }
 
     private NotificationDispatchService CreateSut() =>
-        new(_notifications.Object, _users.Object, _rooms.Object, _sender.Object, _businessSettings, _logger.Object);
+        new(_notifications.Object, _users.Object, _rooms.Object, _sender.Object, _realtimeNotifier.Object, _businessSettings, _logger.Object);
 
     private static Reservation SomeReservation() => new()
     {
@@ -47,6 +48,7 @@ public class NotificationDispatchServiceTests
         // Assert
         _notifications.Verify(n => n.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()), Times.Never);
         _sender.Verify(s => s.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _realtimeNotifier.Verify(n => n.NotifyUserAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -65,6 +67,9 @@ public class NotificationDispatchServiceTests
         _notifications.Verify(n => n.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()), Times.Once);
         _notifications.Verify(n => n.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _sender.Verify(s => s.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        // The live channel doesn't depend on the user record at all (it only needs the id
+        // already on the reservation), so it still fires even when email delivery can't happen.
+        _realtimeNotifier.Verify(n => n.NotifyUserAsync(reservation.UserId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
@@ -91,6 +96,7 @@ public class NotificationDispatchServiceTests
         persisted.Should().NotBeNull();
         persisted!.SentAt.Should().NotBeNull();
         _notifications.Verify(n => n.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Exactly(2));
+        _realtimeNotifier.Verify(n => n.NotifyUserAsync(reservation.UserId, persisted.Message, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

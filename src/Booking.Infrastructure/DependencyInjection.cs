@@ -6,10 +6,12 @@ using Booking.Domain.Configuration;
 using Booking.Domain.Interfaces;
 using Booking.Infrastructure.External;
 using Booking.Infrastructure.Http;
+using Booking.Infrastructure.Hubs;
 using Booking.Infrastructure.Messaging;
 using Booking.Infrastructure.Persistence;
 using Booking.Infrastructure.Persistence.Repositories;
 using Booking.Infrastructure.Security;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -96,6 +98,14 @@ public static class DependencyInjection
         services.AddScoped<IReservationRepository>(sp => new CachedReservationRepository(
             sp.GetRequiredService<ReservationRepository>(),
             sp.GetRequiredService<IConnectionMultiplexer>()));
+
+        // Shared here too — Booking.Api hosts the actual hub endpoint clients connect to, but
+        // Booking.Worker only ever pushes reminder notifications through an IHubContext with no
+        // client connections of its own. Both need AddSignalR() registered; the Redis backplane
+        // is what relays a broadcast raised from either process to clients connected on Api.
+        services.AddSignalR().AddStackExchangeRedis(redisSettings.ConnectionString);
+        services.AddSingleton<IUserIdProvider, ReservationHubUserIdProvider>();
+        services.AddScoped<IRealtimeNotifier, SignalRRealtimeNotifier>();
 
         var jwtSettings = configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
         services.AddSingleton(jwtSettings);

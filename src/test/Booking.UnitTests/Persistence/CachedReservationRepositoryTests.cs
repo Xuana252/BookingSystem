@@ -92,6 +92,56 @@ public class CachedReservationRepositoryTests
     }
 
     [Fact]
+    public async Task GetByIdAsync_DelegatesToInnerAndDoesNotCache()
+    {
+        // Arrange
+        var reservation = new Reservation { RoomId = Guid.NewGuid() };
+        _inner.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+
+        // Act
+        var result = await CreateSut().GetByIdAsync(reservation.Id);
+
+        // Assert
+        result.Should().Be(reservation);
+        _database.Verify(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
+        _database.Verify(d => d.StringSetAsync(
+            It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<TimeSpan?>(), It.IsAny<bool>(), It.IsAny<When>(), It.IsAny<CommandFlags>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ThenSaveChangesAsync_InvalidatesThatReservationsRoomCacheKey()
+    {
+        // Arrange
+        var reservation = new Reservation { RoomId = Guid.NewGuid() };
+        _inner.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        var sut = CreateSut();
+        await sut.GetByIdAsync(reservation.Id);
+
+        // Act
+        await sut.SaveChangesAsync();
+
+        // Assert
+        _database.Verify(d => d.KeyDeleteAsync($"room-availability:{reservation.RoomId}", It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NotFound_DoesNotTrackAnyInvalidation()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        _inner.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((Reservation?)null);
+        var sut = CreateSut();
+        await sut.GetByIdAsync(id);
+
+        // Act
+        await sut.SaveChangesAsync();
+
+        // Assert
+        _database.Verify(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
+    }
+
+    [Fact]
     public async Task GetUpcomingAsync_AlwaysDelegatesToInnerWithoutCaching()
     {
         // Arrange

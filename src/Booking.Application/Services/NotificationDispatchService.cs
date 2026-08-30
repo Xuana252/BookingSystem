@@ -11,6 +11,7 @@ public class NotificationDispatchService(
     IUserRepository users,
     IRoomRepository rooms,
     INotificationSender sender,
+    IRealtimeNotifier realtimeNotifier,
     BusinessSettings businessSettings,
     ILogger<NotificationDispatchService> logger) : INotificationDispatchService
 {
@@ -39,6 +40,10 @@ public class NotificationDispatchService(
 
         await notifications.AddAsync(notification, ct);
         await notifications.SaveChangesAsync(ct);
+
+        // In-app/live channel — independent of the email below, so it still reaches a connected
+        // user even if SMTP delivery fails or the user's email lookup comes back empty.
+        await realtimeNotifier.NotifyUserAsync(reservation.UserId, notification.Message, ct);
 
         var user = await users.GetByIdAsync(reservation.UserId, ct);
         if (user is null)

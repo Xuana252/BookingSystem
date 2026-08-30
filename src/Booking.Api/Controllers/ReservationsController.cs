@@ -24,4 +24,12 @@ public class ReservationsController(IReservationService reservationService) : Co
         var reservation = await reservationService.CreateAsync(request, userId, ct);
         return CreatedAtAction(nameof(GetAll), new { id = reservation.Id }, reservation);
     }
+
+    [HttpPost("{id:guid}/cancel")]
+    public async Task<IActionResult> Cancel(Guid id, CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+        await reservationService.CancelAsync(id, userId, ct);
+        return NoContent();
+    }
 }

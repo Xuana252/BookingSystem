@@ -21,6 +21,20 @@ public class CachedReservationRepository(
     public Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
         => inner.GetAllAsync(ct);
 
+    // Not cached (a point lookup by primary key isn't the hot path GetByRoomIdAsync's cache
+    // targets), but still tracked as a pending invalidation — the only current caller
+    // (ReservationService.CancelAsync) fetches, mutates Status, then calls SaveChangesAsync, so
+    // the room's cached availability list needs invalidating the same way AddAsync's does.
+    public async Task<Reservation?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        var reservation = await inner.GetByIdAsync(id, ct);
+        if (reservation is not null)
+        {
+            _pendingInvalidations.Add(reservation.RoomId);
+        }
+        return reservation;
+    }
+
     public async Task<IReadOnlyList<Reservation>> GetByRoomIdAsync(Guid roomId, CancellationToken ct = default)
     {
         var db = redis.GetDatabase();

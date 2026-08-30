@@ -23,6 +23,9 @@
     <PackageVersion Include="AWSSDK.SQS" Version="4.0.100.7" />
     <!-- Redis caching (room-availability lookups) -->
     <PackageVersion Include="StackExchange.Redis" Version="3.1.13" />
+    <!-- SignalR Redis backplane (Booking.Infrastructure/Hubs) — Hub/IHubContext themselves come
+         from the ASP.NET Core shared framework via FrameworkReference, not a NuGet package. -->
+    <PackageVersion Include="Microsoft.AspNetCore.SignalR.StackExchangeRedis" Version="10.0.10" />
     <!-- Real Gmail SMTP notification sender (Booking.Infrastructure/External) -->
     <PackageVersion Include="MailKit" Version="4.17.0" />
     <!-- Background jobs (Hangfire recurring job in Booking.Worker) -->

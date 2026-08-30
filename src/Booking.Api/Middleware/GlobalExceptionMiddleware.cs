@@ -26,6 +26,7 @@ public class GlobalExceptionMiddleware(RequestDelegate next, ILogger<GlobalExcep
         {
             ArgumentException => (StatusCodes.Status400BadRequest, "Invalid request."),
             UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Authentication failed."),
+            KeyNotFoundException => (StatusCodes.Status404NotFound, "Not found."),
             InvalidOperationException => (StatusCodes.Status409Conflict, "Conflict."),
             _ => (StatusCodes.Status500InternalServerError, "An unexpected error occurred.")
         };
