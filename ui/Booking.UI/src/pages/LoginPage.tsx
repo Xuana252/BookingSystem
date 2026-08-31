@@ -33,7 +33,7 @@ export function LoginPage() {
         onSubmit={handleSubmit}
         className="w-full max-w-sm space-y-4 rounded-lg bg-white p-8 shadow"
       >
-        <h1 className="text-xl font-semibold text-slate-900">Sign in to BookingSystem</h1>
+        <h1 className="text-xl font-semibold text-indigo-700">Sign in to BookingSystem</h1>
 
         {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
@@ -45,7 +45,7 @@ export function LoginPage() {
             id="username"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             required
           />
         </div>
@@ -59,7 +59,7 @@ export function LoginPage() {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
+            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
             required
           />
         </div>
@@ -67,7 +67,7 @@ export function LoginPage() {
         <button
           type="submit"
           disabled={isSubmitting}
-          className="w-full rounded bg-slate-900 px-3 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
+          className="w-full rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
         >
           {isSubmitting ? "Signing in..." : "Sign in"}
         </button>

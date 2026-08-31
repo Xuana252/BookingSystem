@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearToken, getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
@@ -6,6 +6,8 @@ import { cancelReservation, createReservation, getReservations, getRooms } from 
 import type { Reservation, Room } from "../lib/types";
 import { useReservationHub } from "../hooks/useReservationHub";
 import { RoomCalendar } from "../components/RoomCalendar";
+import { BookingFormModal } from "../components/BookingFormModal";
+import { BookingDetailModal } from "../components/BookingDetailModal";
 
 function startOfDay(date: Date): Date {
   const d = new Date(date);
@@ -31,7 +33,6 @@ export function HomePage() {
   const authenticated = isAuthenticated();
   const currentUserId = getCurrentUserId();
   const { onRoomAvailabilityChanged } = useReservationHub();
-  const formRef = useRef<HTMLFormElement>(null);
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -39,11 +40,14 @@ export function HomePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
 
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [roomId, setRoomId] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
@@ -70,12 +74,12 @@ export function HomePage() {
     navigate("/login");
   }
 
-  function handleSlotClick(clickedRoomId: string, hour: number) {
-    setRoomId(clickedRoomId);
-    setStartTime(toDatetimeLocalValue(selectedDate, hour));
-    setEndTime(toDatetimeLocalValue(selectedDate, hour + 1));
+  function openBookingForm(prefillRoomId?: string, prefillHour?: number) {
+    setRoomId(prefillRoomId ?? "");
+    setStartTime(prefillHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillHour) : "");
+    setEndTime(prefillHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillHour + 1) : "");
     setFormError(null);
-    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    setIsFormOpen(true);
   }
 
   async function handleBook(event: FormEvent) {
@@ -97,8 +101,7 @@ export function HomePage() {
         startTime: new Date(startTime).toISOString(),
         endTime: new Date(endTime).toISOString(),
       });
-      setStartTime("");
-      setEndTime("");
+      setIsFormOpen(false);
       await loadData();
     } catch (err) {
       setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
@@ -111,6 +114,7 @@ export function HomePage() {
     setCancellingId(reservationId);
     try {
       await cancelReservation(reservationId);
+      setSelectedReservation(null);
       await loadData();
     } catch (err) {
       setLoadError(err instanceof ApiError ? err.message : "Could not cancel that reservation.");
@@ -122,11 +126,11 @@ export function HomePage() {
   if (!authenticated) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10">
-        <h1 className="text-2xl font-semibold text-slate-900">BookingSystem</h1>
+        <h1 className="text-2xl font-semibold text-indigo-700">BookingSystem</h1>
         <p className="mt-2 text-slate-600">Sign in to view room availability and book a time slot.</p>
         <Link
           to="/login"
-          className="mt-6 inline-block rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+          className="mt-6 inline-block rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
         >
           Sign in
         </Link>
@@ -140,7 +144,7 @@ export function HomePage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-slate-900">BookingSystem</h1>
+        <h1 className="text-2xl font-semibold text-indigo-700">BookingSystem</h1>
         <button
           onClick={handleLogout}
           className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
@@ -150,7 +154,6 @@ export function HomePage() {
       </div>
 
       <div className="mt-8 flex items-center justify-between">
-        <h2 className="text-sm font-semibold text-slate-900">Rooms</h2>
         <div className="flex items-center gap-1">
           <button
             onClick={() => setSelectedDate((d) => addDays(d, -1))}
@@ -176,16 +179,23 @@ export function HomePage() {
             </button>
           )}
         </div>
+
+        <button
+          onClick={() => openBookingForm()}
+          className="rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+        >
+          New booking
+        </button>
       </div>
 
       <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-blue-100" /> Your booking
+          <span className="h-2.5 w-2.5 rounded-sm bg-indigo-100" /> Your booking
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-slate-200" /> Booked
+          <span className="h-2.5 w-2.5 rounded-sm bg-violet-50" /> Booked
         </span>
-        <span>Click an open slot to book it.</span>
+        <span>Click an open slot to book it, or a booking to see details.</span>
       </div>
 
       {loadError && <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</p>}
@@ -198,77 +208,37 @@ export function HomePage() {
           rooms={rooms}
           reservations={reservations}
           currentUserId={currentUserId}
-          cancellingId={cancellingId}
-          onSlotClick={handleSlotClick}
-          onCancel={handleCancel}
+          onSlotClick={(clickedRoomId, hour) => openBookingForm(clickedRoomId, hour)}
+          onBlockClick={setSelectedReservation}
         />
       )}
 
-      <form ref={formRef} onSubmit={handleBook} className="mt-8 space-y-4 rounded-lg border border-slate-200 bg-white p-6">
-        <h2 className="text-sm font-semibold text-slate-900">Book a room</h2>
+      {isFormOpen && (
+        <BookingFormModal
+          rooms={rooms}
+          roomId={roomId}
+          startTime={startTime}
+          endTime={endTime}
+          formError={formError}
+          isSubmitting={isSubmitting}
+          onRoomIdChange={setRoomId}
+          onStartTimeChange={setStartTime}
+          onEndTimeChange={setEndTime}
+          onSubmit={handleBook}
+          onClose={() => setIsFormOpen(false)}
+        />
+      )}
 
-        {formError && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>}
-
-        <div className="grid gap-4 sm:grid-cols-3">
-          <div className="sm:col-span-1">
-            <label htmlFor="roomId" className="block text-sm font-medium text-slate-700">
-              Room
-            </label>
-            <select
-              id="roomId"
-              value={roomId}
-              onChange={(event) => setRoomId(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
-              required
-            >
-              <option value="" disabled>
-                Select a room
-              </option>
-              {rooms.map((room) => (
-                <option key={room.id} value={room.id}>
-                  {room.name} ({room.capacity})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="startTime" className="block text-sm font-medium text-slate-700">
-              Start
-            </label>
-            <input
-              id="startTime"
-              type="datetime-local"
-              value={startTime}
-              onChange={(event) => setStartTime(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="endTime" className="block text-sm font-medium text-slate-700">
-              End
-            </label>
-            <input
-              id="endTime"
-              type="datetime-local"
-              value={endTime}
-              onChange={(event) => setEndTime(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm"
-              required
-            />
-          </div>
-        </div>
-
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:opacity-50"
-        >
-          {isSubmitting ? "Booking..." : "Book"}
-        </button>
-      </form>
+      {selectedReservation && (
+        <BookingDetailModal
+          reservation={selectedReservation}
+          room={rooms.find((r) => r.id === selectedReservation.roomId)}
+          isMine={selectedReservation.userId === currentUserId}
+          isCancelling={cancellingId === selectedReservation.id}
+          onCancel={() => handleCancel(selectedReservation.id)}
+          onClose={() => setSelectedReservation(null)}
+        />
+      )}
     </div>
   );
 }

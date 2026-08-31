@@ -8,7 +8,7 @@ export function Layout() {
     <ReservationHubProvider>
       <div className="min-h-screen bg-slate-50">
         <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-          <Link to="/" className="text-lg font-semibold text-slate-900">
+          <Link to="/" className="text-lg font-semibold text-indigo-700">
             BookingSystem
           </Link>
           {isAuthenticated() && <NotificationBell />}

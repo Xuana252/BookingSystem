@@ -6,7 +6,8 @@ import { ReservationStatus, type Reservation, type Room } from "../lib/types";
 // default.
 const CALENDAR_START_HOUR = 8;
 const CALENDAR_END_HOUR = 18;
-const ROW_HEIGHT_PX = 48;
+const ROW_HEIGHT_PX = 56;
+const RAIL_WIDTH_PX = 140;
 
 function isSameLocalDay(a: Date, b: Date): boolean {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
@@ -15,7 +16,7 @@ function isSameLocalDay(a: Date, b: Date): boolean {
 function hourLabel(hour: number): string {
   const period = hour < 12 ? "AM" : "PM";
   const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour} ${period}`;
+  return `${displayHour}${period}`;
 }
 
 interface RoomCalendarProps {
@@ -23,22 +24,13 @@ interface RoomCalendarProps {
   rooms: Room[];
   reservations: Reservation[];
   currentUserId: string | null;
-  cancellingId: string | null;
   onSlotClick: (roomId: string, hour: number) => void;
-  onCancel: (reservationId: string) => void;
+  onBlockClick: (reservation: Reservation) => void;
 }
 
-export function RoomCalendar({
-  date,
-  rooms,
-  reservations,
-  currentUserId,
-  cancellingId,
-  onSlotClick,
-  onCancel,
-}: RoomCalendarProps) {
+export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotClick, onBlockClick }: RoomCalendarProps) {
   const hours = Array.from({ length: CALENDAR_END_HOUR - CALENDAR_START_HOUR }, (_, i) => CALENDAR_START_HOUR + i);
-  const dayHeight = hours.length * ROW_HEIGHT_PX;
+  const hourWidthPct = 100 / hours.length;
 
   const reservationsByRoom = new Map<string, Reservation[]>();
   for (const reservation of reservations) {
@@ -59,42 +51,40 @@ export function RoomCalendar({
   }
 
   return (
-    <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
-      <div className="grid min-w-[640px]" style={{ gridTemplateColumns: `56px repeat(${rooms.length}, minmax(120px, 1fr))` }}>
-        <div className="border-b border-slate-200" />
-        {rooms.map((room) => (
-          <div key={room.id} className="border-b border-l border-slate-200 px-2 py-2">
-            <div className="truncate text-sm font-medium text-slate-900">{room.name}</div>
-            <div className="truncate text-xs text-slate-500">{room.capacity} seats</div>
-          </div>
+    <div className="mt-3 grid overflow-hidden rounded-lg border border-slate-200 bg-white" style={{ gridTemplateColumns: `${RAIL_WIDTH_PX}px 1fr` }}>
+      <div className="border-b border-slate-200" />
+      <div className="relative border-b border-slate-200 py-2">
+        {hours.map((hour, i) => (
+          <span
+            key={hour}
+            className="absolute text-xs text-slate-400"
+            style={{ left: `${i * hourWidthPct}%` }}
+          >
+            {hourLabel(hour)}
+          </span>
         ))}
+      </div>
 
-        <div className="relative" style={{ height: dayHeight }}>
-          {hours.map((hour, i) => (
-            <div
-              key={hour}
-              className="absolute inset-x-0 border-t border-slate-100 pr-2 text-right text-xs text-slate-400"
-              style={{ top: i * ROW_HEIGHT_PX }}
-            >
-              {hourLabel(hour)}
-            </div>
-          ))}
-        </div>
-
-        {rooms.map((room) => {
-          const roomReservations = reservationsByRoom.get(room.id) ?? [];
-          const occupiedHours = new Set<number>();
-          for (const reservation of roomReservations) {
-            const startHour = new Date(reservation.startTime).getHours();
-            const endLocal = new Date(reservation.endTime);
-            const endHour = endLocal.getHours() + (endLocal.getMinutes() > 0 ? 1 : 0);
-            for (let h = startHour; h < endHour; h++) {
-              occupiedHours.add(h);
-            }
+      {rooms.map((room) => {
+        const roomReservations = reservationsByRoom.get(room.id) ?? [];
+        const occupiedHours = new Set<number>();
+        for (const reservation of roomReservations) {
+          const startHour = new Date(reservation.startTime).getHours();
+          const endLocal = new Date(reservation.endTime);
+          const endHour = endLocal.getHours() + (endLocal.getMinutes() > 0 ? 1 : 0);
+          for (let h = startHour; h < endHour; h++) {
+            occupiedHours.add(h);
           }
+        }
 
-          return (
-            <div key={room.id} className="relative border-l border-slate-200" style={{ height: dayHeight }}>
+        return (
+          <div key={room.id} className="contents">
+            <div className="flex flex-col justify-center border-t border-slate-100 px-3" style={{ height: ROW_HEIGHT_PX }}>
+              <div className="truncate text-sm font-medium text-slate-900">{room.name}</div>
+              <div className="truncate text-xs text-slate-500">{room.capacity} seats</div>
+            </div>
+
+            <div className="relative border-t border-slate-100" style={{ height: ROW_HEIGHT_PX }}>
               {hours.map((hour, i) => (
                 <button
                   key={hour}
@@ -102,8 +92,8 @@ export function RoomCalendar({
                   disabled={occupiedHours.has(hour)}
                   onClick={() => onSlotClick(room.id, hour)}
                   aria-label={`Book ${room.name} at ${hourLabel(hour)}`}
-                  className="absolute inset-x-0 border-t border-slate-100 enabled:hover:bg-slate-50"
-                  style={{ top: i * ROW_HEIGHT_PX, height: ROW_HEIGHT_PX }}
+                  className="absolute inset-y-0 border-l border-slate-100 enabled:hover:bg-slate-50"
+                  style={{ left: `${i * hourWidthPct}%`, width: `${hourWidthPct}%` }}
                 />
               ))}
 
@@ -112,36 +102,28 @@ export function RoomCalendar({
                 const end = new Date(reservation.endTime);
                 const startFrac = Math.max(start.getHours() + start.getMinutes() / 60, CALENDAR_START_HOUR);
                 const endFrac = Math.min(end.getHours() + end.getMinutes() / 60, CALENDAR_END_HOUR);
-                const top = (startFrac - CALENDAR_START_HOUR) * ROW_HEIGHT_PX;
-                const height = Math.max((endFrac - startFrac) * ROW_HEIGHT_PX - 2, 16);
+                const left = (startFrac - CALENDAR_START_HOUR) * hourWidthPct;
+                const width = Math.max((endFrac - startFrac) * hourWidthPct, 3);
                 const isMine = reservation.userId === currentUserId;
 
                 return (
                   <button
                     key={reservation.id}
                     type="button"
-                    disabled={!isMine || cancellingId === reservation.id}
-                    onClick={() => isMine && onCancel(reservation.id)}
-                    title={
-                      isMine
-                        ? `Your booking, ${start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}–${end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })} — click to cancel`
-                        : `Booked, ${start.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}–${end.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })}`
-                    }
-                    className={`absolute inset-x-1 overflow-hidden rounded px-1.5 py-1 text-left text-xs ${
-                      isMine
-                        ? "cursor-pointer bg-blue-100 text-blue-800 hover:bg-blue-200 disabled:cursor-wait"
-                        : "cursor-default bg-slate-200 text-slate-600"
+                    onClick={() => onBlockClick(reservation)}
+                    className={`absolute inset-y-2 overflow-hidden rounded px-2 text-left text-xs ${
+                      isMine ? "bg-indigo-100 text-indigo-800 hover:bg-indigo-200" : "bg-violet-50 text-violet-700 hover:bg-violet-100"
                     }`}
-                    style={{ top, height }}
+                    style={{ left: `${left}%`, width: `${width}%` }}
                   >
-                    {isMine ? "Your booking" : "Booked"}
+                    {isMine ? "You" : "Booked"}
                   </button>
                 );
               })}
             </div>
-          );
-        })}
-      </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
