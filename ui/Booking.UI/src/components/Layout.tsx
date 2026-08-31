@@ -1,5 +1,6 @@
 import { Link, Outlet } from "react-router-dom";
 import { NotificationBell } from "./NotificationBell";
+import { UserMenu } from "./UserMenu";
 import { ReservationHubProvider } from "../contexts/ReservationHubContext";
 import { isAuthenticated } from "../lib/auth";
 
@@ -11,7 +12,12 @@ export function Layout() {
           <Link to="/" className="text-lg font-semibold text-indigo-700">
             BookingSystem
           </Link>
-          {isAuthenticated() && <NotificationBell />}
+          {isAuthenticated() && (
+            <div className="flex items-center gap-3">
+              <NotificationBell />
+              <UserMenu />
+            </div>
+          )}
         </header>
         <main>
           <Outlet />

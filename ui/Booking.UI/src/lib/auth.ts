@@ -16,11 +16,17 @@ export function isAuthenticated(): boolean {
   return getToken() !== null;
 }
 
-// No dedicated /api/users/me endpoint exists, and login's AuthResponse.userId isn't persisted
-// separately — decode it straight from the token instead of adding either. JwtTokenGenerator
-// issues "sub" (see Booking.Infrastructure/Security/JwtTokenGenerator.cs), same claim the
-// server-side ReservationHubUserIdProvider reads for SignalR's Clients.User(...) targeting.
-export function getCurrentUserId(): string | null {
+interface TokenPayload {
+  sub?: string;
+  unique_name?: string;
+}
+
+// No dedicated /api/users/me endpoint exists, and login's AuthResponse fields (userId,
+// username) aren't persisted separately — decode straight from the token instead of adding
+// either. JwtTokenGenerator issues "sub"/"unique_name" (see
+// Booking.Infrastructure/Security/JwtTokenGenerator.cs); "sub" is also the claim the server-side
+// ReservationHubUserIdProvider reads for SignalR's Clients.User(...) targeting.
+function decodeToken(): TokenPayload | null {
   const token = getToken();
   if (!token) {
     return null;
@@ -28,9 +34,16 @@ export function getCurrentUserId(): string | null {
 
   try {
     const payload = token.split(".")[1];
-    const decoded = JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as { sub?: string };
-    return decoded.sub ?? null;
+    return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/"))) as TokenPayload;
   } catch {
     return null;
   }
+}
+
+export function getCurrentUserId(): string | null {
+  return decodeToken()?.sub ?? null;
+}
+
+export function getCurrentUsername(): string | null {
+  return decodeToken()?.unique_name ?? null;
 }

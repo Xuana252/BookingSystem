@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import { clearToken, getCurrentUserId, isAuthenticated } from "../lib/auth";
+import { Link } from "react-router-dom";
+import { getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
 import { cancelReservation, createReservation, getReservations, getRooms } from "../lib/api";
 import type { Reservation, Room } from "../lib/types";
@@ -29,7 +29,6 @@ function toDatetimeLocalValue(date: Date, hour: number): string {
 }
 
 export function HomePage() {
-  const navigate = useNavigate();
   const authenticated = isAuthenticated();
   const currentUserId = getCurrentUserId();
   const { onRoomAvailabilityChanged } = useReservationHub();
@@ -68,11 +67,6 @@ export function HomePage() {
 
   // Covers changes made from another tab/user too, not just this one's own actions below.
   useEffect(() => onRoomAvailabilityChanged(() => loadData()), [onRoomAvailabilityChanged, loadData]);
-
-  function handleLogout() {
-    clearToken();
-    navigate("/login");
-  }
 
   function openBookingForm(prefillRoomId?: string, prefillHour?: number) {
     setRoomId(prefillRoomId ?? "");
@@ -144,16 +138,6 @@ export function HomePage() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-indigo-700">BookingSystem</h1>
-        <button
-          onClick={handleLogout}
-          className="rounded border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100"
-        >
-          Log out
-        </button>
-      </div>
-
-      <div className="mt-8 flex items-center justify-between">
         <div className="flex items-center gap-1">
           <button
             onClick={() => setSelectedDate((d) => addDays(d, -1))}
