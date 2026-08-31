@@ -64,7 +64,11 @@ builder.Services
             ValidAudience = jwtSettings.Audience,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
-            ValidateLifetime = true
+            ValidateLifetime = true,
+            // JwtTokenGenerator issues a short "role" claim, not the default (long-URI)
+            // ClaimTypes.Role — MapInboundClaims = false below means it isn't auto-remapped, so
+            // [Authorize(Roles = ...)]/User.IsInRole(...) would silently never match without this.
+            RoleClaimType = "role"
         };
     });
 builder.Services.AddAuthorization();

@@ -15,7 +15,7 @@ public class RoomsController(IRoomService roomService) : ControllerBase
         => Ok(await roomService.GetAllAsync(ct));
 
     [HttpPost]
-    [Authorize]
+    [Authorize(Roles = "Admin")]
     public async Task<ActionResult<Room>> Create(CreateRoomRequest request, CancellationToken ct)
     {
         var room = await roomService.CreateAsync(request, ct);

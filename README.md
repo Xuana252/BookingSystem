@@ -44,6 +44,9 @@ dotnet run --project src/Booking.Worker
 
 - API health: `http://localhost:5133/health`
 - Interactive API reference (Scalar, dev only): `http://localhost:5133/scalar/v1`
+- Seeded Admin account (only role allowed to create/manage rooms — self-registration always
+  creates an Employee): username `admin`, password `Admin@12345`. Dev-only credential, not meant
+  to survive past local/demo use.
 
 ### 3) Frontend (UI)
 

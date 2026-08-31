@@ -17,7 +17,11 @@ public class JwtTokenGenerator(JwtSettings settings) : IJwtTokenGenerator
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
             new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
             new Claim(JwtRegisteredClaimNames.Email, user.Email),
-            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
+            // Short claim type, not ClaimTypes.Role — matches "sub" elsewhere in this token,
+            // and Program.cs sets RoleClaimType = "role" so [Authorize(Roles = ...)]/IsInRole
+            // still resolve it correctly despite MapInboundClaims = false leaving it unmapped.
+            new Claim("role", user.Role.ToString())
         };
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Secret));
