@@ -53,15 +53,21 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotC
   return (
     <div className="mt-3 grid overflow-hidden rounded-lg border border-slate-200 bg-white" style={{ gridTemplateColumns: `${RAIL_WIDTH_PX}px 1fr` }}>
       <div className="border-b border-slate-200" />
-      <div className="relative border-b border-slate-200 py-2">
+      <div className="relative border-b border-slate-200" style={{ height: 28 }}>
         {hours.map((hour, i) => (
-          <span
+          // A tick (border-l) at the exact column boundary, with the label offset a couple px
+          // to its right — matches the vertical dividers in the room rows below, so the header
+          // reads as a ruler instead of loosely floating text. Equal-width columns already made
+          // this uniform (verified: every hour is 85.04px apart at 1280px), but without a visible
+          // line to anchor each label, "8AM" vs "12PM" being different lengths made the spacing
+          // look uneven even though the underlying grid wasn't.
+          <div
             key={hour}
-            className="absolute text-xs text-slate-400"
+            className="absolute inset-y-0 border-l border-slate-100 pl-1 pt-1.5 text-xs text-slate-400"
             style={{ left: `${i * hourWidthPct}%` }}
           >
             {hourLabel(hour)}
-          </span>
+          </div>
         ))}
       </div>
 
