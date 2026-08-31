@@ -1,19 +1,29 @@
-import { useCallback, useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { clearToken, getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
 import { cancelReservation, createReservation, getReservations, getRooms } from "../lib/api";
-import { ReservationStatus, type Reservation, type Room } from "../lib/types";
+import type { Reservation, Room } from "../lib/types";
 import { useReservationHub } from "../hooks/useReservationHub";
+import { RoomCalendar } from "../components/RoomCalendar";
 
-function toLocalDisplay(iso: string): string {
-  return new Date(iso).toLocaleString(undefined, {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
+function startOfDay(date: Date): Date {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function addDays(date: Date, days: number): Date {
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function toDatetimeLocalValue(date: Date, hour: number): string {
+  const d = new Date(date);
+  d.setHours(hour, 0, 0, 0);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 export function HomePage() {
@@ -21,11 +31,13 @@ export function HomePage() {
   const authenticated = isAuthenticated();
   const currentUserId = getCurrentUserId();
   const { onRoomAvailabilityChanged } = useReservationHub();
+  const formRef = useRef<HTMLFormElement>(null);
 
   const [rooms, setRooms] = useState<Room[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
 
   const [roomId, setRoomId] = useState("");
   const [startTime, setStartTime] = useState("");
@@ -56,6 +68,14 @@ export function HomePage() {
   function handleLogout() {
     clearToken();
     navigate("/login");
+  }
+
+  function handleSlotClick(clickedRoomId: string, hour: number) {
+    setRoomId(clickedRoomId);
+    setStartTime(toDatetimeLocalValue(selectedDate, hour));
+    setEndTime(toDatetimeLocalValue(selectedDate, hour + 1));
+    setFormError(null);
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
   async function handleBook(event: FormEvent) {
@@ -114,22 +134,11 @@ export function HomePage() {
     );
   }
 
-  const now = Date.now();
-  const upcomingByRoom = new Map<string, Reservation[]>();
-  for (const reservation of reservations) {
-    if (reservation.status !== ReservationStatus.Confirmed || new Date(reservation.endTime).getTime() < now) {
-      continue;
-    }
-    const list = upcomingByRoom.get(reservation.roomId) ?? [];
-    list.push(reservation);
-    upcomingByRoom.set(reservation.roomId, list);
-  }
-  for (const list of upcomingByRoom.values()) {
-    list.sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-  }
+  const dateLabel = selectedDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const isToday = selectedDate.getTime() === startOfDay(new Date()).getTime();
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
+    <div className="mx-auto max-w-5xl px-4 py-10">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-semibold text-slate-900">BookingSystem</h1>
         <button
@@ -140,7 +149,62 @@ export function HomePage() {
         </button>
       </div>
 
-      <form onSubmit={handleBook} className="mt-6 space-y-4 rounded-lg border border-slate-200 bg-white p-6">
+      <div className="mt-8 flex items-center justify-between">
+        <h2 className="text-sm font-semibold text-slate-900">Rooms</h2>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setSelectedDate((d) => addDays(d, -1))}
+            aria-label="Previous day"
+            className="rounded border border-slate-300 px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            ‹
+          </button>
+          <span className="min-w-[9rem] text-center text-sm font-medium text-slate-900">{dateLabel}</span>
+          <button
+            onClick={() => setSelectedDate((d) => addDays(d, 1))}
+            aria-label="Next day"
+            className="rounded border border-slate-300 px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
+          >
+            ›
+          </button>
+          {!isToday && (
+            <button
+              onClick={() => setSelectedDate(startOfDay(new Date()))}
+              className="ml-1 rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+            >
+              Today
+            </button>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-blue-100" /> Your booking
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2.5 w-2.5 rounded-sm bg-slate-200" /> Booked
+        </span>
+        <span>Click an open slot to book it.</span>
+      </div>
+
+      {loadError && <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</p>}
+
+      {isLoading ? (
+        <p className="mt-3 text-sm text-slate-500">Loading...</p>
+      ) : (
+        <RoomCalendar
+          date={selectedDate}
+          rooms={rooms}
+          reservations={reservations}
+          currentUserId={currentUserId}
+          cancellingId={cancellingId}
+          onSlotClick={handleSlotClick}
+          onCancel={handleCancel}
+        />
+      )}
+
+      <form ref={formRef} onSubmit={handleBook} className="mt-8 space-y-4 rounded-lg border border-slate-200 bg-white p-6">
         <h2 className="text-sm font-semibold text-slate-900">Book a room</h2>
 
         {formError && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>}
@@ -205,54 +269,6 @@ export function HomePage() {
           {isSubmitting ? "Booking..." : "Book"}
         </button>
       </form>
-
-      <div className="mt-8">
-        <h2 className="text-sm font-semibold text-slate-900">Rooms</h2>
-
-        {loadError && <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</p>}
-
-        {isLoading ? (
-          <p className="mt-3 text-sm text-slate-500">Loading...</p>
-        ) : rooms.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">No rooms yet.</p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {rooms.map((room) => (
-              <li key={room.id} className="rounded-lg border border-slate-200 bg-white p-4">
-                <div className="flex items-baseline justify-between">
-                  <span className="font-medium text-slate-900">{room.name}</span>
-                  <span className="text-sm text-slate-500">
-                    {room.location} · {room.capacity} seats
-                  </span>
-                </div>
-
-                <ul className="mt-2 space-y-1">
-                  {(upcomingByRoom.get(room.id) ?? []).length === 0 ? (
-                    <li className="text-sm text-slate-400">No upcoming reservations.</li>
-                  ) : (
-                    upcomingByRoom.get(room.id)!.map((reservation) => (
-                      <li key={reservation.id} className="flex items-center justify-between text-sm text-slate-600">
-                        <span>
-                          {toLocalDisplay(reservation.startTime)} – {toLocalDisplay(reservation.endTime)}
-                        </span>
-                        {reservation.userId === currentUserId && (
-                          <button
-                            onClick={() => handleCancel(reservation.id)}
-                            disabled={cancellingId === reservation.id}
-                            className="text-xs font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
-                          >
-                            {cancellingId === reservation.id ? "Cancelling..." : "Cancel"}
-                          </button>
-                        )}
-                      </li>
-                    ))
-                  )}
-                </ul>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </div>
   );
 }
