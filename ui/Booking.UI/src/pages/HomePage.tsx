@@ -4,22 +4,15 @@ import { getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
 import { cancelReservation, createReservation, getReservations, getRooms } from "../lib/api";
 import type { Reservation, Room } from "../lib/types";
+import { addDays, startOfDay } from "../lib/dates";
 import { useReservationHub } from "../hooks/useReservationHub";
 import { RoomCalendar } from "../components/RoomCalendar";
+import { MonthCalendar } from "../components/MonthCalendar";
+import { StatsPanel } from "../components/StatsPanel";
 import { BookingFormModal } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
 
-function startOfDay(date: Date): Date {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  return d;
-}
-
-function addDays(date: Date, days: number): Date {
-  const d = new Date(date);
-  d.setDate(d.getDate() + days);
-  return d;
-}
+type ViewMode = "day" | "month";
 
 function toDatetimeLocalValue(date: Date, hour: number): string {
   const d = new Date(date);
@@ -38,6 +31,7 @@ export function HomePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+  const [viewMode, setViewMode] = useState<ViewMode>("day");
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [roomId, setRoomId] = useState("");
@@ -74,6 +68,11 @@ export function HomePage() {
     setEndTime(prefillHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillHour + 1) : "");
     setFormError(null);
     setIsFormOpen(true);
+  }
+
+  function handleSelectMonthDay(date: Date) {
+    setSelectedDate(startOfDay(date));
+    setViewMode("day");
   }
 
   async function handleBook(event: FormEvent) {
@@ -132,24 +131,27 @@ export function HomePage() {
     );
   }
 
-  const dateLabel = selectedDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" });
+  const dateLabel =
+    viewMode === "day"
+      ? selectedDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+      : selectedDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const isToday = selectedDate.getTime() === startOfDay(new Date()).getTime();
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10">
-      <div className="flex items-center justify-between">
+    <div className="mx-auto max-w-7xl px-4 py-10">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1">
           <button
-            onClick={() => setSelectedDate((d) => addDays(d, -1))}
-            aria-label="Previous day"
+            onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? -1 : -30))}
+            aria-label="Previous"
             className="rounded border border-slate-300 px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
           >
             ‹
           </button>
           <span className="min-w-[9rem] text-center text-sm font-medium text-slate-900">{dateLabel}</span>
           <button
-            onClick={() => setSelectedDate((d) => addDays(d, 1))}
-            aria-label="Next day"
+            onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? 1 : 30))}
+            aria-label="Next"
             className="rounded border border-slate-300 px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
           >
             ›
@@ -162,6 +164,20 @@ export function HomePage() {
               Today
             </button>
           )}
+
+          <div className="ml-3 flex overflow-hidden rounded border border-slate-300">
+            {(["day", "month"] as const).map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`px-3 py-1 text-xs font-medium capitalize ${
+                  viewMode === mode ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100"
+                }`}
+              >
+                {mode}
+              </button>
+            ))}
+          </div>
         </div>
 
         <button
@@ -179,23 +195,31 @@ export function HomePage() {
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm bg-violet-50" /> Booked
         </span>
-        <span>Click an open slot to book it, or a booking to see details.</span>
+        <span>{viewMode === "day" ? "Click an open slot to book it, or a booking to see details." : "Click a day to view it."}</span>
       </div>
 
       {loadError && <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</p>}
 
-      {isLoading ? (
-        <p className="mt-3 text-sm text-slate-500">Loading...</p>
-      ) : (
-        <RoomCalendar
-          date={selectedDate}
-          rooms={rooms}
-          reservations={reservations}
-          currentUserId={currentUserId}
-          onSlotClick={(clickedRoomId, hour) => openBookingForm(clickedRoomId, hour)}
-          onBlockClick={setSelectedReservation}
-        />
-      )}
+      <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-start">
+        <div className="min-w-0 flex-1">
+          {isLoading ? (
+            <p className="text-sm text-slate-500">Loading...</p>
+          ) : viewMode === "day" ? (
+            <RoomCalendar
+              date={selectedDate}
+              rooms={rooms}
+              reservations={reservations}
+              currentUserId={currentUserId}
+              onSlotClick={(clickedRoomId, hour) => openBookingForm(clickedRoomId, hour)}
+              onBlockClick={setSelectedReservation}
+            />
+          ) : (
+            <MonthCalendar month={selectedDate} rooms={rooms} reservations={reservations} onSelectDay={handleSelectMonthDay} />
+          )}
+        </div>
+
+        {!isLoading && <StatsPanel rooms={rooms} reservations={reservations} currentUserId={currentUserId} />}
+      </div>
 
       {isFormOpen && (
         <BookingFormModal

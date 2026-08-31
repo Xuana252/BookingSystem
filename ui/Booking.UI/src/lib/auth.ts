@@ -16,9 +16,12 @@ export function isAuthenticated(): boolean {
   return getToken() !== null;
 }
 
+export type UserRole = "Employee" | "Admin";
+
 interface TokenPayload {
   sub?: string;
   unique_name?: string;
+  role?: UserRole;
 }
 
 // No dedicated /api/users/me endpoint exists, and login's AuthResponse fields (userId,
@@ -46,4 +49,12 @@ export function getCurrentUserId(): string | null {
 
 export function getCurrentUsername(): string | null {
   return decodeToken()?.unique_name ?? null;
+}
+
+// Mirrors JwtTokenGenerator's "role" claim — see Booking.Api/Program.cs's
+// RoleClaimType = "role" for why it's not the default ClaimTypes.Role. This is a UX
+// convenience only (hides the Create Room nav item for non-admins); the Api enforces the real
+// boundary via [Authorize(Roles = "Admin")] regardless of what the UI shows.
+export function isAdmin(): boolean {
+  return decodeToken()?.role === "Admin";
 }

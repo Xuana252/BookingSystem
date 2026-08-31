@@ -7,7 +7,15 @@ export interface CreateReservationRequest {
   endTime: string;
 }
 
+export interface CreateRoomRequest {
+  name: string;
+  location: string;
+  capacity: number;
+}
+
 export const getRooms = () => apiClient.get<Room[]>("/rooms");
+
+export const createRoom = (request: CreateRoomRequest) => apiClient.post<Room>("/rooms", request);
 
 export const getReservations = () => apiClient.get<Reservation[]>("/reservations");
 

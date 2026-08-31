@@ -1,4 +1,5 @@
 import { ReservationStatus, type Reservation, type Room } from "../lib/types";
+import { isSameLocalDay } from "../lib/dates";
 
 // Mirrors ReservationRuleSettings' defaults (Booking.Api/appsettings.json: 08:00-18:00) — not
 // fetched from the Api, since nothing exposes business-hours config over HTTP yet. Worth
@@ -8,10 +9,6 @@ const CALENDAR_START_HOUR = 8;
 const CALENDAR_END_HOUR = 18;
 const ROW_HEIGHT_PX = 56;
 const RAIL_WIDTH_PX = 140;
-
-function isSameLocalDay(a: Date, b: Date): boolean {
-  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
-}
 
 function hourLabel(hour: number): string {
   const period = hour < 12 ? "AM" : "PM";

@@ -1,6 +1,7 @@
 import { Link, Outlet } from "react-router-dom";
 import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
+import { Sidebar } from "./Sidebar";
 import { ReservationHubProvider } from "../contexts/ReservationHubContext";
 import { isAuthenticated } from "../lib/auth";
 
@@ -19,9 +20,12 @@ export function Layout() {
             </div>
           )}
         </header>
-        <main>
-          <Outlet />
-        </main>
+        <div className="flex">
+          {isAuthenticated() && <Sidebar />}
+          <main className="min-w-0 flex-1">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </ReservationHubProvider>
   );
