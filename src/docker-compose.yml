@@ -178,16 +178,17 @@ services:
       fluent-bit:
         condition: service_started
 
-  # Built static bundle served by nginx — not something the browser reaches over the compose
-  # network, so VITE_API_BASE_URL (baked in at build time) points at api's host-published port,
-  # same as this service's own published port below.
+  # Built static bundle served by nginx, which also reverse-proxies /api and /hubs to the api
+  # service (see ui/Booking.UI/nginx.conf) — VITE_API_BASE_URL is relative ("/api", the
+  # Dockerfile's default), so the browser only ever talks to this container's own origin.
   ui:
     build:
       context: ../ui/Booking.UI
-      args:
-        VITE_API_BASE_URL: http://localhost:8080/api
     container_name: local-ui
     restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_started
     ports:
       - "5173:80"
 

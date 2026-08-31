@@ -219,7 +219,12 @@ and how escalation works. Both need a signed-up external SaaS account to genuine
    as the Api's existing `POST /api/reservations` — no hold/checkout state, per the Phase 2
    decision to drop `BookingHold`), live availability updates and notification feed via
    `@microsoft/signalr`, consuming the Api.
-4. **Nginx reverse proxy** — only if actually exposing a local endpoint; skip otherwise.
+4. **Nginx reverse proxy** — `ui`'s existing nginx (previously just a static file server) now
+   also proxies `/api/*` and `/hubs/*` to the `api` container, so the browser talks to one
+   origin instead of two. `VITE_API_BASE_URL` is now the relative `/api`, not an absolute
+   `http://localhost:8080/api`. The Api's own CORS policy stays configured — still needed for
+   `npm run dev` (Vite dev server talking directly to a differently-ported Api, no proxy in
+   front of it) — this only removes the *need* for CORS on the dockerized path, not the config.
 5. Remaining AWS reading (CloudWatch, EC2, VPC, Codeship) — notes only, same as Phase 3.
 6. Final backend/frontend polish so the whole stack demos cleanly via `docker compose up`.
 
