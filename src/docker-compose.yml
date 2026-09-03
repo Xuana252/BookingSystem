@@ -75,6 +75,16 @@ services:
       - SPLUNK_PASSWORD=ChangeMe123!
       - SPLUNK_HEC_TOKEN=00000000-0000-0000-0000-000000000000
       - SPLUNK_HEC_SSL=False
+    # The splunk/splunk image declares /opt/splunk/etc and /opt/splunk/var as VOLUMEs
+    # internally. Without an explicit mapping here, Docker silently creates a new anonymous
+    # volume for each on every container recreation instead of reusing one — orphaned junk that
+    # never gets cleaned up (this is exactly what the dozens of unnamed multi-GB volumes turned
+    # out to be). Only /var (indexed data, KV store) is worth naming — /etc is small config that
+    # SPLUNK_HEC_TOKEN et al. regenerate identically from the environment above anyway. As a
+    # side effect, Splunk's indexed logs now actually survive a container recreation instead of
+    # starting fresh every time.
+    volumes:
+      - splunk_var:/opt/splunk/var
     ports:
       - "8000:8000" # web UI
       - "8088:8088" # HTTP Event Collector
@@ -200,3 +210,4 @@ services:
 
 volumes:
   postgres_data:
+  splunk_var:
