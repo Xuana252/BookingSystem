@@ -1,6 +1,7 @@
 import type { FormEvent } from "react";
 import { Modal } from "./Modal";
 import type { Room } from "../lib/types";
+import { BUSINESS_HOURS_END_TIME, BUSINESS_HOURS_START_TIME } from "../lib/dates";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -9,11 +10,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 interface BookingFormModalProps {
   rooms: Room[];
   roomId: string;
+  date: string;
+  /** HH:mm, 24-hour — the format <input type="time"> reads/writes. */
   startTime: string;
   endTime: string;
   formError: string | null;
   isSubmitting: boolean;
   onRoomIdChange: (value: string) => void;
+  onDateChange: (value: string) => void;
   onStartTimeChange: (value: string) => void;
   onEndTimeChange: (value: string) => void;
   onSubmit: (event: FormEvent) => void;
@@ -23,11 +27,13 @@ interface BookingFormModalProps {
 export function BookingFormModal({
   rooms,
   roomId,
+  date,
   startTime,
   endTime,
   formError,
   isSubmitting,
   onRoomIdChange,
+  onDateChange,
   onStartTimeChange,
   onEndTimeChange,
   onSubmit,
@@ -69,26 +75,45 @@ export function BookingFormModal({
           </Select>
         </div>
 
+        <div>
+          <Label htmlFor="date">Date</Label>
+          <Input
+            id="date"
+            type="date"
+            value={date}
+            onChange={(event) => onDateChange(event.target.value)}
+            className="mt-1"
+            required
+          />
+        </div>
+
+        {/* Every booking is confined to a single business day (08:00-18:00, see lib/dates.ts),
+            so there's one date picker above rather than separate start/end date+time fields —
+            just a plain HH:mm time for each end, clamped to business hours via min/max. */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="startTime">Start</Label>
+            <Label htmlFor="startTime">From</Label>
             <Input
               id="startTime"
-              type="datetime-local"
+              type="time"
               value={startTime}
               onChange={(event) => onStartTimeChange(event.target.value)}
+              min={BUSINESS_HOURS_START_TIME}
+              max={BUSINESS_HOURS_END_TIME}
               className="mt-1"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="endTime">End</Label>
+            <Label htmlFor="endTime">To</Label>
             <Input
               id="endTime"
-              type="datetime-local"
+              type="time"
               value={endTime}
               onChange={(event) => onEndTimeChange(event.target.value)}
+              min={startTime || BUSINESS_HOURS_START_TIME}
+              max={BUSINESS_HOURS_END_TIME}
               className="mt-1"
               required
             />

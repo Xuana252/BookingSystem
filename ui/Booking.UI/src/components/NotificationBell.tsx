@@ -10,7 +10,7 @@ export function NotificationBell() {
       <button
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Notifications"
-        className="relative rounded p-2 text-slate-600 hover:bg-slate-100"
+        className="relative rounded p-2 text-white hover:bg-white/10"
       >
         🔔
         {notifications.length > 0 && (

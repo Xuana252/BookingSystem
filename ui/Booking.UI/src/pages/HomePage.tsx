@@ -4,7 +4,7 @@ import { getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
 import { cancelReservation, createReservation, getReservations, getRooms } from "../lib/api";
 import type { Reservation, Room } from "../lib/types";
-import { addDays, startOfDay } from "../lib/dates";
+import { addDays, combineDateAndTime, hourToTimeValue, startOfDay, toDateInputValue } from "../lib/dates";
 import { useReservationHub } from "../hooks/useReservationHub";
 import { RoomCalendar } from "../components/RoomCalendar";
 import { MonthCalendar } from "../components/MonthCalendar";
@@ -13,13 +13,6 @@ import { BookingFormModal } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
 
 type ViewMode = "day" | "month";
-
-function toDatetimeLocalValue(date: Date, hour: number): string {
-  const d = new Date(date);
-  d.setHours(hour, 0, 0, 0);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function HomePage() {
   const authenticated = isAuthenticated();
@@ -35,6 +28,7 @@ export function HomePage() {
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [roomId, setRoomId] = useState("");
+  const [bookingDate, setBookingDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -62,14 +56,24 @@ export function HomePage() {
   // Covers changes made from another tab/user too, not just this one's own actions below.
   useEffect(() => onRoomAvailabilityChanged(() => loadData()), [onRoomAvailabilityChanged, loadData]);
 
-  // prefillEndHour is exclusive (one past the last selected hour) — a plain 1-hour pick from
-  // RoomCalendar's click-or-drag interaction passes prefillStartHour + 1 here.
+  // prefillStartHour/prefillEndHour come from RoomCalendar's click-or-drag interaction on its
+  // hourly grid — converted straight to HH:mm here since that's just a whole-hour clock time.
+  // Both default to whatever day is currently in view, since every booking is confined to a
+  // single day anyway.
   function openBookingForm(prefillRoomId?: string, prefillStartHour?: number, prefillEndHour?: number) {
     setRoomId(prefillRoomId ?? "");
-    setStartTime(prefillStartHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillStartHour) : "");
-    setEndTime(prefillEndHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillEndHour) : "");
+    setBookingDate(toDateInputValue(selectedDate));
+    setStartTime(prefillStartHour !== undefined ? hourToTimeValue(prefillStartHour) : "");
+    setEndTime(prefillEndHour !== undefined ? hourToTimeValue(prefillEndHour) : "");
     setFormError(null);
     setIsFormOpen(true);
+  }
+
+  // A "From" change that leaves the current "To" no longer after it (or equal — an empty range)
+  // clears "To" rather than silently keeping an invalid range around.
+  function handleStartTimeChange(value: string) {
+    setStartTime(value);
+    setEndTime((current) => (current && current > value ? current : ""));
   }
 
   function handleSelectMonthDay(date: Date) {
@@ -81,20 +85,21 @@ export function HomePage() {
     event.preventDefault();
     setFormError(null);
 
-    if (!roomId || !startTime || !endTime) {
-      setFormError("Pick a room, start time, and end time.");
+    if (!roomId || !bookingDate || !startTime || !endTime) {
+      setFormError("Pick a room, date, and time range.");
+      return;
+    }
+    if (endTime <= startTime) {
+      setFormError("End time must be after start time.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      // datetime-local values have no timezone — the Date constructor treats them as the
-      // browser's local time, so this converts to the correct UTC instant the Api expects
-      // (BookingRuleEngine re-interprets it in the configured business timezone).
       await createReservation({
         roomId,
-        startTime: new Date(startTime).toISOString(),
-        endTime: new Date(endTime).toISOString(),
+        startTime: combineDateAndTime(bookingDate, startTime).toISOString(),
+        endTime: combineDateAndTime(bookingDate, endTime).toISOString(),
       });
       setIsFormOpen(false);
       await loadData();
@@ -120,7 +125,7 @@ export function HomePage() {
 
   if (!authenticated) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-10">
+      <>
         <h1 className="text-2xl font-semibold text-indigo-700">BookingSystem</h1>
         <p className="mt-2 text-slate-600">Sign in to view room availability and book a time slot.</p>
         <Link
@@ -129,7 +134,7 @@ export function HomePage() {
         >
           Sign in
         </Link>
-      </div>
+      </>
     );
   }
 
@@ -140,7 +145,7 @@ export function HomePage() {
   const isToday = selectedDate.getTime() === startOfDay(new Date()).getTime();
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-10">
+    <>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-1">
           <button
@@ -192,10 +197,10 @@ export function HomePage() {
 
       <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-indigo-100" /> Your booking
+          <span className="h-2.5 w-2.5 rounded-sm bg-indigo-500" /> Your booking
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-violet-50" /> Booked
+          <span className="h-2.5 w-2.5 rounded-sm bg-red-500" /> Booked
         </span>
         <span>{viewMode === "day" ? "Click an open slot to book it, or a booking to see details." : "Click a day to view it."}</span>
       </div>
@@ -227,12 +232,14 @@ export function HomePage() {
         <BookingFormModal
           rooms={rooms}
           roomId={roomId}
+          date={bookingDate}
           startTime={startTime}
           endTime={endTime}
           formError={formError}
           isSubmitting={isSubmitting}
           onRoomIdChange={setRoomId}
-          onStartTimeChange={setStartTime}
+          onDateChange={setBookingDate}
+          onStartTimeChange={handleStartTimeChange}
           onEndTimeChange={setEndTime}
           onSubmit={handleBook}
           onClose={() => setIsFormOpen(false)}
@@ -249,6 +256,6 @@ export function HomePage() {
           onClose={() => setSelectedReservation(null)}
         />
       )}
-    </div>
+    </>
   );
 }

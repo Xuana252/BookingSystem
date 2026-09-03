@@ -1,13 +1,9 @@
 import { useEffect, useState } from "react";
 import { ReservationStatus, type Reservation, type Room } from "../lib/types";
-import { isSameLocalDay } from "../lib/dates";
+import { BUSINESS_HOURS_END, BUSINESS_HOURS_START, hourLabel, isSameLocalDay } from "../lib/dates";
 
-// Mirrors ReservationRuleSettings' defaults (Booking.Api/appsettings.json: 08:00-18:00) — not
-// fetched from the Api, since nothing exposes business-hours config over HTTP yet. Worth
-// revisiting if that setting ever becomes configurable per-deployment rather than a fixed
-// default.
-const CALENDAR_START_HOUR = 8;
-const CALENDAR_END_HOUR = 18;
+const CALENDAR_START_HOUR = BUSINESS_HOURS_START;
+const CALENDAR_END_HOUR = BUSINESS_HOURS_END;
 const ROW_HEIGHT_PX = 56;
 const RAIL_WIDTH_PX = 140;
 // A fixed min-width per hour column, not a percentage of the container — percentages on
@@ -16,12 +12,6 @@ const RAIL_WIDTH_PX = 140;
 // horizontal scrolling. Fixed px cells give the row a genuine content width wider than the
 // container once there are enough hours, which is what actually makes overflow-x scroll.
 const HOUR_WIDTH_PX = 90;
-
-function hourLabel(hour: number): string {
-  const period = hour < 12 ? "AM" : "PM";
-  const displayHour = hour % 12 === 0 ? 12 : hour % 12;
-  return `${displayHour}${period}`;
-}
 
 // Walks from anchorHour toward targetHour and stops at the first occupied hour it meets — so
 // dragging a selection can never span across an existing booking. Returns the far end of the
@@ -191,14 +181,14 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
                       type="button"
                       onClick={() => onBlockClick(reservation)}
                       title={reservation.username}
-                      className={`absolute inset-y-2 flex items-center gap-1 overflow-hidden rounded px-1.5 text-left text-xs ${
-                        isMine ? "bg-indigo-100 text-indigo-800 hover:bg-indigo-200" : "bg-violet-50 text-violet-700 hover:bg-violet-100"
+                      className={`absolute inset-y-2 flex items-center gap-1 overflow-hidden rounded px-1.5 text-left text-xs font-medium text-white ${
+                        isMine ? "bg-indigo-500 hover:bg-indigo-600" : "bg-red-500 hover:bg-red-600"
                       }`}
                       style={{ left, width }}
                     >
                       <span
-                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-medium ${
-                          isMine ? "bg-indigo-200 text-indigo-900" : "bg-violet-200 text-violet-900"
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-medium text-white ${
+                          isMine ? "bg-indigo-700" : "bg-red-700"
                         }`}
                         aria-hidden="true"
                       >

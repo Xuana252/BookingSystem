@@ -43,7 +43,7 @@ export function CreateRoomPage() {
   }
 
   return (
-    <div className="mx-auto max-w-lg px-4 py-10">
+    <div className="mx-auto max-w-lg">
       <h1 className="text-xl font-semibold text-slate-900">Create room</h1>
 
       <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-lg border border-slate-200 bg-white p-6">

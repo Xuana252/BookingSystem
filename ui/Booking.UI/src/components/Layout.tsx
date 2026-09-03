@@ -8,9 +8,9 @@ import { isAuthenticated } from "../lib/auth";
 export function Layout() {
   return (
     <ReservationHubProvider>
-      <div className="min-h-screen bg-slate-50">
-        <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-4">
-          <Link to="/" className="text-lg font-semibold text-indigo-700">
+      <div className="h-screen max-h-screen bg-slate-50 overflow-hidden grid grid-rows-[auto_1fr]">
+        <header className="flex items-center justify-between border-b border-indigo-700 bg-indigo-600 px-6 py-2">
+          <Link to="/" className="text-lg font-semibold text-white">
             BookingSystem
           </Link>
           {isAuthenticated() && (
@@ -20,9 +20,9 @@ export function Layout() {
             </div>
           )}
         </header>
-        <div className="flex">
+        <div className="flex overflow-hidden">
           {isAuthenticated() && <Sidebar />}
-          <main className="min-w-0 flex-1">
+          <main className="min-w-0 flex-1 overflow-auto mx-auto max-w-[1980px] px-4 py-4">
             <Outlet />
           </main>
         </div>

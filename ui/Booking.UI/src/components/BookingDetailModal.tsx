@@ -32,8 +32,8 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
       </p>
       <p className="mt-2 flex items-center gap-2 text-sm text-slate-600">
         <span
-          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
-            isMine ? "bg-indigo-100 text-indigo-800" : "bg-violet-100 text-violet-800"
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium text-white ${
+            isMine ? "bg-indigo-500" : "bg-red-500"
           }`}
           aria-hidden="true"
         >

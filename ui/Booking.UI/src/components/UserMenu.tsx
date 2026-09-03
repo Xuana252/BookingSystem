@@ -17,7 +17,7 @@ export function UserMenu() {
       <button
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Account menu"
-        className="flex h-8 w-8 items-center justify-center rounded-full bg-indigo-100 text-sm font-medium text-indigo-700 hover:bg-indigo-200"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-sm font-medium text-indigo-700 hover:bg-indigo-50"
       >
         {username ? username[0]!.toUpperCase() : "?"}
       </button>
