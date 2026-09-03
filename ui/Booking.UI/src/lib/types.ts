@@ -25,11 +25,13 @@ export const ReservationStatus = {
 } as const;
 export type ReservationStatus = (typeof ReservationStatus)[keyof typeof ReservationStatus];
 
-// Mirrors Booking.Domain/Entities/Reservation.cs.
+// Mirrors Booking.Application/DTOs/ReservationDTOs.cs's ReservationResponse (not the raw
+// Reservation entity — this carries the booker's Username too, looked up server-side).
 export interface Reservation {
   id: string;
   roomId: string;
   userId: string;
+  username: string;
   startTime: string;
   endTime: string;
   status: ReservationStatus;

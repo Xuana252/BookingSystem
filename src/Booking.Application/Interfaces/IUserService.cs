@@ -1,8 +1,8 @@
-using Booking.Domain.Entities;
+using Booking.Application.DTOs;
 
 namespace Booking.Application.Interfaces;
 
 public interface IUserService
 {
-    Task<IReadOnlyList<User>> GetAllAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<UserSummaryResponse>> GetAllAsync(CancellationToken ct = default);
 }

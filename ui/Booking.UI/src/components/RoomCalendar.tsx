@@ -114,12 +114,21 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotC
                     key={reservation.id}
                     type="button"
                     onClick={() => onBlockClick(reservation)}
-                    className={`absolute inset-y-2 overflow-hidden rounded px-2 text-left text-xs ${
+                    title={reservation.username}
+                    className={`absolute inset-y-2 flex items-center gap-1 overflow-hidden rounded px-1.5 text-left text-xs ${
                       isMine ? "bg-indigo-100 text-indigo-800 hover:bg-indigo-200" : "bg-violet-50 text-violet-700 hover:bg-violet-100"
                     }`}
                     style={{ left: `${left}%`, width: `${width}%` }}
                   >
-                    {isMine ? "You" : "Booked"}
+                    <span
+                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-medium ${
+                        isMine ? "bg-indigo-200 text-indigo-900" : "bg-violet-200 text-violet-900"
+                      }`}
+                      aria-hidden="true"
+                    >
+                      {reservation.username[0]?.toUpperCase() ?? "?"}
+                    </span>
+                    <span className="truncate">{isMine ? "You" : reservation.username}</span>
                   </button>
                 );
               })}

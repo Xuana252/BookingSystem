@@ -30,7 +30,17 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
       <p className="text-sm text-slate-600">
         {formatTime(reservation.startTime)} – {formatTime(reservation.endTime)}
       </p>
-      <p className="mt-2 text-sm text-slate-600">{isMine ? "Booked by you" : "Booked"}</p>
+      <p className="mt-2 flex items-center gap-2 text-sm text-slate-600">
+        <span
+          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+            isMine ? "bg-indigo-100 text-indigo-800" : "bg-violet-100 text-violet-800"
+          }`}
+          aria-hidden="true"
+        >
+          {reservation.username[0]?.toUpperCase() ?? "?"}
+        </span>
+        {isMine ? "Booked by you" : `Booked by ${reservation.username}`}
+      </p>
 
       {isMine && (
         <button

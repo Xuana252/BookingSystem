@@ -13,16 +13,17 @@ public class UserServiceTests
     private UserService CreateSut() => new(_users.Object);
 
     [Fact]
-    public async Task GetAllAsync_DelegatesToRepository()
+    public async Task GetAllAsync_ProjectsIdAndUsernameOnly()
     {
         // Arrange
-        var expected = new List<User> { new() { Username = "alice" } };
-        _users.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(expected);
+        var user = new User { Username = "alice", Email = "alice@example.com", PasswordHash = "hashed-password" };
+        _users.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([user]);
 
         // Act
         var result = await CreateSut().GetAllAsync();
 
-        // Assert
-        result.Should().BeEquivalentTo(expected);
+        // Assert — the whole point of UserSummaryResponse is that it *can't* carry PasswordHash/Email,
+        // the compiler enforces that; this just confirms Id/Username actually made it through.
+        result.Should().ContainSingle().Which.Should().BeEquivalentTo(new { user.Id, user.Username });
     }
 }

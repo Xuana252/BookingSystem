@@ -9,15 +9,25 @@ namespace Booking.Application.Services;
 
 public class ReservationService(
     IReservationRepository reservations,
+    IUserRepository users,
     IEventPublisher eventPublisher,
     IBookingRuleEngine ruleEngine,
     ICorrelationIdAccessor correlationIdAccessor,
     IRealtimeNotifier realtimeNotifier) : IReservationService
 {
-    public Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
-        => reservations.GetAllAsync(ct);
+    public async Task<IReadOnlyList<ReservationResponse>> GetAllAsync(CancellationToken ct = default)
+    {
+        var all = await reservations.GetAllAsync(ct);
 
-    public async Task<Reservation> CreateAsync(CreateReservationRequest request, Guid userId, CancellationToken ct = default)
+        // One GetAllAsync for the whole list rather than a lookup per reservation — avoids N+1
+        // against the Users table. Fine at this project's scale; would need revisiting (a batched
+        // GetByIdsAsync, say) if the user table ever got large.
+        var usernameById = (await users.GetAllAsync(ct)).ToDictionary(u => u.Id, u => u.Username);
+
+        return all.Select(r => ToResponse(r, usernameById.GetValueOrDefault(r.UserId, "Unknown"))).ToList();
+    }
+
+    public async Task<ReservationResponse> CreateAsync(CreateReservationRequest request, Guid userId, CancellationToken ct = default)
     {
         if (!Reservation.IsValidTimeRange(request.StartTime, request.EndTime))
         {
@@ -48,7 +58,8 @@ public class ReservationService(
         await eventPublisher.PublishAsync(envelope, ct);
         await realtimeNotifier.RoomAvailabilityChangedAsync(reservation.RoomId, ct);
 
-        return reservation;
+        var user = await users.GetByIdAsync(userId, ct);
+        return ToResponse(reservation, user?.Username ?? "Unknown");
     }
 
     public async Task CancelAsync(Guid reservationId, Guid userId, CancellationToken ct = default)
@@ -79,4 +90,14 @@ public class ReservationService(
         await eventPublisher.PublishAsync(envelope, ct);
         await realtimeNotifier.RoomAvailabilityChangedAsync(reservation.RoomId, ct);
     }
+
+    private static ReservationResponse ToResponse(Reservation reservation, string username) => new(
+        reservation.Id,
+        reservation.RoomId,
+        reservation.UserId,
+        username,
+        reservation.StartTime,
+        reservation.EndTime,
+        reservation.Status,
+        reservation.CreatedAt);
 }

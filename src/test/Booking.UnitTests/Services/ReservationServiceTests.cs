@@ -11,22 +11,27 @@ namespace Booking.UnitTests.Services;
 public class ReservationServiceTests
 {
     private readonly Mock<IReservationRepository> _reservations = new();
+    private readonly Mock<IUserRepository> _users = new();
     private readonly Mock<IEventPublisher> _eventPublisher = new();
     private readonly Mock<IBookingRuleEngine> _ruleEngine = new();
     private readonly Mock<ICorrelationIdAccessor> _correlationIdAccessor = new();
     private readonly Mock<IRealtimeNotifier> _realtimeNotifier = new();
 
     private const string TestCorrelationId = "test-correlation-id";
+    private const string TestUsername = "alice";
 
     public ReservationServiceTests()
     {
         _reservations.Setup(r => r.GetByRoomIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<Reservation>());
         _correlationIdAccessor.Setup(c => c.CorrelationId).Returns(TestCorrelationId);
+        _users.Setup(u => u.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync((Guid id, CancellationToken _) => new User { Id = id, Username = TestUsername });
+        _users.Setup(u => u.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new List<User>());
     }
 
     private ReservationService CreateSut() => new(
-        _reservations.Object, _eventPublisher.Object, _ruleEngine.Object, _correlationIdAccessor.Object, _realtimeNotifier.Object);
+        _reservations.Object, _users.Object, _eventPublisher.Object, _ruleEngine.Object, _correlationIdAccessor.Object, _realtimeNotifier.Object);
 
     private static CreateReservationRequest ValidRequest() => new(
         RoomId: Guid.NewGuid(),
@@ -34,17 +39,38 @@ public class ReservationServiceTests
         EndTime: new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
 
     [Fact]
-    public async Task GetAllAsync_DelegatesToRepository()
+    public async Task GetAllAsync_ProjectsReservationsWithBookerUsername()
     {
         // Arrange
-        var expected = new List<Reservation> { new() };
-        _reservations.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(expected);
+        var user = new User { Username = TestUsername };
+        var reservation = new Reservation { UserId = user.Id };
+        _reservations.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        _users.Setup(u => u.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([user]);
 
         // Act
         var result = await CreateSut().GetAllAsync();
 
         // Assert
-        result.Should().BeEquivalentTo(expected);
+        var response = result.Should().ContainSingle().Subject;
+        response.Id.Should().Be(reservation.Id);
+        response.RoomId.Should().Be(reservation.RoomId);
+        response.UserId.Should().Be(user.Id);
+        response.Username.Should().Be(TestUsername);
+    }
+
+    [Fact]
+    public async Task GetAllAsync_ReservationsUserNoLongerFound_UsernameFallsBackToUnknown()
+    {
+        // Arrange
+        var reservation = new Reservation { UserId = Guid.NewGuid() };
+        _reservations.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([reservation]);
+        _users.Setup(u => u.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([]);
+
+        // Act
+        var result = await CreateSut().GetAllAsync();
+
+        // Assert
+        result.Should().ContainSingle().Which.Username.Should().Be("Unknown");
     }
 
     [Fact]
@@ -62,8 +88,11 @@ public class ReservationServiceTests
         reservation.UserId.Should().Be(userId);
         reservation.StartTime.Should().Be(request.StartTime);
         reservation.EndTime.Should().Be(request.EndTime);
+        reservation.Username.Should().Be(TestUsername);
 
-        _reservations.Verify(r => r.AddAsync(It.Is<Reservation>(x => x == reservation), It.IsAny<CancellationToken>()), Times.Once);
+        _reservations.Verify(r => r.AddAsync(
+            It.Is<Reservation>(x => x.Id == reservation.Id && x.RoomId == request.RoomId && x.UserId == userId),
+            It.IsAny<CancellationToken>()), Times.Once);
         _reservations.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
         _eventPublisher.Verify(p => p.PublishAsync(
             It.Is<EventEnvelope>(e => e.EventType == EventTypes.ReservationCreated && e.Source == "Booking.Api"
