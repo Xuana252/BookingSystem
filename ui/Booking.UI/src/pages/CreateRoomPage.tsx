@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { isAdmin } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
 import { createRoom } from "../lib/api";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 
 export function CreateRoomPage() {
   const navigate = useNavigate();
@@ -47,53 +50,43 @@ export function CreateRoomPage() {
         {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
         <div>
-          <label htmlFor="name" className="block text-sm font-medium text-slate-700">
-            Name
-          </label>
-          <input
+          <Label htmlFor="name">Name</Label>
+          <Input
             id="name"
             value={name}
             onChange={(event) => setName(event.target.value)}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="mt-1"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="location" className="block text-sm font-medium text-slate-700">
-            Location
-          </label>
-          <input
+          <Label htmlFor="location">Location</Label>
+          <Input
             id="location"
             value={location}
             onChange={(event) => setLocation(event.target.value)}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="mt-1"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="capacity" className="block text-sm font-medium text-slate-700">
-            Capacity
-          </label>
-          <input
+          <Label htmlFor="capacity">Capacity</Label>
+          <Input
             id="capacity"
             type="number"
             min={1}
             value={capacity}
             onChange={(event) => setCapacity(Number(event.target.value))}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="mt-1"
             required
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
           {isSubmitting ? "Creating..." : "Create room"}
-        </button>
+        </Button>
       </form>
     </div>
   );

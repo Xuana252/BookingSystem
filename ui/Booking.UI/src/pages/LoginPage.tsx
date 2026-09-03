@@ -3,6 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { ApiError, apiClient } from "../lib/apiClient";
 import { setToken } from "../lib/auth";
 import type { AuthResponse } from "../lib/types";
+import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
 
 export function LoginPage() {
   const [username, setUsername] = useState("");
@@ -38,39 +41,31 @@ export function LoginPage() {
         {error && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
 
         <div>
-          <label htmlFor="username" className="block text-sm font-medium text-slate-700">
-            Username
-          </label>
-          <input
+          <Label htmlFor="username">Username</Label>
+          <Input
             id="username"
             value={username}
             onChange={(event) => setUsername(event.target.value)}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="mt-1"
             required
           />
         </div>
 
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-slate-700">
-            Password
-          </label>
-          <input
+          <Label htmlFor="password">Password</Label>
+          <Input
             id="password"
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+            className="mt-1"
             required
           />
         </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded bg-indigo-600 px-3 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
           {isSubmitting ? "Signing in..." : "Sign in"}
-        </button>
+        </Button>
       </form>
     </div>
   );

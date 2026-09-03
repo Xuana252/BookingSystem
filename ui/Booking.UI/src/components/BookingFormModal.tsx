@@ -1,6 +1,10 @@
 import type { FormEvent } from "react";
 import { Modal } from "./Modal";
 import type { Room } from "../lib/types";
+import { Button } from "./ui/button";
+import { Input } from "./ui/input";
+import { Label } from "./ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
 
 interface BookingFormModalProps {
   rooms: Room[];
@@ -42,64 +46,58 @@ export function BookingFormModal({
         {formError && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>}
 
         <div>
-          <label htmlFor="roomId" className="block text-sm font-medium text-slate-700">
-            Room
-          </label>
-          <select
-            id="roomId"
-            value={roomId}
-            onChange={(event) => onRoomIdChange(event.target.value)}
-            className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-            required
-          >
-            <option value="" disabled>
-              Select a room
-            </option>
-            {rooms.map((room) => (
-              <option key={room.id} value={room.id}>
-                {room.name} ({room.capacity})
-              </option>
-            ))}
-          </select>
+          <Label htmlFor="roomId">Room</Label>
+          <Select value={roomId} onValueChange={(value) => onRoomIdChange(value ?? "")} required>
+            <SelectTrigger id="roomId" className="mt-1 w-full">
+              {/* Base UI's Select.Value doesn't infer a label from the matching SelectItem's
+                  children the way Radix does — it just stringifies the raw value unless given
+                  a render function, so without this it showed the room's raw GUID. */}
+              <SelectValue placeholder="Select a room">
+                {(value: string | null) => {
+                  const room = rooms.find((r) => r.id === value);
+                  return room ? `${room.name} (${room.capacity})` : null;
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {rooms.map((room) => (
+                <SelectItem key={room.id} value={room.id}>
+                  {room.name} ({room.capacity})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label htmlFor="startTime" className="block text-sm font-medium text-slate-700">
-              Start
-            </label>
-            <input
+            <Label htmlFor="startTime">Start</Label>
+            <Input
               id="startTime"
               type="datetime-local"
               value={startTime}
               onChange={(event) => onStartTimeChange(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="endTime" className="block text-sm font-medium text-slate-700">
-              End
-            </label>
-            <input
+            <Label htmlFor="endTime">End</Label>
+            <Input
               id="endTime"
               type="datetime-local"
               value={endTime}
               onChange={(event) => onEndTimeChange(event.target.value)}
-              className="mt-1 w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+              className="mt-1"
               required
             />
           </div>
         </div>
 
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
           {isSubmitting ? "Booking..." : "Book"}
-        </button>
+        </Button>
       </form>
     </Modal>
   );
