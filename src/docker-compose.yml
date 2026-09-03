@@ -21,6 +21,13 @@ services:
     image: redis:7.2-alpine
     container_name: local-redis
     restart: unless-stopped
+    # redis:7.2-alpine declares /data as a VOLUME internally too (same issue as Splunk's
+    # /opt/splunk/var above) — without this mapping, every recreation orphaned a fresh anonymous
+    # volume. Unlike Splunk there's no real data worth keeping here (this only ever holds the
+    # 5-minute-TTL room-availability cache, designed to self-heal on a miss) — named purely to
+    # stop the leak, not because losing it on restart would matter.
+    volumes:
+      - redis_data:/data
     ports:
       - "6379:6379"
     healthcheck:
@@ -79,12 +86,13 @@ services:
     # internally. Without an explicit mapping here, Docker silently creates a new anonymous
     # volume for each on every container recreation instead of reusing one — orphaned junk that
     # never gets cleaned up (this is exactly what the dozens of unnamed multi-GB volumes turned
-    # out to be). Only /var (indexed data, KV store) is worth naming — /etc is small config that
-    # SPLUNK_HEC_TOKEN et al. regenerate identically from the environment above anyway. As a
-    # side effect, Splunk's indexed logs now actually survive a container recreation instead of
-    # starting fresh every time.
+    # out to be). Named both, even though /etc is small config SPLUNK_HEC_TOKEN et al. would
+    # regenerate identically from the environment above anyway — zero anonymous-volume leakage
+    # from this container beats "leaks less than before." As a side effect, both Splunk's
+    # indexed logs and its config now survive a container recreation instead of starting fresh.
     volumes:
       - splunk_var:/opt/splunk/var
+      - splunk_etc:/opt/splunk/etc
     ports:
       - "8000:8000" # web UI
       - "8088:8088" # HTTP Event Collector
@@ -211,3 +219,5 @@ services:
 volumes:
   postgres_data:
   splunk_var:
+  splunk_etc:
+  redis_data:
