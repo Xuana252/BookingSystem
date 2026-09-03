@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { ReservationStatus, type Reservation, type Room } from "../lib/types";
 import { isSameLocalDay } from "../lib/dates";
 
@@ -16,18 +17,66 @@ function hourLabel(hour: number): string {
   return `${displayHour}${period}`;
 }
 
+// Walks from anchorHour toward targetHour and stops at the first occupied hour it meets — so
+// dragging a selection can never span across an existing booking. Returns the far end of the
+// clamped range (pair it with anchorHour to get [min, max]).
+function clampToFreeRange(occupiedHours: Set<number>, anchorHour: number, targetHour: number): number {
+  const step = targetHour >= anchorHour ? 1 : -1;
+  let clamped = anchorHour;
+  for (let h = anchorHour; step > 0 ? h <= targetHour : h >= targetHour; h += step) {
+    if (occupiedHours.has(h)) {
+      break;
+    }
+    clamped = h;
+  }
+  return clamped;
+}
+
 interface RoomCalendarProps {
   date: Date;
   rooms: Room[];
   reservations: Reservation[];
   currentUserId: string | null;
-  onSlotClick: (roomId: string, hour: number) => void;
+  /** endHour is exclusive — one past the last selected hour (a single-hour pick has endHour = startHour + 1). */
+  onSlotSelect: (roomId: string, startHour: number, endHour: number) => void;
   onBlockClick: (reservation: Reservation) => void;
 }
 
-export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotClick, onBlockClick }: RoomCalendarProps) {
+interface DragState {
+  roomId: string;
+  anchorHour: number;
+  currentHour: number;
+}
+
+export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotSelect, onBlockClick }: RoomCalendarProps) {
   const hours = Array.from({ length: CALENDAR_END_HOUR - CALENDAR_START_HOUR }, (_, i) => CALENDAR_START_HOUR + i);
   const hourWidthPct = 100 / hours.length;
+  const [drag, setDrag] = useState<DragState | null>(null);
+
+  // Window-level, not per-button — the mouse can be released after leaving the row entirely
+  // (or the whole calendar), and a plain onMouseUp on each slot button would miss that.
+  useEffect(() => {
+    if (!drag) {
+      return;
+    }
+
+    function finishDrag() {
+      setDrag((current) => {
+        if (current) {
+          const start = Math.min(current.anchorHour, current.currentHour);
+          const end = Math.max(current.anchorHour, current.currentHour) + 1;
+          onSlotSelect(current.roomId, start, end);
+        }
+        return null;
+      });
+    }
+
+    window.addEventListener("mouseup", finishDrag);
+    return () => window.removeEventListener("mouseup", finishDrag);
+    // Deliberately [drag !== null], not [drag] or [onSlotSelect] — this only needs to
+    // (de)register the listener once per drag start/end, not re-subscribe on every hour the
+    // mouse enters while dragging or every re-render of the parent's onSlotSelect callback.
+  }, [drag !== null]);
 
   const reservationsByRoom = new Map<string, Reservation[]>();
   for (const reservation of reservations) {
@@ -48,7 +97,10 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotC
   }
 
   return (
-    <div className="mt-3 grid overflow-hidden rounded-lg border border-slate-200 bg-white" style={{ gridTemplateColumns: `${RAIL_WIDTH_PX}px 1fr` }}>
+    <div
+      className="mt-3 grid select-none overflow-hidden rounded-lg border border-slate-200 bg-white"
+      style={{ gridTemplateColumns: `${RAIL_WIDTH_PX}px 1fr` }}
+    >
       <div className="border-b border-slate-200" />
       <div className="relative border-b border-slate-200" style={{ height: 28 }}>
         {hours.map((hour, i) => (
@@ -80,6 +132,11 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotC
           }
         }
 
+        const roomDrag = drag?.roomId === room.id ? drag : null;
+        const dragClampedHour = roomDrag ? clampToFreeRange(occupiedHours, roomDrag.anchorHour, roomDrag.currentHour) : null;
+        const dragStart = roomDrag && dragClampedHour !== null ? Math.min(roomDrag.anchorHour, dragClampedHour) : null;
+        const dragEnd = roomDrag && dragClampedHour !== null ? Math.max(roomDrag.anchorHour, dragClampedHour) : null;
+
         return (
           <div key={room.id} className="contents">
             <div className="flex flex-col justify-center border-t border-slate-100 px-3" style={{ height: ROW_HEIGHT_PX }}>
@@ -93,12 +150,23 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotC
                   key={hour}
                   type="button"
                   disabled={occupiedHours.has(hour)}
-                  onClick={() => onSlotClick(room.id, hour)}
+                  onMouseDown={() => setDrag({ roomId: room.id, anchorHour: hour, currentHour: hour })}
+                  onMouseEnter={() => setDrag((current) => (current && current.roomId === room.id ? { ...current, currentHour: hour } : current))}
                   aria-label={`Book ${room.name} at ${hourLabel(hour)}`}
                   className="absolute inset-y-0 border-l border-slate-100 enabled:hover:bg-slate-50"
                   style={{ left: `${i * hourWidthPct}%`, width: `${hourWidthPct}%` }}
                 />
               ))}
+
+              {dragStart !== null && dragEnd !== null && (
+                <div
+                  className="pointer-events-none absolute inset-y-0 z-10 border-2 border-dashed border-indigo-400 bg-indigo-200/40"
+                  style={{
+                    left: `${(dragStart - CALENDAR_START_HOUR) * hourWidthPct}%`,
+                    width: `${(dragEnd - dragStart + 1) * hourWidthPct}%`,
+                  }}
+                />
+              )}
 
               {roomReservations.map((reservation) => {
                 const start = new Date(reservation.startTime);

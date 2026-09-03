@@ -62,10 +62,12 @@ export function HomePage() {
   // Covers changes made from another tab/user too, not just this one's own actions below.
   useEffect(() => onRoomAvailabilityChanged(() => loadData()), [onRoomAvailabilityChanged, loadData]);
 
-  function openBookingForm(prefillRoomId?: string, prefillHour?: number) {
+  // prefillEndHour is exclusive (one past the last selected hour) — a plain 1-hour pick from
+  // RoomCalendar's click-or-drag interaction passes prefillStartHour + 1 here.
+  function openBookingForm(prefillRoomId?: string, prefillStartHour?: number, prefillEndHour?: number) {
     setRoomId(prefillRoomId ?? "");
-    setStartTime(prefillHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillHour) : "");
-    setEndTime(prefillHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillHour + 1) : "");
+    setStartTime(prefillStartHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillStartHour) : "");
+    setEndTime(prefillEndHour !== undefined ? toDatetimeLocalValue(selectedDate, prefillEndHour) : "");
     setFormError(null);
     setIsFormOpen(true);
   }
@@ -210,7 +212,7 @@ export function HomePage() {
               rooms={rooms}
               reservations={reservations}
               currentUserId={currentUserId}
-              onSlotClick={(clickedRoomId, hour) => openBookingForm(clickedRoomId, hour)}
+              onSlotSelect={(clickedRoomId, startHour, endHour) => openBookingForm(clickedRoomId, startHour, endHour)}
               onBlockClick={setSelectedReservation}
             />
           ) : (
