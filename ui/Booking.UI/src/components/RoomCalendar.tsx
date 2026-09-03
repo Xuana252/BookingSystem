@@ -10,6 +10,12 @@ const CALENDAR_START_HOUR = 8;
 const CALENDAR_END_HOUR = 18;
 const ROW_HEIGHT_PX = 56;
 const RAIL_WIDTH_PX = 140;
+// A fixed min-width per hour column, not a percentage of the container — percentages on
+// absolutely positioned children never grow their (non-absolutely-positioned) parent, so a
+// percentage-based cell can only ever be *narrower* than the viewport, never trigger real
+// horizontal scrolling. Fixed px cells give the row a genuine content width wider than the
+// container once there are enough hours, which is what actually makes overflow-x scroll.
+const HOUR_WIDTH_PX = 90;
 
 function hourLabel(hour: number): string {
   const period = hour < 12 ? "AM" : "PM";
@@ -50,7 +56,7 @@ interface DragState {
 
 export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotSelect, onBlockClick }: RoomCalendarProps) {
   const hours = Array.from({ length: CALENDAR_END_HOUR - CALENDAR_START_HOUR }, (_, i) => CALENDAR_START_HOUR + i);
-  const hourWidthPct = 100 / hours.length;
+  const hoursWidthPx = hours.length * HOUR_WIDTH_PX;
   const [drag, setDrag] = useState<DragState | null>(null);
 
   // Window-level, not per-button — the mouse can be released after leaving the row entirely
@@ -97,113 +103,116 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
   }
 
   return (
-    <div
-      className="mt-3 grid select-none overflow-hidden rounded-lg border border-slate-200 bg-white"
-      style={{ gridTemplateColumns: `${RAIL_WIDTH_PX}px 1fr` }}
-    >
-      <div className="border-b border-slate-200" />
-      <div className="relative border-b border-slate-200" style={{ height: 28 }}>
-        {hours.map((hour, i) => (
-          // A tick (border-l) at the exact column boundary, with the label offset a couple px
-          // to its right — matches the vertical dividers in the room rows below, so the header
-          // reads as a ruler instead of loosely floating text. Equal-width columns already made
-          // this uniform (verified: every hour is 85.04px apart at 1280px), but without a visible
-          // line to anchor each label, "8AM" vs "12PM" being different lengths made the spacing
-          // look uneven even though the underlying grid wasn't.
-          <div
-            key={hour}
-            className="absolute inset-y-0 border-l border-slate-100 pl-1 pt-1.5 text-xs text-slate-400"
-            style={{ left: `${i * hourWidthPct}%` }}
-          >
-            {hourLabel(hour)}
-          </div>
-        ))}
-      </div>
+    <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div
+        className="grid select-none"
+        style={{ gridTemplateColumns: `${RAIL_WIDTH_PX}px ${hoursWidthPx}px`, minWidth: RAIL_WIDTH_PX + hoursWidthPx }}
+      >
+        {/* Sticky so the room-name rail stays put while the hours track scrolls under it. */}
+        <div className="sticky left-0 z-20 border-b border-slate-200 bg-white" />
+        <div className="relative border-b border-slate-200" style={{ height: 28 }}>
+          {hours.map((hour, i) => (
+            // A tick (border-l) at the exact column boundary, with the label offset a couple px
+            // to its right — matches the vertical dividers in the room rows below, so the header
+            // reads as a ruler instead of loosely floating text.
+            <div
+              key={hour}
+              className="absolute inset-y-0 border-l border-slate-100 pl-1 pt-1.5 text-xs text-slate-400"
+              style={{ left: i * HOUR_WIDTH_PX, width: HOUR_WIDTH_PX }}
+            >
+              {hourLabel(hour)}
+            </div>
+          ))}
+        </div>
 
-      {rooms.map((room) => {
-        const roomReservations = reservationsByRoom.get(room.id) ?? [];
-        const occupiedHours = new Set<number>();
-        for (const reservation of roomReservations) {
-          const startHour = new Date(reservation.startTime).getHours();
-          const endLocal = new Date(reservation.endTime);
-          const endHour = endLocal.getHours() + (endLocal.getMinutes() > 0 ? 1 : 0);
-          for (let h = startHour; h < endHour; h++) {
-            occupiedHours.add(h);
+        {rooms.map((room) => {
+          const roomReservations = reservationsByRoom.get(room.id) ?? [];
+          const occupiedHours = new Set<number>();
+          for (const reservation of roomReservations) {
+            const startHour = new Date(reservation.startTime).getHours();
+            const endLocal = new Date(reservation.endTime);
+            const endHour = endLocal.getHours() + (endLocal.getMinutes() > 0 ? 1 : 0);
+            for (let h = startHour; h < endHour; h++) {
+              occupiedHours.add(h);
+            }
           }
-        }
 
-        const roomDrag = drag?.roomId === room.id ? drag : null;
-        const dragClampedHour = roomDrag ? clampToFreeRange(occupiedHours, roomDrag.anchorHour, roomDrag.currentHour) : null;
-        const dragStart = roomDrag && dragClampedHour !== null ? Math.min(roomDrag.anchorHour, dragClampedHour) : null;
-        const dragEnd = roomDrag && dragClampedHour !== null ? Math.max(roomDrag.anchorHour, dragClampedHour) : null;
+          const roomDrag = drag?.roomId === room.id ? drag : null;
+          const dragClampedHour = roomDrag ? clampToFreeRange(occupiedHours, roomDrag.anchorHour, roomDrag.currentHour) : null;
+          const dragStart = roomDrag && dragClampedHour !== null ? Math.min(roomDrag.anchorHour, dragClampedHour) : null;
+          const dragEnd = roomDrag && dragClampedHour !== null ? Math.max(roomDrag.anchorHour, dragClampedHour) : null;
 
-        return (
-          <div key={room.id} className="contents">
-            <div className="flex flex-col justify-center border-t border-slate-100 px-3" style={{ height: ROW_HEIGHT_PX }}>
-              <div className="truncate text-sm font-medium text-slate-900">{room.name}</div>
-              <div className="truncate text-xs text-slate-500">{room.capacity} seats</div>
-            </div>
+          return (
+            <div key={room.id} className="contents">
+              <div
+                className="sticky left-0 z-10 flex flex-col justify-center border-t border-slate-100 bg-white px-3"
+                style={{ height: ROW_HEIGHT_PX }}
+              >
+                <div className="truncate text-sm font-medium text-slate-900">{room.name}</div>
+                <div className="truncate text-xs text-slate-500">{room.capacity} seats</div>
+              </div>
 
-            <div className="relative border-t border-slate-100" style={{ height: ROW_HEIGHT_PX }}>
-              {hours.map((hour, i) => (
-                <button
-                  key={hour}
-                  type="button"
-                  disabled={occupiedHours.has(hour)}
-                  onMouseDown={() => setDrag({ roomId: room.id, anchorHour: hour, currentHour: hour })}
-                  onMouseEnter={() => setDrag((current) => (current && current.roomId === room.id ? { ...current, currentHour: hour } : current))}
-                  aria-label={`Book ${room.name} at ${hourLabel(hour)}`}
-                  className="absolute inset-y-0 border-l border-slate-100 enabled:hover:bg-slate-50"
-                  style={{ left: `${i * hourWidthPct}%`, width: `${hourWidthPct}%` }}
-                />
-              ))}
-
-              {dragStart !== null && dragEnd !== null && (
-                <div
-                  className="pointer-events-none absolute inset-y-0 z-10 border-2 border-dashed border-indigo-400 bg-indigo-200/40"
-                  style={{
-                    left: `${(dragStart - CALENDAR_START_HOUR) * hourWidthPct}%`,
-                    width: `${(dragEnd - dragStart + 1) * hourWidthPct}%`,
-                  }}
-                />
-              )}
-
-              {roomReservations.map((reservation) => {
-                const start = new Date(reservation.startTime);
-                const end = new Date(reservation.endTime);
-                const startFrac = Math.max(start.getHours() + start.getMinutes() / 60, CALENDAR_START_HOUR);
-                const endFrac = Math.min(end.getHours() + end.getMinutes() / 60, CALENDAR_END_HOUR);
-                const left = (startFrac - CALENDAR_START_HOUR) * hourWidthPct;
-                const width = Math.max((endFrac - startFrac) * hourWidthPct, 3);
-                const isMine = reservation.userId === currentUserId;
-
-                return (
+              <div className="relative border-t border-slate-100" style={{ height: ROW_HEIGHT_PX }}>
+                {hours.map((hour, i) => (
                   <button
-                    key={reservation.id}
+                    key={hour}
                     type="button"
-                    onClick={() => onBlockClick(reservation)}
-                    title={reservation.username}
-                    className={`absolute inset-y-2 flex items-center gap-1 overflow-hidden rounded px-1.5 text-left text-xs ${
-                      isMine ? "bg-indigo-100 text-indigo-800 hover:bg-indigo-200" : "bg-violet-50 text-violet-700 hover:bg-violet-100"
-                    }`}
-                    style={{ left: `${left}%`, width: `${width}%` }}
-                  >
-                    <span
-                      className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-medium ${
-                        isMine ? "bg-indigo-200 text-indigo-900" : "bg-violet-200 text-violet-900"
+                    disabled={occupiedHours.has(hour)}
+                    onMouseDown={() => setDrag({ roomId: room.id, anchorHour: hour, currentHour: hour })}
+                    onMouseEnter={() => setDrag((current) => (current && current.roomId === room.id ? { ...current, currentHour: hour } : current))}
+                    aria-label={`Book ${room.name} at ${hourLabel(hour)}`}
+                    className="absolute inset-y-0 border-l border-slate-100 enabled:hover:bg-slate-50"
+                    style={{ left: i * HOUR_WIDTH_PX, width: HOUR_WIDTH_PX }}
+                  />
+                ))}
+
+                {dragStart !== null && dragEnd !== null && (
+                  <div
+                    className="pointer-events-none absolute inset-y-0 z-10 border-2 border-dashed border-indigo-400 bg-indigo-200/40"
+                    style={{
+                      left: (dragStart - CALENDAR_START_HOUR) * HOUR_WIDTH_PX,
+                      width: (dragEnd - dragStart + 1) * HOUR_WIDTH_PX,
+                    }}
+                  />
+                )}
+
+                {roomReservations.map((reservation) => {
+                  const start = new Date(reservation.startTime);
+                  const end = new Date(reservation.endTime);
+                  const startFrac = Math.max(start.getHours() + start.getMinutes() / 60, CALENDAR_START_HOUR);
+                  const endFrac = Math.min(end.getHours() + end.getMinutes() / 60, CALENDAR_END_HOUR);
+                  const left = (startFrac - CALENDAR_START_HOUR) * HOUR_WIDTH_PX;
+                  const width = Math.max((endFrac - startFrac) * HOUR_WIDTH_PX, 24);
+                  const isMine = reservation.userId === currentUserId;
+
+                  return (
+                    <button
+                      key={reservation.id}
+                      type="button"
+                      onClick={() => onBlockClick(reservation)}
+                      title={reservation.username}
+                      className={`absolute inset-y-2 flex items-center gap-1 overflow-hidden rounded px-1.5 text-left text-xs ${
+                        isMine ? "bg-indigo-100 text-indigo-800 hover:bg-indigo-200" : "bg-violet-50 text-violet-700 hover:bg-violet-100"
                       }`}
-                      aria-hidden="true"
+                      style={{ left, width }}
                     >
-                      {reservation.username[0]?.toUpperCase() ?? "?"}
-                    </span>
-                    <span className="truncate">{isMine ? "You" : reservation.username}</span>
-                  </button>
-                );
-              })}
+                      <span
+                        className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full text-[9px] font-medium ${
+                          isMine ? "bg-indigo-200 text-indigo-900" : "bg-violet-200 text-violet-900"
+                        }`}
+                        aria-hidden="true"
+                      >
+                        {reservation.username[0]?.toUpperCase() ?? "?"}
+                      </span>
+                      <span className="truncate">{isMine ? "You" : reservation.username}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
