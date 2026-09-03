@@ -71,6 +71,34 @@ docker compose up -d --build
 - UI: `http://localhost:5173` (nginx-served production build, not Vite's dev server)
 - API: `http://localhost:8080`
 
+Services are tagged into Compose profiles so you don't have to bring up the whole stack just to
+test one change — `postgres`/`redis` always start regardless of profile flags:
+
+| Profile | Brings up | Use it for |
+|---|---|---|
+| `backend` | `api`, `worker` | Iterating on API/Worker code. Skips Moto and Splunk/Fluent Bit entirely — no ~120s Splunk health-check wait. |
+| `mock-aws` | `moto`, `moto-init` | Add alongside `backend` to test against the local SNS/SQS mock instead of real AWS |
+| `frontend` | `ui` | Add alongside `backend` — `ui`'s nginx has nothing to proxy to without it |
+| `logging` | `splunk`, `fluent-bit` | Add when you actually need to check ingested logs |
+| `full` | everything | Same as the bare `docker compose up -d --build` above |
+
+```powershell
+# Fast API/Worker iteration — skips Moto, Splunk, Fluent Bit entirely (~48s vs 120s+)
+docker compose --profile backend up -d --build
+
+# + the UI too
+docker compose --profile backend --profile frontend up -d --build
+
+# Testing against the local Moto mock instead of real AWS
+docker compose --profile mock-aws --profile backend up -d --build
+
+# Everything, logging included — same as `docker compose up -d --build`
+docker compose --profile full up -d --build
+```
+
+To pick up a code change on an already-running container, add `--force-recreate <service>`
+(or just re-run the same `up` command — Compose recreates whatever changed).
+
 ## Branching convention (Git Flow, lightweight)
 
 - `main` — stable, always deployable
