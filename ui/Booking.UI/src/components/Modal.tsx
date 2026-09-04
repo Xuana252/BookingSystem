@@ -17,12 +17,15 @@ export function Modal({ onClose, children }: ModalProps) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in-0 duration-150"
+      onClick={onClose}
+    >
       <div
         role="dialog"
         aria-modal="true"
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-sm rounded-lg bg-white p-6 shadow-lg"
+        className="w-full max-w-md animate-in fade-in-0 zoom-in-95 duration-150 rounded-2xl border border-border bg-popover p-6 text-popover-foreground shadow-2xl ring-1 ring-white/10"
       >
         {children}
       </div>
