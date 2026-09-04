@@ -18,8 +18,20 @@ public class BookingRuleEngineTests
     // say — the timezone-conversion behavior itself gets its own dedicated tests below.
     private static readonly BusinessSettings DefaultBusinessSettings = new() { TimeZoneId = "UTC" };
 
-    private static BookingRuleEngine CreateSut(ReservationRuleSettings? settings = null, BusinessSettings? businessSettings = null)
-        => new(settings ?? DefaultSettings, businessSettings ?? DefaultBusinessSettings);
+    // Fixed well before every hardcoded candidate date below (all 2026-08-20+), so the
+    // not-in-the-past check doesn't retroactively break every other test in this file as real
+    // time moves on. TimeProvider (not DateTime.UtcNow directly) is exactly what makes this
+    // controllable instead of racing the real clock.
+    private static readonly DateTimeOffset FixedNow = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private static BookingRuleEngine CreateSut(
+        ReservationRuleSettings? settings = null, BusinessSettings? businessSettings = null, DateTimeOffset? now = null)
+        => new(settings ?? DefaultSettings, businessSettings ?? DefaultBusinessSettings, new FixedTimeProvider(now ?? FixedNow));
 
     private static Reservation Candidate(DateTime start, DateTime end) => new()
     {
@@ -35,6 +47,40 @@ public class BookingRuleEngineTests
         EndTime = end,
         Status = status
     };
+
+    [Fact]
+    public void Validate_StartTimeInThePast_Throws()
+    {
+        // Arrange — "now" is fixed later than the candidate for this one test, the inverse of
+        // every other test's setup, to exercise the past-check specifically.
+        var now = new DateTimeOffset(2026, 8, 21, 0, 0, 0, TimeSpan.Zero);
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
+
+        // Act
+        var act = () => CreateSut(now: now).Validate(candidate, []);
+
+        // Assert
+        act.Should().Throw<ArgumentException>().WithMessage("*past*");
+    }
+
+    [Fact]
+    public void Validate_StartTimeExactlyNow_DoesNotThrow()
+    {
+        // Arrange — the boundary: StartTime == now should still be bookable, only strictly
+        // before now is rejected.
+        var now = new DateTimeOffset(2026, 8, 20, 9, 0, 0, TimeSpan.Zero);
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
+
+        // Act
+        var act = () => CreateSut(now: now).Validate(candidate, []);
+
+        // Assert
+        act.Should().NotThrow();
+    }
 
     [Fact]
     public void Validate_WithinBusinessHoursNoOverlapUnderMaxDuration_DoesNotThrow()

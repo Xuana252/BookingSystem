@@ -1,11 +1,13 @@
 import type { FormEvent } from "react";
+import { AlertCircle, Building2, Calendar, CalendarPlus, Clock, Loader2, X } from "lucide-react";
 import { Modal } from "./Modal";
 import type { Room } from "../lib/types";
-import { BUSINESS_HOURS_END_TIME, BUSINESS_HOURS_START_TIME } from "../lib/dates";
+import { BUSINESS_HOURS_END_TIME, BUSINESS_HOURS_START_TIME, toDateInputValue } from "../lib/dates";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Badge } from "./ui/badge";
 
 interface BookingFormModalProps {
   rooms: Room[];
@@ -24,6 +26,30 @@ interface BookingFormModalProps {
   onClose: () => void;
 }
 
+function calculateDuration(start: string, end: string): string | null {
+  if (!start || !end || end <= start) {
+    return null;
+  }
+  const [startH, startM] = start.split(":").map(Number);
+  const [endH, endM] = end.split(":").map(Number);
+  if (startH === undefined || startM === undefined || endH === undefined || endM === undefined) {
+    return null;
+  }
+  const totalMins = endH * 60 + endM - (startH * 60 + startM);
+  if (totalMins <= 0) {
+    return null;
+  }
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  if (hours > 0 && mins > 0) {
+    return `${hours} hr ${mins} mins`;
+  }
+  if (hours > 0) {
+    return `${hours} ${hours === 1 ? "hr" : "hrs"}`;
+  }
+  return `${mins} mins`;
+}
+
 export function BookingFormModal({
   rooms,
   roomId,
@@ -39,36 +65,52 @@ export function BookingFormModal({
   onSubmit,
   onClose,
 }: BookingFormModalProps) {
+  const duration = calculateDuration(startTime, endTime);
+
   return (
     <Modal onClose={onClose}>
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-medium text-slate-900">Book a room</h2>
-        <button onClick={onClose} aria-label="Close" className="text-slate-400 hover:text-slate-600">
-          ✕
+      <div className="flex items-center justify-between border-b border-border pb-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
+            <CalendarPlus className="size-4" />
+          </div>
+          <h2 className="text-base font-semibold text-foreground">Schedule a Room</h2>
+        </div>
+        <button
+          onClick={onClose}
+          aria-label="Close"
+          className="flex size-7 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground focus:outline-none"
+        >
+          <X className="size-4" />
         </button>
       </div>
 
       <form onSubmit={onSubmit} className="mt-4 space-y-4">
-        {formError && <p className="rounded bg-red-50 px-3 py-2 text-sm text-red-700">{formError}</p>}
+        {formError && (
+          <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive">
+            <AlertCircle className="size-4 shrink-0" />
+            <span>{formError}</span>
+          </div>
+        )}
 
         <div>
-          <Label htmlFor="roomId">Room</Label>
+          <Label htmlFor="roomId" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <Building2 className="size-3.5 text-muted-foreground" />
+            <span>Room</span>
+          </Label>
           <Select value={roomId} onValueChange={(value) => onRoomIdChange(value ?? "")} required>
-            <SelectTrigger id="roomId" className="mt-1 w-full">
-              {/* Base UI's Select.Value doesn't infer a label from the matching SelectItem's
-                  children the way Radix does — it just stringifies the raw value unless given
-                  a render function, so without this it showed the room's raw GUID. */}
-              <SelectValue placeholder="Select a room">
+            <SelectTrigger id="roomId" className="mt-1.5 w-full bg-card">
+              <SelectValue placeholder="Select a conference room">
                 {(value: string | null) => {
                   const room = rooms.find((r) => r.id === value);
-                  return room ? `${room.name} (${room.capacity})` : null;
+                  return room ? `${room.name} (${room.capacity} seats)` : null;
                 }}
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
               {rooms.map((room) => (
                 <SelectItem key={room.id} value={room.id}>
-                  {room.name} ({room.capacity})
+                  {room.name} ({room.capacity} seats)
                 </SelectItem>
               ))}
             </SelectContent>
@@ -76,23 +118,27 @@ export function BookingFormModal({
         </div>
 
         <div>
-          <Label htmlFor="date">Date</Label>
+          <Label htmlFor="date" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+            <Calendar className="size-3.5 text-muted-foreground" />
+            <span>Date</span>
+          </Label>
           <Input
             id="date"
             type="date"
             value={date}
             onChange={(event) => onDateChange(event.target.value)}
-            className="mt-1"
+            min={toDateInputValue(new Date())}
+            className="mt-1.5 bg-card"
             required
           />
         </div>
 
-        {/* Every booking is confined to a single business day (08:00-18:00, see lib/dates.ts),
-            so there's one date picker above rather than separate start/end date+time fields —
-            just a plain HH:mm time for each end, clamped to business hours via min/max. */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label htmlFor="startTime">From</Label>
+            <Label htmlFor="startTime" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <Clock className="size-3.5 text-muted-foreground" />
+              <span>Start Time</span>
+            </Label>
             <Input
               id="startTime"
               type="time"
@@ -100,13 +146,16 @@ export function BookingFormModal({
               onChange={(event) => onStartTimeChange(event.target.value)}
               min={BUSINESS_HOURS_START_TIME}
               max={BUSINESS_HOURS_END_TIME}
-              className="mt-1"
+              className="mt-1.5 bg-card"
               required
             />
           </div>
 
           <div>
-            <Label htmlFor="endTime">To</Label>
+            <Label htmlFor="endTime" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <Clock className="size-3.5 text-muted-foreground" />
+              <span>End Time</span>
+            </Label>
             <Input
               id="endTime"
               type="time"
@@ -114,15 +163,38 @@ export function BookingFormModal({
               onChange={(event) => onEndTimeChange(event.target.value)}
               min={startTime || BUSINESS_HOURS_START_TIME}
               max={BUSINESS_HOURS_END_TIME}
-              className="mt-1"
+              className="mt-1.5 bg-card"
               required
             />
           </div>
         </div>
 
-        <Button type="submit" disabled={isSubmitting} size="lg" className="w-full">
-          {isSubmitting ? "Booking..." : "Book"}
-        </Button>
+        {duration && (
+          <div className="flex items-center justify-between rounded-lg border border-border bg-muted px-3 py-2 text-xs">
+            <span className="text-muted-foreground">Booking Duration</span>
+            <Badge variant="indigo" className="font-semibold">
+              {duration}
+            </Badge>
+          </div>
+        )}
+
+        <div className="pt-2">
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            size="lg"
+            className="w-full gap-2 bg-gradient-to-r from-primary to-indigo-600 font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:opacity-95"
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                <span>Confirming Booking...</span>
+              </>
+            ) : (
+              <span>Confirm Booking</span>
+            )}
+          </Button>
+        </div>
       </form>
     </Modal>
   );
