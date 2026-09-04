@@ -4,6 +4,7 @@ using Booking.Domain.Entities;
 using Booking.Domain.Events;
 using Booking.Domain.Interfaces;
 using FluentAssertions;
+using Microsoft.Extensions.Logging;
 using Moq;
 
 namespace Booking.UnitTests.Services;
@@ -16,9 +17,18 @@ public class ReservationServiceTests
     private readonly Mock<IBookingRuleEngine> _ruleEngine = new();
     private readonly Mock<ICorrelationIdAccessor> _correlationIdAccessor = new();
     private readonly Mock<IRealtimeNotifier> _realtimeNotifier = new();
+    private readonly Mock<ILogger<ReservationService>> _logger = new();
 
     private const string TestCorrelationId = "test-correlation-id";
     private const string TestUsername = "alice";
+
+    // CreateAsync/CancelAsync fire the event publish without awaiting it (see
+    // ReservationService.PublishInBackground) — the PublishAsync Times.Once assertions below
+    // stay deterministic only because Moq returns an already-completed Task for an unconfigured
+    // async mock, and awaiting an already-completed Task never actually yields control (the
+    // compiler's async state machine just continues synchronously). If _eventPublisher ever gets
+    // an explicit setup that returns a genuinely pending Task (e.g. via TaskCompletionSource or
+    // Task.Delay), these assertions would need an explicit await/poll instead.
 
     public ReservationServiceTests()
     {
@@ -31,7 +41,8 @@ public class ReservationServiceTests
     }
 
     private ReservationService CreateSut() => new(
-        _reservations.Object, _users.Object, _eventPublisher.Object, _ruleEngine.Object, _correlationIdAccessor.Object, _realtimeNotifier.Object);
+        _reservations.Object, _users.Object, _eventPublisher.Object, _ruleEngine.Object, _correlationIdAccessor.Object,
+        _realtimeNotifier.Object, _logger.Object);
 
     private static CreateReservationRequest ValidRequest() => new(
         RoomId: Guid.NewGuid(),
