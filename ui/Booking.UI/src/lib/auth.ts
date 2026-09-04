@@ -12,6 +12,24 @@ export function clearToken(): void {
   localStorage.removeItem(TOKEN_KEY);
 }
 
+const UNAUTHORIZED_EVENT = "bookingsystem:unauthorized";
+
+// apiClient calls this when a request that *did* carry a token still comes back 401 — the
+// session's token has expired or been invalidated server-side. Clears it and fires a DOM event
+// rather than importing react-router here (this is a plain module, not a component) — AuthWatcher
+// (mounted once in App.tsx, inside the router) is the one listener that turns this into an actual
+// navigate("/login"). Deliberately not fired for an anonymous request's 401 (e.g. a wrong-password
+// attempt on the login page itself) — see apiClient.ts's `token &&` guard.
+export function notifyUnauthorized(): void {
+  clearToken();
+  window.dispatchEvent(new Event(UNAUTHORIZED_EVENT));
+}
+
+export function onUnauthorized(callback: () => void): () => void {
+  window.addEventListener(UNAUTHORIZED_EVENT, callback);
+  return () => window.removeEventListener(UNAUTHORIZED_EVENT, callback);
+}
+
 export function isAuthenticated(): boolean {
   return getToken() !== null;
 }

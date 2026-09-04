@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
+import {
+  AlertCircle,
+  ArrowRight,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Loader2,
+  Plus,
+} from "lucide-react";
 import { getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
 import { cancelReservation, createReservation, getReservations, getRooms } from "../lib/api";
@@ -11,6 +21,7 @@ import { MonthCalendar } from "../components/MonthCalendar";
 import { StatsPanel } from "../components/StatsPanel";
 import { BookingFormModal } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
+import { Button } from "../components/ui/button";
 
 type ViewMode = "day" | "month";
 
@@ -56,10 +67,6 @@ export function HomePage() {
   // Covers changes made from another tab/user too, not just this one's own actions below.
   useEffect(() => onRoomAvailabilityChanged(() => loadData()), [onRoomAvailabilityChanged, loadData]);
 
-  // prefillStartHour/prefillEndHour come from RoomCalendar's click-or-drag interaction on its
-  // hourly grid — converted straight to HH:mm here since that's just a whole-hour clock time.
-  // Both default to whatever day is currently in view, since every booking is confined to a
-  // single day anyway.
   function openBookingForm(prefillRoomId?: string, prefillStartHour?: number, prefillEndHour?: number) {
     setRoomId(prefillRoomId ?? "");
     setBookingDate(toDateInputValue(selectedDate));
@@ -69,8 +76,6 @@ export function HomePage() {
     setIsFormOpen(true);
   }
 
-  // A "From" change that leaves the current "To" no longer after it (or equal — an empty range)
-  // clears "To" rather than silently keeping an invalid range around.
   function handleStartTimeChange(value: string) {
     setStartTime(value);
     setEndTime((current) => (current && current > value ? current : ""));
@@ -125,16 +130,26 @@ export function HomePage() {
 
   if (!authenticated) {
     return (
-      <>
-        <h1 className="text-2xl font-semibold text-indigo-700">BookingSystem</h1>
-        <p className="mt-2 text-slate-600">Sign in to view room availability and book a time slot.</p>
-        <Link
-          to="/login"
-          className="mt-6 inline-block rounded bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
-        >
-          Sign in
-        </Link>
-      </>
+      <div className="flex min-h-[65vh] items-center justify-center">
+        <div className="mx-auto max-w-md text-center">
+          <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-violet-500 text-white shadow-lg shadow-primary/20">
+            <Calendar className="size-7" />
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to BookingSystem</h1>
+          <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+            Reserve conference rooms, review real-time availability, and coordinate meetings seamlessly across your team.
+          </p>
+          <div className="mt-6 flex justify-center">
+            <Link
+              to="/login"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-primary-foreground shadow-md shadow-primary/20 transition-all hover:bg-primary/90 hover:shadow-lg"
+            >
+              <span>Sign in to get started</span>
+              <ArrowRight className="size-4" />
+            </Link>
+          </div>
+        </div>
+      </div>
     );
   }
 
@@ -145,40 +160,51 @@ export function HomePage() {
   const isToday = selectedDate.getTime() === startOfDay(new Date()).getTime();
 
   return (
-    <>
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? -1 : -30))}
-            aria-label="Previous"
-            className="rounded border border-slate-300 px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
-          >
-            ‹
-          </button>
-          <span className="min-w-[9rem] text-center text-sm font-medium text-slate-900">{dateLabel}</span>
-          <button
-            onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? 1 : 30))}
-            aria-label="Next"
-            className="rounded border border-slate-300 px-2 py-1 text-sm text-slate-600 hover:bg-slate-100"
-          >
-            ›
-          </button>
+    <div className="space-y-4">
+      {/* Modern Control Bar */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3.5 shadow-sm">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Date navigator */}
+          <div className="flex items-center rounded-lg border border-border bg-muted p-0.5">
+            <button
+              onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? -1 : -30))}
+              aria-label="Previous"
+              className="flex size-7.5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus:outline-none"
+            >
+              <ChevronLeft className="size-4" />
+            </button>
+            <div className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-foreground">
+              <Calendar className="size-3.5 text-primary" />
+              <span>{dateLabel}</span>
+            </div>
+            <button
+              onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? 1 : 30))}
+              aria-label="Next"
+              className="flex size-7.5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus:outline-none"
+            >
+              <ChevronRight className="size-4" />
+            </button>
+          </div>
+
           {!isToday && (
             <button
               onClick={() => setSelectedDate(startOfDay(new Date()))}
-              className="ml-1 rounded border border-slate-300 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-100"
+              className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             >
               Today
             </button>
           )}
 
-          <div className="ml-3 flex overflow-hidden rounded border border-slate-300">
+          {/* View mode segmented switcher */}
+          <div className="flex rounded-lg border border-border bg-muted p-0.5">
             {(["day", "month"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
-                className={`px-3 py-1 text-xs font-medium capitalize ${
-                  viewMode === mode ? "bg-indigo-600 text-white" : "bg-white text-slate-600 hover:bg-slate-100"
+                className={`rounded-md px-3 py-1 text-xs font-medium capitalize transition-all ${
+                  viewMode === mode
+                    ? "bg-card text-foreground font-semibold shadow-xs"
+                    : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {mode}
@@ -187,30 +213,49 @@ export function HomePage() {
           </div>
         </div>
 
-        <button
+        {/* Primary CTA */}
+        <Button
           onClick={() => openBookingForm()}
-          className="rounded bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700"
+          className="gap-1.5 bg-gradient-to-r from-primary to-indigo-600 text-primary-foreground shadow-sm shadow-primary/25 hover:opacity-95"
         >
-          New booking
-        </button>
+          <Plus className="size-4" />
+          <span>New booking</span>
+        </Button>
       </div>
 
-      <div className="mt-2 flex items-center gap-4 text-xs text-slate-500">
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-indigo-500" /> Your booking
-        </span>
-        <span className="flex items-center gap-1.5">
-          <span className="h-2.5 w-2.5 rounded-sm bg-red-500" /> Booked
-        </span>
-        <span>{viewMode === "day" ? "Click an open slot to book it, or a booking to see details." : "Click a day to view it."}</span>
+      {/* Legend and tips */}
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground px-1">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-2.5 py-0.5 font-medium text-primary dark:text-indigo-300">
+            <span className="size-2 rounded-full bg-primary" />
+            Your booking
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-0.5 font-medium text-rose-700 dark:text-rose-400">
+            <span className="size-2 rounded-full bg-rose-500" />
+            Booked by others
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
+          <Info className="size-3.5" />
+          <span>{viewMode === "day" ? "Click or drag an open slot to book, or click a booking to view details." : "Click any day in the grid to jump to its schedule."}</span>
+        </div>
       </div>
 
-      {loadError && <p className="mt-3 rounded bg-red-50 px-3 py-2 text-sm text-red-700">{loadError}</p>}
+      {loadError && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{loadError}</span>
+        </div>
+      )}
 
-      <div className="mt-3 flex flex-col gap-6 lg:flex-row lg:items-start">
+      {/* Main layout */}
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start">
         <div className="min-w-0 flex-1">
           {isLoading ? (
-            <p className="text-sm text-slate-500">Loading...</p>
+            <div className="flex min-h-[400px] flex-col items-center justify-center rounded-xl border border-border/70 bg-card p-10 text-muted-foreground">
+              <Loader2 className="size-6 animate-spin text-primary mb-2" />
+              <p className="text-xs font-medium">Loading schedule...</p>
+            </div>
           ) : viewMode === "day" ? (
             <RoomCalendar
               date={selectedDate}
@@ -256,6 +301,6 @@ export function HomePage() {
           onClose={() => setSelectedReservation(null)}
         />
       )}
-    </>
+    </div>
   );
 }
