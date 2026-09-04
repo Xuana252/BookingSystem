@@ -29,6 +29,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             Email = "admin@bookingsystem.local",
             PasswordHash = "$2a$11$wvqCJFb6sIzKGvEDm1DLwuqLLMXHixMb5nbebuuDZ5aMXtO8gKwwK", // "Admin@12345"
             Role = UserRole.Admin,
+            IsActive = true,
             CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc)
         });
     }
