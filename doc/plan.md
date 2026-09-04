@@ -2,9 +2,11 @@
 
 ## Context
 
-BookingSystem is a room/facility booking platform, built as a vehicle to learn: .NET 10,
-EF Core/Postgres, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto), SignalR, React,
-xUnit/WireMock, Git Flow, and CI/CD — driven by a real OJT sprint schedule.
+BookingSystem is a room/facility booking platform, built as a vehicle to learn: [[csharp-dotnet|.NET 10]],
+EF Core/[[postgresql_fundamentals|Postgres]], [[redis|Redis]], [[hangfire|Hangfire]],
+[[event-driven-microservices|event-driven messaging]] (SNS/SQS via [[moto|Moto]]), SignalR, React,
+[[xunit-service-testing-notes|xUnit]]/[[wiremock|WireMock]], [[git-flow|Git Flow]], and CI/CD —
+driven by a real OJT sprint schedule.
 
 Project start: **2026-08-06**. Sprint schedule:
 
@@ -23,9 +25,10 @@ Key decisions:
 - Frontend: plain **React** (Vite + TypeScript + Tailwind), not Next.js — no SSR, file-based
   routing, or API routes. The Api is the only backend.
 - Tech-topic constraints from the OJT tracker: Postgres/EF Core, Redis, Hangfire, SNS/SQS (Moto),
-  SignalR, React, xUnit, WireMock, GitHub Actions CI, Git Flow. DynamoDB, Sidecar pattern,
-  AWS-cloud services, and AI/process topics (SpecKit, MCP, AI workflow/skills) stay as short
-  research write-ups in `doc/notes/`, not merged into the real solution.
+  SignalR, React, xUnit, WireMock, GitHub Actions CI, Git Flow. [[dynamodb|DynamoDB]],
+  [[sidecar-pattern|Sidecar pattern]], AWS-cloud services, and AI/process topics
+  ([[spec-kit|SpecKit]], MCP, AI workflow/skills) stay as short research write-ups in
+  `doc/notes/`, not merged into the real solution.
 - .NET 10 targeted throughout.
 - **Entity naming:** the core entity/events/rules are named `Reservation`, not `Booking` — a
   class literally named `Booking` inside the `Booking.*` namespace tree causes a real C# compiler

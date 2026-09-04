@@ -44,6 +44,12 @@ This is the language/runtime for the whole solution — not one file, but pervas
 - ASP.NET Core: `Booking.Api` (controllers, health checks, Scalar/OpenAPI middleware).
 - EF Core: `Booking.Infrastructure/Persistence/BookingDbContext.cs` + migrations.
 
+## Related Notes
+
+- [[postgresql_fundamentals]] — EF Core, the ORM this project uses against Postgres.
+- [[docker]] — the multi-stage Dockerfiles that build/run this .NET solution.
+- [[xunit-service-testing-notes]] — the testing framework used across the solution.
+
 ## Open Questions / Next Steps
 
 - Middleware pipeline is minimal so far (just `UseHttpsRedirection`/`UseAuthorization`) — global

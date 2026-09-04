@@ -18,8 +18,7 @@ reaching an actual external service.
   configure what response (status code, body, headers) to send back for matches.
 - **Embedded, per-test lifecycle** — `WireMockServer.Start()` spins up an in-process server for
   the duration of a test, disposed afterward. No separate container or long-lived process needed
-  (unlike Moto, which runs as a standalone server this project also uses — see
-  `doc/notes/moto.md`).
+  (unlike [[moto]], which runs as a standalone server this project also uses).
 - **Testing failure modes, not just happy paths** — stopping the server mid-test simulates the
   dependency being unreachable, which is otherwise hard to reproduce deterministically.
 - **`LogEntries`** — after a call, lets a test assert on what was actually sent (path, request
@@ -60,8 +59,14 @@ server.Dispose();
   in the codebase deliberately, as valid, working coverage of the WireMock integration-testing
   pattern, even though it's no longer the production notification path.
 - Sits at the middle layer of the testing pyramid described in
-  `doc/notes/xunit-service-testing-notes.md` — the first (and so far only) integration test in
-  the project, between the Moq-based unit tests and a hypothetical end-to-end test.
+  [[xunit-service-testing-notes]] — the first (and so far only) integration test in the project,
+  between the Moq-based unit tests and a hypothetical end-to-end test.
+
+## Related Notes
+
+- [[xunit-service-testing-notes]] — the testing-pyramid layer this integration test sits in.
+- [[moto]] — the other AWS/HTTP-mocking tool this project uses, contrasted above (embedded
+  per-test server vs. a standalone long-lived one).
 
 ## Open Questions / Next Steps
 

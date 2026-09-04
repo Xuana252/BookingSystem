@@ -145,3 +145,10 @@ docker compose ps
   `ConnectionStrings__DefaultConnection`/`Aws__EndpointUrl`/etc. overridden via `environment:` in
   compose to point at `postgres`/`moto` instead of the `localhost` defaults in `appsettings.json`
   (which are for running via `dotnet run` directly on the host).
+
+## Related Notes
+
+- [[postgresql_fundamentals]], [[redis]] — the `postgres`/`redis` services in this compose file.
+- [[moto]] — the `moto`/`moto-init` services, AWS mocking for local dev.
+- [[splunk]], [[sidecar-pattern]] — the `splunk`/`fluent-bit` services and the log-shipping
+  pattern they implement.

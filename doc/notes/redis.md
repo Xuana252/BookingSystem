@@ -60,6 +60,12 @@ await db.KeyDeleteAsync(key);                // explicit invalidation
 - Verified live: the running stack talked to real Redis (`local-redis`, healthy) throughout Phase
   2's live checks.
 
+## Related Notes
+
+- [[postgresql_fundamentals]] — the real data source this cache sits in front of.
+- [[docker]] — `redis` service wiring, including the named-volume fix that stopped anonymous
+  volumes from leaking on every container recreation.
+
 ## Open Questions / Next Steps
 
 - Cache key granularity is per-room only (`room-availability:{roomId}`), not per time-range — a

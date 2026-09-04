@@ -7,7 +7,7 @@
 
 Splunk is a centralized log search/indexing platform. In this project it's reached not by the
 app talking to Splunk directly, but through a Fluent Bit log-shipping sidecar — see
-`doc/notes/sidecar-pattern.md` for the pattern itself.
+[[sidecar-pattern]] for the pattern itself.
 
 ## Key Concepts
 
@@ -61,7 +61,7 @@ Splunk web UI: `http://localhost:8000` (`admin` / configured password). Search e
   `SPLUNK_HEC_TOKEN` auto-provisions a matching HEC input at first boot, no external account or
   manual token setup needed); `fluent-bit` service — one shared instance handling both `api` and
   `worker` rather than a strict one-per-container sidecar (an honest simplification, documented
-  in `doc/notes/sidecar-pattern.md`, closer to a node-level agent than the textbook pattern).
+  in [[sidecar-pattern]], closer to a node-level agent than the textbook pattern).
   `api` and `worker` are both configured with `logging: driver: fluentd`, pointed at fluent-bit's
   published port (the `fluentd` driver runs inside the Docker daemon, not the container's own
   network namespace, so it can't resolve the `fluent-bit` service name directly — it reaches it
@@ -82,6 +82,13 @@ Splunk web UI: `http://localhost:8000` (`admin` / configured password). Search e
 - Verified live, end to end: a real reservation-creation request was searched for and found in
   Splunk's own search UI, independently re-confirmed via `docker logs local-fluent-bit` after
   each of the two fixes above.
+
+## Related Notes
+
+- [[sidecar-pattern]] — the architectural pattern Fluent Bit implements here (with the shared,
+  not-strictly-per-instance deviation named plainly).
+- [[docker]] — the `logging: driver: fluentd` config and the whole `splunk`/`fluent-bit`/`api`/
+  `worker` service wiring live in `docker-compose.yml`.
 
 ## Open Questions / Next Steps
 

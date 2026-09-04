@@ -111,6 +111,11 @@ Unit-test layer only so far, the base of the pyramid:
   without touching the repository or publisher at all (`Times.Never`).
 - `dotnet test` run as part of every phase's verification pass (see `doc/phase-outputs/`).
 
+## Related Notes
+
+- [[wiremock]] — the middle (integration-test) layer of the pyramid described here, in practice.
+- [[csharp-dotnet]] — the language/runtime these tests are written against.
+
 ## Open Questions / Next Steps
 
 - No integration or end-to-end tests yet. Phase 2's plan calls for a `Booking.IntegrationTests`

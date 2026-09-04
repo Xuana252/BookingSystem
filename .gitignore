@@ -406,6 +406,10 @@ FodyWeavers.xsd
 *.sln.iml
 .idea/
 
+# Obsidian (doc/ opened as a vault) — local workspace state (open tabs, pane layout, per-machine
+# UI settings), not vault content worth sharing.
+.obsidian/
+
 ##
 ## Visual studio for Mac
 ##
