@@ -38,7 +38,7 @@ public class ReservationReminderServiceTests
         var reservation = UpcomingReservation();
         _reservations.Setup(r => r.GetUpcomingAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([reservation]);
-        _notifications.Setup(n => n.ExistsForReservationAsync(reservation.Id, NotificationType.ReservationReminder, It.IsAny<CancellationToken>()))
+        _notifications.Setup(n => n.ExistsForReservationAsync(reservation.Id, reservation.UserId, NotificationType.ReservationReminder, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         // Act
@@ -58,7 +58,7 @@ public class ReservationReminderServiceTests
         var reservation = UpcomingReservation();
         _reservations.Setup(r => r.GetUpcomingAsync(It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync([reservation]);
-        _notifications.Setup(n => n.ExistsForReservationAsync(reservation.Id, NotificationType.ReservationReminder, It.IsAny<CancellationToken>()))
+        _notifications.Setup(n => n.ExistsForReservationAsync(reservation.Id, reservation.UserId, NotificationType.ReservationReminder, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         // Act
@@ -80,7 +80,7 @@ public class ReservationReminderServiceTests
 
         // Assert
         _eventPublisher.Verify(p => p.PublishAsync(It.IsAny<EventEnvelope>(), It.IsAny<CancellationToken>()), Times.Never);
-        _notifications.Verify(n => n.ExistsForReservationAsync(It.IsAny<Guid>(), It.IsAny<NotificationType>(), It.IsAny<CancellationToken>()), Times.Never);
+        _notifications.Verify(n => n.ExistsForReservationAsync(It.IsAny<Guid>(), It.IsAny<Guid>(), It.IsAny<NotificationType>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

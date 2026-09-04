@@ -11,6 +11,8 @@ namespace Booking.Application.Services;
 public class ReservationService(
     IReservationRepository reservations,
     IUserRepository users,
+    IRoomRepository rooms,
+    IReservationAttendeeRepository attendees,
     IEventPublisher eventPublisher,
     IBookingRuleEngine ruleEngine,
     ICorrelationIdAccessor correlationIdAccessor,
@@ -26,7 +28,19 @@ public class ReservationService(
         // GetByIdsAsync, say) if the user table ever got large.
         var usernameById = (await users.GetAllAsync(ct)).ToDictionary(u => u.Id, u => u.Username);
 
-        return all.Select(r => ToResponse(r, usernameById.GetValueOrDefault(r.UserId, "Unknown"))).ToList();
+        // Same reasoning as the username dictionary above — one bulk query across every returned
+        // reservation's attendees, not one query per reservation.
+        var attendeesByReservation = (await attendees.GetForReservationsAsync(all.Select(r => r.Id), ct))
+            .GroupBy(a => a.ReservationId)
+            .ToDictionary(
+                g => g.Key,
+                g => (IReadOnlyList<AttendeeSummary>)g
+                    .Select(a => new AttendeeSummary(a.UserId, usernameById.GetValueOrDefault(a.UserId, "Unknown")))
+                    .ToList());
+
+        return all.Select(r => ToResponse(
+            r, usernameById.GetValueOrDefault(r.UserId, "Unknown"),
+            attendeesByReservation.GetValueOrDefault(r.Id, []))).ToList();
     }
 
     public async Task<ReservationResponse> CreateAsync(CreateReservationRequest request, Guid userId, CancellationToken ct = default)
@@ -34,6 +48,25 @@ public class ReservationService(
         if (!Reservation.IsValidTimeRange(request.StartTime, request.EndTime))
         {
             throw new ArgumentException("EndTime must be after StartTime.");
+        }
+
+        var room = await rooms.GetByIdAsync(request.RoomId, ct)
+            ?? throw new KeyNotFoundException($"Room '{request.RoomId}' not found.");
+        if (!room.IsActive)
+        {
+            throw new ArgumentException("This room is not currently available for booking.");
+        }
+
+        // The host isn't an "attendee" — silently drop their own id rather than erroring if it
+        // shows up in the list; Distinct() guards against the same id being listed twice too.
+        var attendeeIds = (request.AttendeeUserIds ?? []).Where(id => id != userId).Distinct().ToList();
+
+        var attendeeUsers = new List<User>(attendeeIds.Count);
+        foreach (var attendeeId in attendeeIds)
+        {
+            var attendeeUser = await users.GetByIdAsync(attendeeId, ct)
+                ?? throw new ArgumentException($"Attendee '{attendeeId}' is not a valid user.");
+            attendeeUsers.Add(attendeeUser);
         }
 
         var reservation = new Reservation
@@ -45,9 +78,18 @@ public class ReservationService(
         };
 
         var existingForRoom = await reservations.GetByRoomIdAsync(request.RoomId, ct);
-        ruleEngine.Validate(reservation, existingForRoom);
+        ruleEngine.Validate(reservation, existingForRoom, room.Capacity, attendeeIds.Count);
 
         await reservations.AddAsync(reservation, ct);
+        if (attendeeIds.Count > 0)
+        {
+            // Not its own SaveChangesAsync call — ReservationAttendeeRepository shares the same
+            // scoped BookingDbContext as ReservationRepository underneath, so staging these here
+            // and committing via reservations.SaveChangesAsync() below persists the reservation
+            // and its attendees in one atomic transaction, same trick the outbox pattern would
+            // use if this project had one.
+            await attendees.AddRangeAsync(reservation.Id, attendeeIds, ct);
+        }
         await reservations.SaveChangesAsync(ct);
 
         var envelope = new EventEnvelope
@@ -61,7 +103,8 @@ public class ReservationService(
         await realtimeNotifier.RoomAvailabilityChangedAsync(reservation.RoomId, ct);
 
         var user = await users.GetByIdAsync(userId, ct);
-        return ToResponse(reservation, user?.Username ?? "Unknown");
+        var attendeeSummaries = attendeeIds.Zip(attendeeUsers, (id, u) => new AttendeeSummary(id, u.Username)).ToList();
+        return ToResponse(reservation, user?.Username ?? "Unknown", attendeeSummaries);
     }
 
     public async Task CancelAsync(Guid reservationId, Guid userId, CancellationToken ct = default)
@@ -118,7 +161,7 @@ public class ReservationService(
         }
     }
 
-    private static ReservationResponse ToResponse(Reservation reservation, string username) => new(
+    private static ReservationResponse ToResponse(Reservation reservation, string username, IReadOnlyList<AttendeeSummary> attendeeSummaries) => new(
         reservation.Id,
         reservation.RoomId,
         reservation.UserId,
@@ -126,5 +169,6 @@ public class ReservationService(
         reservation.StartTime,
         reservation.EndTime,
         reservation.Status,
-        reservation.CreatedAt);
+        reservation.CreatedAt,
+        attendeeSummaries);
 }
