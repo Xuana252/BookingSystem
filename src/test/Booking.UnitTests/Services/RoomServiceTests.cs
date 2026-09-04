@@ -14,17 +14,119 @@ public class RoomServiceTests
     private RoomService CreateSut() => new(_rooms.Object);
 
     [Fact]
-    public async Task GetAllAsync_DelegatesToRepository()
+    public async Task GetAllAsync_ExcludesInactiveRooms()
     {
         // Arrange
-        var expected = new List<Room> { new() { Name = "Conference A" } };
-        _rooms.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(expected);
+        var active = new Room { Name = "Conference A", IsActive = true };
+        var inactive = new Room { Name = "Conference B (under maintenance)", IsActive = false };
+        _rooms.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([active, inactive]);
 
         // Act
         var result = await CreateSut().GetAllAsync();
 
         // Assert
-        result.Should().BeEquivalentTo(expected);
+        result.Should().ContainSingle().Which.Should().Be(active);
+    }
+
+    [Fact]
+    public async Task GetAllIncludingInactiveAsync_ReturnsEveryRoomRegardlessOfActiveStatus()
+    {
+        // Arrange
+        var active = new Room { Name = "Conference A", IsActive = true };
+        var inactive = new Room { Name = "Conference B (under maintenance)", IsActive = false };
+        _rooms.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync([active, inactive]);
+
+        // Act
+        var result = await CreateSut().GetAllIncludingInactiveAsync();
+
+        // Assert
+        result.Should().BeEquivalentTo([active, inactive]);
+    }
+
+    [Fact]
+    public async Task DeactivateAsync_ActiveRoom_SetsInactiveAndSaves()
+    {
+        // Arrange
+        var room = new Room { IsActive = true };
+        _rooms.Setup(r => r.GetByIdAsync(room.Id, It.IsAny<CancellationToken>())).ReturnsAsync(room);
+
+        // Act
+        await CreateSut().DeactivateAsync(room.Id);
+
+        // Assert
+        room.IsActive.Should().BeFalse();
+        _rooms.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task DeactivateAsync_AlreadyInactive_IsIdempotentAndDoesNotSave()
+    {
+        // Arrange
+        var room = new Room { IsActive = false };
+        _rooms.Setup(r => r.GetByIdAsync(room.Id, It.IsAny<CancellationToken>())).ReturnsAsync(room);
+
+        // Act
+        await CreateSut().DeactivateAsync(room.Id);
+
+        // Assert
+        _rooms.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DeactivateAsync_RoomNotFound_Throws()
+    {
+        // Arrange
+        var roomId = Guid.NewGuid();
+        _rooms.Setup(r => r.GetByIdAsync(roomId, It.IsAny<CancellationToken>())).ReturnsAsync((Room?)null);
+
+        // Act
+        var act = () => CreateSut().DeactivateAsync(roomId);
+
+        // Assert
+        await act.Should().ThrowAsync<KeyNotFoundException>();
+    }
+
+    [Fact]
+    public async Task ActivateAsync_InactiveRoom_SetsActiveAndSaves()
+    {
+        // Arrange
+        var room = new Room { IsActive = false };
+        _rooms.Setup(r => r.GetByIdAsync(room.Id, It.IsAny<CancellationToken>())).ReturnsAsync(room);
+
+        // Act
+        await CreateSut().ActivateAsync(room.Id);
+
+        // Assert
+        room.IsActive.Should().BeTrue();
+        _rooms.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task ActivateAsync_AlreadyActive_IsIdempotentAndDoesNotSave()
+    {
+        // Arrange
+        var room = new Room { IsActive = true };
+        _rooms.Setup(r => r.GetByIdAsync(room.Id, It.IsAny<CancellationToken>())).ReturnsAsync(room);
+
+        // Act
+        await CreateSut().ActivateAsync(room.Id);
+
+        // Assert
+        _rooms.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ActivateAsync_RoomNotFound_Throws()
+    {
+        // Arrange
+        var roomId = Guid.NewGuid();
+        _rooms.Setup(r => r.GetByIdAsync(roomId, It.IsAny<CancellationToken>())).ReturnsAsync((Room?)null);
+
+        // Act
+        var act = () => CreateSut().ActivateAsync(roomId);
+
+        // Assert
+        await act.Should().ThrowAsync<KeyNotFoundException>();
     }
 
     [Fact]
