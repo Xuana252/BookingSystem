@@ -10,6 +10,12 @@ public class NotificationRepository(BookingDbContext db) : INotificationReposito
         => await db.Notifications.AsNoTracking()
             .AnyAsync(n => n.ReservationId == reservationId && n.UserId == userId && n.Type == type, ct);
 
+    public async Task<IReadOnlyList<Notification>> GetForUserAsync(Guid userId, CancellationToken ct = default)
+        => await db.Notifications.AsNoTracking()
+            .Where(n => n.UserId == userId)
+            .OrderByDescending(n => n.CreatedAt)
+            .ToListAsync(ct);
+
     public async Task AddAsync(Notification notification, CancellationToken ct = default)
         => await db.Notifications.AddAsync(notification, ct);
 
