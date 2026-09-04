@@ -67,6 +67,13 @@ Common cron shapes: `*/1 * * * *` (every minute), `0 * * * *` (top of every hour
 - Verified live: `GET http://localhost:8081/hangfire/recurring` showed `reservation-reminder-scan`
   actually executing on schedule against real data, confirmed against Worker's own logs.
 
+## Related Notes
+
+- [[postgresql_fundamentals]] — the storage backend Hangfire persists job state to
+  (`UsePostgreSqlStorage`), the same database EF Core uses.
+- [[event-driven-microservices]] — the recurring reminder-scan job's whole point is publishing
+  `ReservationReminderDue` events through that pipeline.
+
 ## Open Questions / Next Steps
 
 - The dashboard has no real authentication (`Authorization = []`). The fix would be a custom

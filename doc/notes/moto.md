@@ -86,6 +86,16 @@ config-only, no code change needed:
   `sns:Publish` on that one topic ARN and `sqs:ReceiveMessage`/`DeleteMessage`/`GetQueueAttributes`/
   `GetQueueUrl` on that one queue ARN, not admin credentials.
 
+## Related Notes
+
+- [[event-driven-microservices]] — the SNS→SQS pub/sub pattern this project runs against Moto
+  locally.
+- [[dynamodb]] — the other Moto-emulated service enabled here (`MOTO_SERVICE: sns,sqs,dynamodb`)
+  but not yet used.
+- [[wiremock]] — the other HTTP-mocking tool in this project; contrasted in that note as
+  embedded-per-test vs. Moto's standalone-server model.
+- [[docker]] — Moto and `moto-init` are both services in `docker-compose.yml`.
+
 ## Open Questions / Next Steps
 
 - DynamoDB isn't used yet even though `MOTO_SERVICE` enables it — reserved for the Phase 2

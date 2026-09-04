@@ -93,6 +93,14 @@ Via EF Core, not raw SQL, but the underlying concepts map directly:
 - Verified via `docker exec local-postgres psql -U dev -d devdb -c "\dt"` that the tables and
   `__EFMigrationsHistory` (EF Core's own migration-tracking table) exist as expected.
 
+## Related Notes
+
+- [[docker]] — the `postgres` service this database actually runs in locally.
+- [[redis]] — the read-through cache sitting in front of the reservation-availability queries
+  described here.
+- [[hangfire]] — persists job state to this same Postgres database (`UsePostgreSqlStorage`).
+- [[dynamodb]] — the point-by-point contrast with what this project actually uses.
+
 ## Open Questions / Next Steps
 
 - No views, functions, triggers, or GIN indexes used yet — nothing in the current schema needs

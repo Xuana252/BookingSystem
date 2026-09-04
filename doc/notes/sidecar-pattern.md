@@ -86,6 +86,12 @@ to the same destination. A true per-instance sidecar would also need something l
 isn't the natural fit here since the connection is over `fluentd`'s network protocol rather than
 `localhost`. Named plainly rather than presented as the canonical pattern.
 
+## Related Notes
+
+- [[splunk]] — the concrete destination this sidecar ships logs to, and where the HEC/log-format
+  details live.
+- [[docker]] — the `fluentd` logging driver and service wiring this pattern is built from.
+
 ## Open Questions / Next Steps
 
 - If BookingSystem ever moves to Kubernetes, revisit as a true per-pod sidecar (one Fluent Bit

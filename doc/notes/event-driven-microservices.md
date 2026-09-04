@@ -64,7 +64,7 @@ equivalents like Google Pub/Sub, Azure Service Bus).
 - **Filter policies** — subscriptions can often be scoped so a queue only receives a subset of
   event types, rather than everything published to the topic.
 - **Local testing** — libraries like `moto` can mock cloud messaging services, letting you test
-  publish/subscribe flows without hitting real infrastructure (see `moto.md`).
+  publish/subscribe flows without hitting real infrastructure (see [[moto]]).
 
 ## Applied In This Project
 
@@ -85,6 +85,15 @@ This is the choreography/pub-sub pattern, concretely, via SNS → SQS:
 - Producer/consumer are two independent processes (`Booking.Api` / `Booking.Worker`) — verified
   they work independently: the Worker picks up events even though it never talks to the Api
   directly.
+
+## Related Notes
+
+- [[moto]] — how SNS/SQS are actually run locally (and how to switch to real AWS) for this
+  exact pub/sub setup.
+- [[hangfire]] — the reminder-scan recurring job that publishes `ReservationReminderDue` through
+  this same pipeline.
+- [[dynamodb]] — the one place DynamoDB's shape would genuinely fit this project (an append-only
+  audit log of every `EventEnvelope`) is framed as a possible future consumer of these events.
 
 ## Open Questions / Next Steps
 

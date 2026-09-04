@@ -56,7 +56,7 @@ Core operations (via any AWS SDK, or the CLI):
 ## Applied In This Project
 
 Not applied — `MOTO_SERVICE` in `src/docker-compose.yml` already enables Moto's DynamoDB
-emulation (see `doc/notes/moto.md`), but nothing in `Booking.Infrastructure` talks to it. The
+emulation (see [[moto]]), but nothing in `Booking.Infrastructure` talks to it. The
 domain here (`Room` ↔ `Reservation` ↔ `User` ↔ `Notification`, all FK-linked, queried with
 overlap/range conditions in `BookingRuleEngine` and `ReservationReminderService`) is a genuinely
 relational shape that Postgres/EF Core already fits well — swapping it for DynamoDB would mean
@@ -64,6 +64,12 @@ either denormalizing reservations onto rooms/users (losing the clean FK model) o
 multiple queries plus a GSI to approximate what one SQL `WHERE RoomId = @x AND StartTime <= @y`
 already does in one round trip. Per the OJT plan this stays a research topic with no build
 dependency for BookingSystem.
+
+## Related Notes
+
+- [[postgresql_fundamentals]] — what this project actually uses; the comparison table above is
+  the direct point-by-point contrast.
+- [[moto]] — how DynamoDB emulation is already available in this stack (unused).
 
 ## Open Questions / Next Steps
 

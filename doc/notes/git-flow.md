@@ -129,6 +129,11 @@ A lightweight version of Git Flow — its core branches, without the full releas
 - No `release/*` or `hotfix/*` branches yet, and no tags — not needed at this project's scale
   (single deployable target, no versioned releases).
 
+## Related Notes
+
+- [[spec-kit]] — recommends the same "one branch per feature" discipline for scoping AI-driven
+  work.
+
 ## Open Questions / Next Steps
 
 - Revisit whether tagging sprint milestones (`v0.1-phase1`, etc.) would be useful for the OJT

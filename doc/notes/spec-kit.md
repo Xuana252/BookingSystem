@@ -76,6 +76,11 @@ targets for BookingSystem"). This project has instead been built through an ordi
 conversational plan-then-implement flow with Claude Code (see the phase plan and
 `doc/phase-outputs/`), not Spec Kit's structured constitution/spec/plan/tasks artifact chain.
 
+## Related Notes
+
+- [[git-flow]] — the "one branch per feature" discipline this note recommends pairing with
+  Spec Kit's per-feature spec scoping.
+
 ## Open Questions / Next Steps
 
 - Could be worth a small side experiment later: run one narrow feature through the actual
