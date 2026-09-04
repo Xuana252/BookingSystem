@@ -85,6 +85,7 @@ public static class DependencyInjection
         services.AddScoped<IRoomRepository, RoomRepository>();
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
+        services.AddScoped<IReservationAttendeeRepository, ReservationAttendeeRepository>();
 
         // Shared here (not one composition root's own Program.cs) since both BookingRuleEngine
         // (Api) and NotificationDispatchService (Worker) need it.

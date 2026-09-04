@@ -21,9 +21,16 @@ public class ReservationReminderService(
 
         foreach (var reservation in upcoming)
         {
-            var alreadyNotified = await notifications.ExistsForReservationAsync(
-                reservation.Id, NotificationType.ReservationReminder, ct);
-            if (alreadyNotified)
+            // Host-only gate, deliberately — this only decides whether to publish the event at
+            // all, not who ends up notified (NotificationDispatchService fans that out to the
+            // host and every attendee independently, each with its own per-user dedup check).
+            // Known trade-off: if an attendee's own notification failed once for some transient
+            // reason while the host's succeeded, this gate won't re-publish on a later scan to
+            // retry just that attendee — narrow edge case, not worth more machinery for at this
+            // project's scale.
+            var hostAlreadyNotified = await notifications.ExistsForReservationAsync(
+                reservation.Id, reservation.UserId, NotificationType.ReservationReminder, ct);
+            if (hostAlreadyNotified)
             {
                 continue;
             }

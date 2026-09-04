@@ -9,7 +9,7 @@ public class BookingRuleEngine(
     BusinessSettings businessSettings,
     TimeProvider timeProvider) : IBookingRuleEngine
 {
-    public void Validate(Reservation candidate, IReadOnlyList<Reservation> existingReservationsForRoom)
+    public void Validate(Reservation candidate, IReadOnlyList<Reservation> existingReservationsForRoom, int roomCapacity, int attendeeCount)
     {
         // Both sides are absolute instants (StartTime is UTC, GetUtcNow() is UTC), so this needs
         // no timezone conversion, unlike the business-hours check below — "in the past" means the
@@ -40,6 +40,15 @@ public class BookingRuleEngine(
         if (duration > TimeSpan.FromHours(settings.MaxDurationHours))
         {
             throw new ArgumentException($"Reservation duration cannot exceed {settings.MaxDurationHours} hour(s).");
+        }
+
+        // +1 for the host — Capacity means "how many people can physically be in the room",
+        // and the person creating the reservation is one of them.
+        var totalHeadcount = 1 + attendeeCount;
+        if (totalHeadcount > roomCapacity)
+        {
+            throw new ArgumentException(
+                $"This room's capacity is {roomCapacity}, but the reservation has {totalHeadcount} people (including the host).");
         }
 
         var overlaps = existingReservationsForRoom.Any(r =>
