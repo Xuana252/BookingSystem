@@ -53,7 +53,11 @@ export function CreateRoomPage() {
 
     try {
       await createRoom({ name, location, capacity });
-      navigate("/");
+      navigate("/admin/rooms", {
+        state: {
+          successMessage: `Room "${name}" created successfully.`,
+        },
+      });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
     } finally {
@@ -66,11 +70,11 @@ export function CreateRoomPage() {
       <div className="flex items-center justify-between">
         <div>
           <Link
-            to="/"
+            to="/admin/rooms"
             className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="size-3.5" />
-            <span>Back to overview</span>
+            <span>Back to room management</span>
           </Link>
           <h1 className="text-xl font-bold tracking-tight text-foreground">Create Conference Room</h1>
           <p className="text-xs text-muted-foreground">Add a new meeting room or facility to the schedule</p>

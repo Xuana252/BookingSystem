@@ -18,7 +18,17 @@ function extractErrorMessage(body: string): string {
   }
 
   try {
-    const parsed = JSON.parse(body) as { detail?: string; title?: string };
+    const parsed = JSON.parse(body) as {
+      detail?: string;
+      title?: string;
+      errors?: Record<string, string[] | string>;
+    };
+    if (parsed.errors && typeof parsed.errors === "object") {
+      const messages = Object.values(parsed.errors).flat();
+      if (messages.length > 0) {
+        return messages.join(" ");
+      }
+    }
     return parsed.detail ?? parsed.title ?? body;
   } catch {
     return body;

@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { CalendarDays, PlusCircle, ShieldCheck, User } from "lucide-react";
+import { Building2, CalendarDays, PlusCircle, ShieldCheck, User, UserPlus, Users } from "lucide-react";
 import { getCurrentUsername, isAdmin } from "../lib/auth";
 import { Badge } from "./ui/badge";
 
@@ -36,9 +36,21 @@ export function Sidebar() {
               Admin Area
             </div>
             <nav className="space-y-1">
-              <NavLink to="/rooms/new" className={navItemClass}>
+              <NavLink to="/admin/rooms" className={navItemClass}>
+                <Building2 className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Manage Rooms</span>
+              </NavLink>
+              <NavLink to="/admin/rooms/new" className={navItemClass}>
                 <PlusCircle className="size-4 shrink-0 transition-transform group-hover:scale-110" />
                 <span>Create Room</span>
+              </NavLink>
+              <NavLink to="/admin/users" className={navItemClass}>
+                <Users className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Manage Users</span>
+              </NavLink>
+              <NavLink to="/admin/users/new" className={navItemClass}>
+                <UserPlus className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Create User</span>
               </NavLink>
             </nav>
           </div>
