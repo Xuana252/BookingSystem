@@ -214,16 +214,25 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
                   const left = (startFrac - CALENDAR_START_HOUR) * HOUR_WIDTH_PX + 2;
                   const width = Math.max((endFrac - startFrac) * HOUR_WIDTH_PX - 4, 28);
                   const isMine = reservation.userId === currentUserId;
+                  const isAttending = !isMine && Boolean(reservation.attendees?.some((a) => a.userId === currentUserId));
 
                   return (
                     <button
                       key={reservation.id}
                       type="button"
                       onClick={() => onBlockClick(reservation)}
-                      title={`${reservation.username} (${formatBlockTime(reservation.startTime)} - ${formatBlockTime(reservation.endTime)})`}
+                      title={
+                        isMine
+                          ? `Your booking (${formatBlockTime(reservation.startTime)} - ${formatBlockTime(reservation.endTime)})`
+                          : isAttending
+                          ? `Attending: ${reservation.username}'s meeting (${formatBlockTime(reservation.startTime)} - ${formatBlockTime(reservation.endTime)})`
+                          : `${reservation.username} (${formatBlockTime(reservation.startTime)} - ${formatBlockTime(reservation.endTime)})`
+                      }
                       className={`group absolute inset-y-2 z-10 flex items-center gap-1.5 overflow-hidden rounded-lg px-2 text-left text-xs font-semibold text-white shadow-sm transition-all hover:scale-[1.01] hover:brightness-105 active:scale-95 focus:outline-none ${
                         isMine
                           ? "bg-gradient-to-r from-primary to-indigo-600 shadow-primary/25 ring-1 ring-white/20"
+                          : isAttending
+                          ? "bg-gradient-to-r from-amber-600 via-amber-500 to-yellow-500 shadow-amber-500/25 ring-1 ring-white/25"
                           : "bg-gradient-to-r from-rose-500 to-red-600 shadow-rose-500/25 ring-1 ring-white/20"
                       }`}
                       style={{ left, width }}
@@ -235,7 +244,12 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
                         {reservation.username[0]?.toUpperCase() ?? "?"}
                       </span>
                       <span className="truncate font-medium">{isMine ? "You" : reservation.username}</span>
-                      {width > 120 && (
+                      {isAttending && (
+                        <span className="shrink-0 rounded bg-black/25 px-1 py-0.2 text-[9px] font-semibold text-white">
+                          Attending
+                        </span>
+                      )}
+                      {width > 150 && (
                         <span className="ml-auto hidden text-[10px] opacity-80 xl:inline-block">
                           {formatBlockTime(reservation.startTime)}
                         </span>

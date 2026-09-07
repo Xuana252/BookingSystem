@@ -1,5 +1,6 @@
 import { ReservationStatus, type Reservation, type Room } from "../lib/types";
 import { addDays, isSameLocalDay, startOfMonth } from "../lib/dates";
+import { getCurrentUserId } from "../lib/auth";
 
 const WEEKDAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MAX_CHIPS_PER_DAY = 2;
@@ -12,6 +13,7 @@ interface MonthCalendarProps {
 }
 
 export function MonthCalendar({ month, rooms, reservations, onSelectDay }: MonthCalendarProps) {
+  const currentUserId = getCurrentUserId();
   const firstOfMonth = startOfMonth(month);
   const gridStart = addDays(firstOfMonth, -firstOfMonth.getDay());
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
@@ -68,14 +70,26 @@ export function MonthCalendar({ month, rooms, reservations, onSelectDay }: Month
                 )}
               </div>
 
-              {shown.map((r) => (
-                <span
-                  key={r.id}
-                  className="w-full truncate rounded-md border border-primary/20 bg-primary/10 px-1.5 py-0.5 text-[11px] font-medium text-primary dark:bg-primary/20 dark:text-indigo-300"
-                >
-                  {roomNameById.get(r.roomId) ?? "Room"}
-                </span>
-              ))}
+              {shown.map((r) => {
+                const isMine = r.userId === currentUserId;
+                const isAttending = !isMine && Boolean(r.attendees?.some((a) => a.userId === currentUserId));
+
+                return (
+                  <span
+                    key={r.id}
+                    className={`w-full truncate rounded-md px-1.5 py-0.5 text-[11px] font-medium border ${
+                      isMine
+                        ? "border-primary/30 bg-primary/10 text-primary dark:bg-primary/20 dark:text-indigo-300"
+                        : isAttending
+                        ? "border-amber-500/30 bg-amber-500/15 text-amber-700 dark:bg-amber-500/25 dark:text-amber-300 font-semibold"
+                        : "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-400"
+                    }`}
+                  >
+                    {roomNameById.get(r.roomId) ?? "Room"}
+                    {isAttending && " (Invited)"}
+                  </span>
+                );
+              })}
 
               {extra > 0 && (
                 <span className="mt-auto text-[10px] font-semibold text-muted-foreground hover:text-foreground">
