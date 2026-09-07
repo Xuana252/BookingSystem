@@ -1,6 +1,7 @@
-import { Building2, Calendar, Clock, Loader2, MapPin, Trash2, User, X } from "lucide-react";
+import { Building2, Calendar, Clock, Loader2, MapPin, Trash2, User, Users, X } from "lucide-react";
 import { Modal } from "./Modal";
 import type { Reservation, Room } from "../lib/types";
+import { getCurrentUserId } from "../lib/auth";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
@@ -18,6 +19,8 @@ function formatTime(iso: string): string {
 }
 
 export function BookingDetailModal({ reservation, room, isMine, isCancelling, onCancel, onClose }: BookingDetailModalProps) {
+  const currentUserId = getCurrentUserId();
+  const isAttending = !isMine && Boolean(reservation.attendees?.some((a) => a.userId === currentUserId));
   return (
     <Modal onClose={onClose}>
       <div className="flex items-center justify-between border-b border-border pb-3">
@@ -89,7 +92,57 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
             </div>
           </div>
           {isMine && <Badge variant="indigo">Your Booking</Badge>}
+          {isAttending && (
+            <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-400 font-semibold">
+              You are Attending
+            </Badge>
+          )}
         </div>
+
+        {reservation.attendees && reservation.attendees.length > 0 && (
+          <div className="rounded-lg border border-border bg-muted/60 p-3">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <Users className="size-3.5 text-primary" />
+                <span>Invited Attendees ({reservation.attendees.length})</span>
+              </div>
+              <Badge variant="secondary" className="text-[10px]">
+                {1 + reservation.attendees.length} / {room?.capacity ?? "?"} seats
+              </Badge>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {reservation.attendees.map((attendee) => {
+                const isCurrent = attendee.userId === currentUserId;
+                return (
+                  <span
+                    key={attendee.userId}
+                    className={`inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs shadow-2xs ${
+                      isCurrent
+                        ? "border border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-300 font-medium"
+                        : "border border-border bg-card text-foreground"
+                    }`}
+                  >
+                    <span
+                      className={`flex size-4 items-center justify-center rounded-full text-[9px] font-bold ${
+                        isCurrent
+                          ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                          : "bg-primary/10 text-primary"
+                      }`}
+                    >
+                      {attendee.username[0]?.toUpperCase() ?? "U"}
+                    </span>
+                    <span>{attendee.username}</span>
+                    {isCurrent && (
+                      <span className="text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                        (You)
+                      </span>
+                    )}
+                  </span>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {isMine && (

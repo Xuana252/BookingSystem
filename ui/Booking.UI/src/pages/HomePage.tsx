@@ -42,6 +42,7 @@ export function HomePage() {
   const [bookingDate, setBookingDate] = useState("");
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
+  const [attendeeUserIds, setAttendeeUserIds] = useState<string[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -72,6 +73,7 @@ export function HomePage() {
     setBookingDate(toDateInputValue(selectedDate));
     setStartTime(prefillStartHour !== undefined ? hourToTimeValue(prefillStartHour) : "");
     setEndTime(prefillEndHour !== undefined ? hourToTimeValue(prefillEndHour) : "");
+    setAttendeeUserIds([]);
     setFormError(null);
     setIsFormOpen(true);
   }
@@ -105,6 +107,7 @@ export function HomePage() {
         roomId,
         startTime: combineDateAndTime(bookingDate, startTime).toISOString(),
         endTime: combineDateAndTime(bookingDate, endTime).toISOString(),
+        attendeeUserIds: attendeeUserIds.length > 0 ? attendeeUserIds : undefined,
       });
       setIsFormOpen(false);
       await loadData();
@@ -230,6 +233,10 @@ export function HomePage() {
             <span className="size-2 rounded-full bg-primary" />
             Your booking
           </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-500/20 bg-amber-500/10 px-2.5 py-0.5 font-medium text-amber-700 dark:text-amber-400">
+            <span className="size-2 rounded-full bg-amber-500" />
+            Attending (Invited)
+          </span>
           <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-500/20 bg-rose-500/10 px-2.5 py-0.5 font-medium text-rose-700 dark:text-rose-400">
             <span className="size-2 rounded-full bg-rose-500" />
             Booked by others
@@ -280,12 +287,14 @@ export function HomePage() {
           date={bookingDate}
           startTime={startTime}
           endTime={endTime}
+          attendeeUserIds={attendeeUserIds}
           formError={formError}
           isSubmitting={isSubmitting}
           onRoomIdChange={setRoomId}
           onDateChange={setBookingDate}
           onStartTimeChange={handleStartTimeChange}
           onEndTimeChange={setEndTime}
+          onAttendeeUserIdsChange={setAttendeeUserIds}
           onSubmit={handleBook}
           onClose={() => setIsFormOpen(false)}
         />

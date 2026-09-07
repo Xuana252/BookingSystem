@@ -1,8 +1,20 @@
-import type { FormEvent } from "react";
-import { AlertCircle, Building2, Calendar, CalendarPlus, Clock, Loader2, X } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import {
+  AlertCircle,
+  Building2,
+  Calendar,
+  CalendarPlus,
+  Clock,
+  Loader2,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
 import { Modal } from "./Modal";
-import type { Room } from "../lib/types";
+import type { Room, UserSummary } from "../lib/types";
 import { BUSINESS_HOURS_END_TIME, BUSINESS_HOURS_START_TIME, toDateInputValue } from "../lib/dates";
+import { getCurrentUserId } from "../lib/auth";
+import { getUsers } from "../lib/api";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -16,12 +28,14 @@ interface BookingFormModalProps {
   /** HH:mm, 24-hour — the format <input type="time"> reads/writes. */
   startTime: string;
   endTime: string;
+  attendeeUserIds: string[];
   formError: string | null;
   isSubmitting: boolean;
   onRoomIdChange: (value: string) => void;
   onDateChange: (value: string) => void;
   onStartTimeChange: (value: string) => void;
   onEndTimeChange: (value: string) => void;
+  onAttendeeUserIdsChange: (userIds: string[]) => void;
   onSubmit: (event: FormEvent) => void;
   onClose: () => void;
 }
@@ -56,16 +70,63 @@ export function BookingFormModal({
   date,
   startTime,
   endTime,
+  attendeeUserIds,
   formError,
   isSubmitting,
   onRoomIdChange,
   onDateChange,
   onStartTimeChange,
   onEndTimeChange,
+  onAttendeeUserIdsChange,
   onSubmit,
   onClose,
 }: BookingFormModalProps) {
   const duration = calculateDuration(startTime, endTime);
+  const currentUserId = getCurrentUserId();
+
+  const [availableUsers, setAvailableUsers] = useState<UserSummary[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+
+  const selectedRoom = rooms.find((r) => r.id === roomId);
+  const maxAttendees = selectedRoom ? Math.max(0, selectedRoom.capacity - 1) : 0;
+  const isCapacityReached = selectedRoom !== undefined && attendeeUserIds.length >= maxAttendees;
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingUsers(true);
+    getUsers()
+      .then((users) => {
+        if (isMounted) {
+          // Exclude the current user because they are the host (implicit organizer)
+          setAvailableUsers(users.filter((u) => u.id !== currentUserId));
+        }
+      })
+      .catch(() => {
+        // Non-fatal if users couldn't be loaded, booking can still proceed without attendees
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoadingUsers(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [currentUserId]);
+
+  function handleAddAttendee(userId: string) {
+    if (!userId || attendeeUserIds.includes(userId)) return;
+    if (isCapacityReached) return;
+    onAttendeeUserIdsChange([...attendeeUserIds, userId]);
+  }
+
+  function handleRemoveAttendee(userId: string) {
+    onAttendeeUserIdsChange(attendeeUserIds.filter((id) => id !== userId));
+  }
+
+  // Candidates for adding are available users not yet selected
+  const unselectedUsers = availableUsers.filter((u) => !attendeeUserIds.includes(u.id));
 
   return (
     <Modal onClose={onClose}>
@@ -98,7 +159,19 @@ export function BookingFormModal({
             <Building2 className="size-3.5 text-muted-foreground" />
             <span>Room</span>
           </Label>
-          <Select value={roomId} onValueChange={(value) => onRoomIdChange(value ?? "")} required>
+          <Select
+            value={roomId}
+            onValueChange={(value) => {
+              const newRoomId = value ?? "";
+              onRoomIdChange(newRoomId);
+              // If new room has lower capacity than current attendees + 1, trim or keep within bounds
+              const newRoom = rooms.find((r) => r.id === newRoomId);
+              if (newRoom && attendeeUserIds.length > Math.max(0, newRoom.capacity - 1)) {
+                onAttendeeUserIdsChange(attendeeUserIds.slice(0, Math.max(0, newRoom.capacity - 1)));
+              }
+            }}
+            required
+          >
             <SelectTrigger id="roomId" className="mt-1.5 w-full bg-card">
               <SelectValue placeholder="Select a conference room">
                 {(value: string | null) => {
@@ -177,6 +250,96 @@ export function BookingFormModal({
             </Badge>
           </div>
         )}
+
+        {/* Attendees Section */}
+        <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="attendees" className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+              <Users className="size-3.5 text-muted-foreground" />
+              <span>Invite Attendees</span>
+            </Label>
+            {selectedRoom && (
+              <span className="text-[11px] text-muted-foreground">
+                <span className="font-semibold text-foreground">{1 + attendeeUserIds.length}</span> of{" "}
+                <span className="font-semibold text-foreground">{selectedRoom.capacity}</span> seats filled
+              </span>
+            )}
+          </div>
+
+          {selectedRoom ? (
+            <>
+              {/* Add attendee selector */}
+              <div className="flex gap-2">
+                <Select
+                  value=""
+                  onValueChange={(val) => {
+                    if (val) handleAddAttendee(val);
+                  }}
+                  disabled={isCapacityReached || isLoadingUsers || unselectedUsers.length === 0}
+                >
+                  <SelectTrigger className="flex-1 bg-card text-xs">
+                    <SelectValue placeholder={
+                      isLoadingUsers
+                        ? "Loading colleagues..."
+                        : isCapacityReached
+                        ? "Room capacity reached"
+                        : unselectedUsers.length === 0
+                        ? "All colleagues added"
+                        : "Select colleagues to invite..."
+                    } />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {unselectedUsers.map((user) => (
+                      <SelectItem key={user.id} value={user.id}>
+                        {user.username}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {isCapacityReached && (
+                <div className="flex items-center gap-1.5 text-[11px] text-amber-600 dark:text-amber-400">
+                  <AlertCircle className="size-3.5 shrink-0" />
+                  <span>
+                    Maximum room capacity reached (1 host + {maxAttendees} attendee{maxAttendees === 1 ? "" : "s"}).
+                  </span>
+                </div>
+              )}
+
+              {/* Selected attendee chips */}
+              {attendeeUserIds.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 pt-1">
+                  {attendeeUserIds.map((id) => {
+                    const user = availableUsers.find((u) => u.id === id);
+                    const name = user?.username ?? "Colleague";
+                    return (
+                      <span
+                        key={id}
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card py-1 pr-1.5 pl-2.5 text-xs font-medium text-foreground shadow-2xs"
+                      >
+                        <UserPlus className="size-3 text-primary" />
+                        <span>{name}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAttendee(id)}
+                          className="flex size-4 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          title={`Remove ${name}`}
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </span>
+                    );
+                  })}
+                </div>
+              )}
+            </>
+          ) : (
+            <p className="text-[11px] text-muted-foreground">
+              Select a room above to invite attendees and check seating limits.
+            </p>
+          )}
+        </div>
 
         <div className="pt-2">
           <Button
