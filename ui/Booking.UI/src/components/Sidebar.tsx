@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Building2, CalendarDays, PlusCircle, ShieldCheck, User, UserPlus, Users } from "lucide-react";
+import { Building2, CalendarDays, PlusCircle, ShieldCheck, Sparkles, User, UserPlus, Users } from "lucide-react";
 import { getCurrentUsername, isAdmin } from "../lib/auth";
 import { Badge } from "./ui/badge";
 
@@ -27,6 +27,19 @@ export function Sidebar() {
               <CalendarDays className="size-4 shrink-0 transition-transform group-hover:scale-110" />
               <span>Calendar</span>
             </NavLink>
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new CustomEvent("toggle-ai-chat"))}
+              className="w-full group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-all duration-150 cursor-pointer"
+            >
+              <div className="flex items-center gap-3">
+                <Sparkles className="size-4 shrink-0 text-indigo-500 transition-transform group-hover:scale-110" />
+                <span>AI Concierge</span>
+              </div>
+              <span className="rounded-full bg-indigo-500/15 border border-indigo-500/25 px-1.5 py-0.2 text-[9px] font-bold text-indigo-500 dark:text-indigo-400">
+                AI
+              </span>
+            </button>
           </nav>
         </div>
 

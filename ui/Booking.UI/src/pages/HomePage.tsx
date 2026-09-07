@@ -68,6 +68,15 @@ export function HomePage() {
   // Covers changes made from another tab/user too, not just this one's own actions below.
   useEffect(() => onRoomAvailabilityChanged(() => loadData()), [onRoomAvailabilityChanged, loadData]);
 
+  // Instant refresh when AI chatbot completes a booking
+  useEffect(() => {
+    function handleRefresh() {
+      loadData();
+    }
+    window.addEventListener("refresh-reservations", handleRefresh);
+    return () => window.removeEventListener("refresh-reservations", handleRefresh);
+  }, [loadData]);
+
   function openBookingForm(prefillRoomId?: string, prefillStartHour?: number, prefillEndHour?: number) {
     setRoomId(prefillRoomId ?? "");
     setBookingDate(toDateInputValue(selectedDate));
