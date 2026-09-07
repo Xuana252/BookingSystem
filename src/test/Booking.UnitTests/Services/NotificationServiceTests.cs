@@ -26,4 +26,36 @@ public class NotificationServiceTests
         // Assert
         result.Should().BeEquivalentTo(expected);
     }
+
+    [Fact]
+    public async Task MarkAsReadAsync_DelegatesToRepository_ReturnsResult()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        var notificationId = Guid.NewGuid();
+        _notifications.Setup(n => n.MarkAsReadAsync(notificationId, userId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        // Act
+        var result = await CreateSut().MarkAsReadAsync(notificationId, userId);
+
+        // Assert
+        result.Should().BeTrue();
+        _notifications.Verify(n => n.MarkAsReadAsync(notificationId, userId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task MarkAllAsReadAsync_DelegatesToRepository()
+    {
+        // Arrange
+        var userId = Guid.NewGuid();
+        _notifications.Setup(n => n.MarkAllAsReadAsync(userId, It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        // Act
+        await CreateSut().MarkAllAsReadAsync(userId);
+
+        // Assert
+        _notifications.Verify(n => n.MarkAllAsReadAsync(userId, It.IsAny<CancellationToken>()), Times.Once);
+    }
 }
