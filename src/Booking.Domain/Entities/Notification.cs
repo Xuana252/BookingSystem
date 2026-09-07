@@ -25,5 +25,7 @@ public class Notification
     public NotificationType Type { get; set; }
     public string Message { get; set; } = string.Empty;
     public DateTime? SentAt { get; set; }
+    public bool IsRead { get; set; }
+    public DateTime? ReadAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

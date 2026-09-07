@@ -18,4 +18,24 @@ public class NotificationsController(INotificationService notificationService) :
         var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
         return Ok(await notificationService.GetForUserAsync(userId, ct));
     }
+
+    [HttpPost("{id:guid}/read")]
+    public async Task<IActionResult> MarkAsRead(Guid id, CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+        var found = await notificationService.MarkAsReadAsync(id, userId, ct);
+        if (!found)
+        {
+            return NotFound();
+        }
+        return NoContent();
+    }
+
+    [HttpPost("read-all")]
+    public async Task<IActionResult> MarkAllAsRead(CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+        await notificationService.MarkAllAsReadAsync(userId, ct);
+        return NoContent();
+    }
 }

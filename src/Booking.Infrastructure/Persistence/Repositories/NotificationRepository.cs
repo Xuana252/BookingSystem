@@ -16,6 +16,25 @@ public class NotificationRepository(BookingDbContext db) : INotificationReposito
             .OrderByDescending(n => n.CreatedAt)
             .ToListAsync(ct);
 
+    public async Task<bool> MarkAsReadAsync(Guid notificationId, Guid userId, CancellationToken ct = default)
+    {
+        var rows = await db.Notifications
+            .Where(n => n.Id == notificationId && n.UserId == userId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.IsRead, true)
+                .SetProperty(n => n.ReadAt, DateTime.UtcNow), ct);
+        return rows > 0;
+    }
+
+    public async Task MarkAllAsReadAsync(Guid userId, CancellationToken ct = default)
+    {
+        await db.Notifications
+            .Where(n => n.UserId == userId && !n.IsRead)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(n => n.IsRead, true)
+                .SetProperty(n => n.ReadAt, DateTime.UtcNow), ct);
+    }
+
     public async Task AddAsync(Notification notification, CancellationToken ct = default)
         => await db.Notifications.AddAsync(notification, ct);
 
