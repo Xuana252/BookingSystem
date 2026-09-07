@@ -3,6 +3,7 @@ import { Calendar, Radio } from "lucide-react";
 import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
 import { Sidebar } from "./Sidebar";
+import { BookingChatbot } from "./BookingChatbot";
 import { ReservationHubProvider } from "../contexts/ReservationHubContext";
 import { isAuthenticated } from "../lib/auth";
 
@@ -60,6 +61,9 @@ export function Layout() {
             </div>
           </main>
         </div>
+
+        {/* AI Booking Concierge Chatbot */}
+        {authenticated && <BookingChatbot />}
       </div>
     </ReservationHubProvider>
   );
