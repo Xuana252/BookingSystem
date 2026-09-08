@@ -6,20 +6,51 @@ using StackExchange.Redis;
 namespace Booking.Infrastructure.Persistence.Repositories;
 
 /// <summary>
-/// Caches GetByRoomIdAsync (the per-room availability lookup the booking rule engine's overlap
-/// check depends on) in Redis, invalidated on the next successful SaveChangesAsync after an
-/// AddAsync for that room. Other queries pass straight through to the EF-backed repository.
+/// Caches GetAllAsync (the full reservation list every client re-fetches on page load and on
+/// every SignalR RoomAvailabilityChanged broadcast — the real hot path) and GetByRoomIdAsync
+/// (the per-room availability lookup the booking rule engine's overlap check depends on) in
+/// Redis, invalidated on the next successful SaveChangesAsync after a write. Other queries pass
+/// straight through to the EF-backed repository.
 /// </summary>
 public class CachedReservationRepository(
     IReservationRepository inner,
     IConnectionMultiplexer redis) : IReservationRepository
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
+    private const string AllReservationsCacheKey = "reservations:all";
 
     private readonly List<Guid> _pendingInvalidations = [];
+    private bool _invalidateAll;
 
-    public Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
-        => inner.GetAllAsync(ct);
+    public async Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
+    {
+        var db = redis.GetDatabase();
+
+        var cached = await db.StringGetAsync(AllReservationsCacheKey);
+        if (cached.HasValue)
+        {
+            return JsonSerializer.Deserialize<List<Reservation>>((string)cached!) ?? [];
+        }
+
+        var all = await inner.GetAllAsync(ct);
+        await db.StringSetAsync(AllReservationsCacheKey, JsonSerializer.Serialize(all), CacheTtl);
+        return all;
+    }
+
+    // Not cached itself (a point lookup by primary key isn't a hot path), but still tracked as a
+    // pending invalidation — the only current caller (ReservationService.CancelAsync) fetches,
+    // mutates Status, then calls SaveChangesAsync, so both the room's and the full-list cache
+    // need invalidating the same way AddAsync's does.
+    public async Task<Reservation?> GetByIdAsync(Guid id, CancellationToken ct = default)
+    {
+        var reservation = await inner.GetByIdAsync(id, ct);
+        if (reservation is not null)
+        {
+            _pendingInvalidations.Add(reservation.RoomId);
+            _invalidateAll = true;
+        }
+        return reservation;
+    }
 
     public async Task<IReadOnlyList<Reservation>> GetByRoomIdAsync(Guid roomId, CancellationToken ct = default)
     {
@@ -44,13 +75,14 @@ public class CachedReservationRepository(
     {
         await inner.AddAsync(reservation, ct);
         _pendingInvalidations.Add(reservation.RoomId);
+        _invalidateAll = true;
     }
 
     public async Task SaveChangesAsync(CancellationToken ct = default)
     {
         await inner.SaveChangesAsync(ct);
 
-        if (_pendingInvalidations.Count == 0)
+        if (_pendingInvalidations.Count == 0 && !_invalidateAll)
         {
             return;
         }
@@ -61,6 +93,12 @@ public class CachedReservationRepository(
             await db.KeyDeleteAsync(CacheKey(roomId));
         }
         _pendingInvalidations.Clear();
+
+        if (_invalidateAll)
+        {
+            await db.KeyDeleteAsync(AllReservationsCacheKey);
+            _invalidateAll = false;
+        }
     }
 
     private static string CacheKey(Guid roomId) => $"room-availability:{roomId}";

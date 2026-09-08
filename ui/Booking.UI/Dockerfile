@@ -11,10 +11,10 @@ COPY . .
 
 # Vite bakes VITE_* vars into the bundle at build time, not read at container startup — so this
 # has to be a build ARG, not a docker-compose environment: entry (which only affects runtime).
-# Defaults to api's docker-compose host-published port, not Booking.Api's `dotnet run` port
-# (5133) — the browser runs on the host, outside the compose network, so it has to reach api
-# the same way it reaches this container: via a published host port.
-ARG VITE_API_BASE_URL=http://localhost:8080/api
+# "/api" (relative, not an absolute localhost:8080 URL) — this container's own nginx (see
+# nginx.conf) reverse-proxies /api/ to the api container, so the browser only ever talks to
+# whatever origin serves this page, same-origin, no CORS involved for this path.
+ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 

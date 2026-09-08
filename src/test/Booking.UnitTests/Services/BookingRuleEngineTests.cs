@@ -18,8 +18,20 @@ public class BookingRuleEngineTests
     // say — the timezone-conversion behavior itself gets its own dedicated tests below.
     private static readonly BusinessSettings DefaultBusinessSettings = new() { TimeZoneId = "UTC" };
 
-    private static BookingRuleEngine CreateSut(ReservationRuleSettings? settings = null, BusinessSettings? businessSettings = null)
-        => new(settings ?? DefaultSettings, businessSettings ?? DefaultBusinessSettings);
+    // Fixed well before every hardcoded candidate date below (all 2026-08-20+), so the
+    // not-in-the-past check doesn't retroactively break every other test in this file as real
+    // time moves on. TimeProvider (not DateTime.UtcNow directly) is exactly what makes this
+    // controllable instead of racing the real clock.
+    private static readonly DateTimeOffset FixedNow = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
+    private sealed class FixedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
+
+    private static BookingRuleEngine CreateSut(
+        ReservationRuleSettings? settings = null, BusinessSettings? businessSettings = null, DateTimeOffset? now = null)
+        => new(settings ?? DefaultSettings, businessSettings ?? DefaultBusinessSettings, new FixedTimeProvider(now ?? FixedNow));
 
     private static Reservation Candidate(DateTime start, DateTime end) => new()
     {
@@ -37,6 +49,40 @@ public class BookingRuleEngineTests
     };
 
     [Fact]
+    public void Validate_StartTimeInThePast_Throws()
+    {
+        // Arrange — "now" is fixed later than the candidate for this one test, the inverse of
+        // every other test's setup, to exercise the past-check specifically.
+        var now = new DateTimeOffset(2026, 8, 21, 0, 0, 0, TimeSpan.Zero);
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
+
+        // Act
+        var act = () => CreateSut(now: now).Validate(candidate, [], 100, 0);
+
+        // Assert
+        act.Should().Throw<ArgumentException>().WithMessage("*past*");
+    }
+
+    [Fact]
+    public void Validate_StartTimeExactlyNow_DoesNotThrow()
+    {
+        // Arrange — the boundary: StartTime == now should still be bookable, only strictly
+        // before now is rejected.
+        var now = new DateTimeOffset(2026, 8, 20, 9, 0, 0, TimeSpan.Zero);
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
+
+        // Act
+        var act = () => CreateSut(now: now).Validate(candidate, [], 100, 0);
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    [Fact]
     public void Validate_WithinBusinessHoursNoOverlapUnderMaxDuration_DoesNotThrow()
     {
         // Arrange
@@ -45,7 +91,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, []);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().NotThrow();
@@ -60,7 +106,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, []);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithMessage("*business hours*");
@@ -75,7 +121,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 19, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, []);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithMessage("*business hours*");
@@ -90,7 +136,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 21, 10, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, []);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithMessage("*business hours*");
@@ -105,7 +151,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 12, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, []);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().NotThrow();
@@ -120,7 +166,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 13, 30, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, []);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithMessage("*duration*");
@@ -135,7 +181,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 13, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, []);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().NotThrow();
@@ -154,7 +200,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 12, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, [existing]);
+        var act = () => CreateSut().Validate(candidate, [existing], 100, 0);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithMessage("*overlap*");
@@ -173,7 +219,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, [existing]);
+        var act = () => CreateSut().Validate(candidate, [existing], 100, 0);
 
         // Assert
         act.Should().NotThrow();
@@ -193,7 +239,7 @@ public class BookingRuleEngineTests
             ReservationStatus.Cancelled);
 
         // Act
-        var act = () => CreateSut().Validate(candidate, [existing]);
+        var act = () => CreateSut().Validate(candidate, [existing], 100, 0);
 
         // Assert
         act.Should().NotThrow();
@@ -208,7 +254,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 11, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, [candidate]);
+        var act = () => CreateSut().Validate(candidate, [candidate], 100, 0);
 
         // Assert
         act.Should().NotThrow();
@@ -227,7 +273,7 @@ public class BookingRuleEngineTests
             new DateTime(2026, 8, 20, 11, 0, 0, DateTimeKind.Utc));
 
         // Act
-        var act = () => CreateSut().Validate(candidate, [existingInOtherRoom]);
+        var act = () => CreateSut().Validate(candidate, [existingInOtherRoom], 100, 0);
 
         // Assert
         act.Should().NotThrow();
@@ -244,7 +290,7 @@ public class BookingRuleEngineTests
         var businessSettings = new BusinessSettings { TimeZoneId = "Asia/Ho_Chi_Minh" };
 
         // Act
-        var act = () => CreateSut(businessSettings: businessSettings).Validate(candidate, []);
+        var act = () => CreateSut(businessSettings: businessSettings).Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().NotThrow();
@@ -261,9 +307,55 @@ public class BookingRuleEngineTests
         var businessSettings = new BusinessSettings { TimeZoneId = "Asia/Ho_Chi_Minh" };
 
         // Act
-        var act = () => CreateSut(businessSettings: businessSettings).Validate(candidate, []);
+        var act = () => CreateSut(businessSettings: businessSettings).Validate(candidate, [], 100, 0);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithMessage("*business hours*");
+    }
+
+    [Fact]
+    public void Validate_HostPlusAttendeesExactlyAtCapacity_DoesNotThrow()
+    {
+        // Arrange — capacity 4, host + 3 attendees = 4, exactly at the limit.
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
+
+        // Act
+        var act = () => CreateSut().Validate(candidate, [], roomCapacity: 4, attendeeCount: 3);
+
+        // Assert
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void Validate_HostPlusAttendeesExceedsCapacity_Throws()
+    {
+        // Arrange — capacity 4, host + 4 attendees = 5, one over.
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
+
+        // Act
+        var act = () => CreateSut().Validate(candidate, [], roomCapacity: 4, attendeeCount: 4);
+
+        // Assert
+        act.Should().Throw<ArgumentException>().WithMessage("*capacity*");
+    }
+
+    [Fact]
+    public void Validate_NoAttendeesExceedsCapacity_Throws()
+    {
+        // Arrange — a room with 0 capacity can't even hold the host alone. Contrived, but proves
+        // the "+1 for the host" isn't accidentally dropped when attendeeCount is 0.
+        var candidate = Candidate(
+            new DateTime(2026, 8, 20, 9, 0, 0, DateTimeKind.Utc),
+            new DateTime(2026, 8, 20, 10, 0, 0, DateTimeKind.Utc));
+
+        // Act
+        var act = () => CreateSut().Validate(candidate, [], roomCapacity: 0, attendeeCount: 0);
+
+        // Assert
+        act.Should().Throw<ArgumentException>().WithMessage("*capacity*");
     }
 }

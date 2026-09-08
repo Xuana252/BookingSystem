@@ -58,6 +58,20 @@ public class GlobalExceptionMiddlewareTests
     }
 
     [Fact]
+    public async Task InvokeAsync_KeyNotFoundException_Returns404WithExceptionMessage()
+    {
+        // Arrange
+        var exception = new KeyNotFoundException("Reservation 'some-id' not found.");
+
+        // Act
+        var (statusCode, problem) = await InvokeAsync(exception);
+
+        // Assert
+        statusCode.Should().Be(StatusCodes.Status404NotFound);
+        problem.Detail.Should().Be(exception.Message);
+    }
+
+    [Fact]
     public async Task InvokeAsync_InvalidOperationException_Returns409WithExceptionMessage()
     {
         // Arrange

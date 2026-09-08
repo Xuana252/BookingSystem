@@ -18,10 +18,9 @@ See [`doc/plan.md`](doc/plan.md) for the full sprint-by-sprint build plan and cu
   - `docker-compose.yml` — local infra (Postgres, Redis, Moto)
 - `ui/Booking.UI` — React (Vite) frontend
 - `doc/plan.md` — sprint-by-sprint build plan, key architectural decisions, current status
-- `doc/notes/` — one file per OJT tracker topic, following `doc/notes/_TEMPLATE.md`: summary, key
-  concepts, cheatsheet, and — critically — where (if anywhere) it's actually applied in this
-  project. Covers both applied topics (Docker, PostgreSQL, xUnit, ...) and research-only ones
-  (Sidecar pattern, Spec Kit, ...).
+- `doc/notes/` — organized into phase folders (`phase-1/` through `phase-3/`), one file per OJT
+  tracker topic following `doc/notes/_TEMPLATE.md`: summary, key concepts, cheatsheet, and
+  where (if anywhere) it's applied in this project. Covers both applied topics and research-only ones.
 - `doc/phase-outputs/` — one summary per sprint phase (what was built, verification results, demo steps)
 
 ## Quick start (development)
@@ -44,6 +43,9 @@ dotnet run --project src/Booking.Worker
 
 - API health: `http://localhost:5133/health`
 - Interactive API reference (Scalar, dev only): `http://localhost:5133/scalar/v1`
+- Seeded Admin account (only role allowed to create/manage rooms — self-registration always
+  creates an Employee): username `admin`, password `Admin@12345`. Dev-only credential, not meant
+  to survive past local/demo use.
 
 ### 3) Frontend (UI)
 
@@ -67,6 +69,34 @@ docker compose up -d --build
 
 - UI: `http://localhost:5173` (nginx-served production build, not Vite's dev server)
 - API: `http://localhost:8080`
+
+Services are tagged into Compose profiles so you don't have to bring up the whole stack just to
+test one change — `postgres`/`redis` always start regardless of profile flags:
+
+| Profile | Brings up | Use it for |
+|---|---|---|
+| `backend` | `api`, `worker` | Iterating on API/Worker code. Skips Moto and Splunk/Fluent Bit entirely — no ~120s Splunk health-check wait. |
+| `mock-aws` | `moto`, `moto-init` | Add alongside `backend` to test against the local SNS/SQS mock instead of real AWS |
+| `frontend` | `ui` | Add alongside `backend` — `ui`'s nginx has nothing to proxy to without it |
+| `logging` | `splunk`, `fluent-bit` | Add when you actually need to check ingested logs |
+| `full` | everything | Same as the bare `docker compose up -d --build` above |
+
+```powershell
+# Fast API/Worker iteration — skips Moto, Splunk, Fluent Bit entirely (~48s vs 120s+)
+docker compose --profile backend up -d --build
+
+# + the UI too
+docker compose --profile backend --profile frontend up -d --build
+
+# Testing against the local Moto mock instead of real AWS
+docker compose --profile mock-aws --profile backend up -d --build
+
+# Everything, logging included — same as `docker compose up -d --build`
+docker compose --profile full up -d --build
+```
+
+To pick up a code change on an already-running container, add `--force-recreate <service>`
+(or just re-run the same `up` command — Compose recreates whatever changed).
 
 ## Branching convention (Git Flow, lightweight)
 

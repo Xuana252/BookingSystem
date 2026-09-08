@@ -2,16 +2,17 @@
 
 ## Context
 
-BookingSystem is a room/facility booking platform, built as a vehicle to learn: .NET 10,
-EF Core/Postgres, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto), SignalR, React,
-xUnit/WireMock, Git Flow, and CI/CD — driven by a real OJT sprint schedule.
+BookingSystem is a room/facility booking platform, built as a vehicle to learn: [[csharp-dotnet|.NET 10]],
+EF Core/[[postgresql_fundamentals|Postgres]], [[redis|Redis]], [[hangfire|Hangfire]],
+[[event-driven-microservices|event-driven messaging]] (SNS/SQS via [[moto|Moto]]), SignalR, React,
+[[xunit-service-testing-notes|xUnit]]/[[wiremock|WireMock]], [[git-flow|Git Flow]], and CI/CD —
+driven by a real OJT sprint schedule.
 
 Project start: **2026-08-06**. Sprint schedule:
 
 - **Sprint 1** (Aug 4–17, present Aug 18): Foundations
 - **Sprint 2** (Aug 18–31, present Sep 1): Core domain
-- **Sprint 3** (Sep 1–14, present Sep 15): Research only — no build work
-- **Sprint 4** (Sep 15–28, present Sep 29): Integration, CI/CD, UI completion, polish
+- **Sprint 3** (Sep 1–28, present Sep 29): Research, Integration, CI/CD, UI completion & polish (merged Phase 3 & former Phase 4)
 - **Final week** (Sep 29–Oct 4): Rehearsal/polish only
 
 Key decisions:
@@ -23,9 +24,10 @@ Key decisions:
 - Frontend: plain **React** (Vite + TypeScript + Tailwind), not Next.js — no SSR, file-based
   routing, or API routes. The Api is the only backend.
 - Tech-topic constraints from the OJT tracker: Postgres/EF Core, Redis, Hangfire, SNS/SQS (Moto),
-  SignalR, React, xUnit, WireMock, GitHub Actions CI, Git Flow. DynamoDB, Sidecar pattern,
-  AWS-cloud services, and AI/process topics (SpecKit, MCP, AI workflow/skills) stay as short
-  research write-ups in `doc/notes/`, not merged into the real solution.
+  SignalR, React, xUnit, WireMock, GitHub Actions CI, Git Flow. [[dynamodb|DynamoDB]],
+  [[sidecar-pattern|Sidecar pattern]], AWS-cloud services, and AI/process topics
+  ([[spec-kit|SpecKit]], MCP, AI workflow/skills) stay as short research write-ups in
+  `doc/notes/`, not merged into the real solution.
 - .NET 10 targeted throughout.
 - **Entity naming:** the core entity/events/rules are named `Reservation`, not `Booking` — a
   class literally named `Booking` inside the `Booking.*` namespace tree causes a real C# compiler
@@ -160,7 +162,7 @@ recurring job); core domain logic covered by tests.
    hook point for the Splunk logging below.
 9. **Splunk logging** — self-hosted `splunk/splunk` container added to `docker-compose.yml`
    (no external account needed). **Revised from a direct Serilog HEC sink to a log-shipping
-   sidecar** (see `doc/notes/sidecar-pattern.md`): Api/Worker switch their console sink to
+   sidecar** (see `doc/notes/phase-2/sidecar-pattern.md`): Api/Worker switch their console sink to
    structured JSON and know nothing about Splunk; Docker's `fluentd` logging driver forwards
    each container's stdout to a `fluent-bit` container, which parses the JSON and ships it to
    Splunk's HEC. One shared Fluent Bit instance handles both services rather than a strict
@@ -174,7 +176,7 @@ recurring job); core domain logic covered by tests.
 11. **Frontend kickoff** — scaffold `ui/Booking.UI` (Vite + React + TypeScript + Tailwind,
     `package.json` name `booking-ui`), basic pages/layout, API client stub, plus a login page and
     token storage since the Api now requires auth for booking. Real feature pages (room calendar,
-    booking form, live availability) land in Phase 4.
+    booking form, live availability) land in Phase 3.
 
 **Phase 2 verification**
 - Register a user → login → receive a JWT → call `POST /api/reservations` with it → 201, owned
@@ -189,24 +191,26 @@ recurring job); core domain logic covered by tests.
 
 ---
 
-## Phase 3 — Sprint 3: Research only (Sep 1–14, present Sep 15)
+## Phase 3 — Sprint 3: Research, Integration, CI/CD & UI Completion (Sep 1–28, present Sep 29)
 
-**No BookingSystem build work this sprint** — domain-agnostic. Deliverable is summarized research
-notes under `doc/notes/`: SpecKit, AI workflow/skills basics, MCP (server/client), plus AWS
-reading (ECS, Parameter Store, CloudWatch, EC2, VPC — the ones assigned to this window). Nothing
-here touches the running app.
+**Goal (matches tracker milestone):** Merged Phase 3 (Research) and Phase 4 (Integration +
+CI/CD + UI completion) into a unified final sprint. CI green on push; research deliverables
+documented; full interactive demo works end to end.
 
-One combined write-up (not two separate ones): **New Relic + PagerDuty as a single detect →
-escalate pipeline** — New Relic evaluates alert conditions on metrics/logs (error rate, latency,
-service down) and hands off to PagerDuty via its native integration, which owns who gets paged
-and how escalation works. Both need a signed-up external SaaS account to genuinely wire in
-(unlike Splunk's self-hosted option from Phase 2), so this stays research-only for now.
+### Part A: Research & Documentation (Domain-Agnostic)
 
----
+Deliverable is summarized research notes under `doc/notes/phase-3/`: SpecKit, AI workflow/skills
+basics, MCP (server/client), plus AWS reading (ECS, Parameter Store, CloudWatch, EC2, VPC, Codeship).
 
-## Phase 4 — Sprint 4: Integration + CI/CD + UI completion (Sep 15–28, present Sep 29)
+- **New Relic + PagerDuty detect → escalate pipeline**:
+  New Relic evaluates alert conditions on metrics/logs (error rate, latency, service down) and
+  hands off to PagerDuty via its native integration, which owns who gets paged and how
+  escalation works. Research-only in this sprint (Splunk covers local self-hosted logging);
+  detailed in `doc/notes/phase-3/new-relic.md` and `doc/notes/phase-3/pagerduty.md`.
+- **Spec Kit & AI Workflows**: `doc/notes/phase-3/spec-kit.md`.
+- **AWS Infrastructure Reading**: ECS, Parameter Store, CloudWatch, EC2, VPC, Codeship.
 
-**Goal (matches tracker milestone):** CI green on push; full demo works end to end.
+### Part B: Integration, CI/CD & UI Completion (Build Scope)
 
 1. **GitHub Actions CI** — `.github/workflows/ci.yml`: restore/build solution → run
    `Booking.UnitTests` → `docker compose up -d` the infra → run `Booking.IntegrationTests` →
@@ -219,20 +223,25 @@ and how escalation works. Both need a signed-up external SaaS account to genuine
    as the Api's existing `POST /api/reservations` — no hold/checkout state, per the Phase 2
    decision to drop `BookingHold`), live availability updates and notification feed via
    `@microsoft/signalr`, consuming the Api.
-4. **Nginx reverse proxy** — only if actually exposing a local endpoint; skip otherwise.
-5. Remaining AWS reading (CloudWatch, EC2, VPC, Codeship) — notes only, same as Phase 3.
-6. Final backend/frontend polish so the whole stack demos cleanly via `docker compose up`.
+4. **Nginx reverse proxy** — `ui`'s existing nginx (previously just a static file server) now
+   also proxies `/api/*` and `/hubs/*` to the `api` container, so the browser talks to one
+   origin instead of two. `VITE_API_BASE_URL` is now the relative `/api`, not an absolute
+   `http://localhost:8080/api`. The Api's own CORS policy stays configured — still needed for
+   `npm run dev` (Vite dev server talking directly to a differently-ported Api, no proxy in
+   front of it) — this only removes the *need* for CORS on the dockerized path, not the config.
+5. Final backend/frontend polish so the whole stack demos cleanly via `docker compose up`.
 
-**Phase 4 verification**
+**Phase 3 verification**
 - Push to a branch → GitHub Actions run is green.
 - Full `docker compose up` → open the UI, book a room, see it disappear from another open tab's
   calendar live via SignalR, and see a reminder notification arrive without refreshing.
+- Research deliverables complete and organized under `doc/notes/phase-3/`.
 
 ---
 
 ## Final week (Sep 29–Oct 4)
 
-Rehearsal and polish only — no new build scope. Re-verify the Phase 4 demo path end-to-end,
+Rehearsal and polish only — no new build scope. Re-verify the Phase 3 demo path end-to-end,
 review fundamentals for the company test.
 
 ---
@@ -246,5 +255,5 @@ verification against the running stack, beyond the original 11-item plan — in
 row end-to-end, exception → visible in Splunk) are flagged there as not yet independently
 exercised, though everything each depends on is confirmed working.
 
-Next: Phase 3 (Sprint 3 — research only, no build work) or Phase 4 (Sprint 4 — Integration +
-CI/CD + SignalR + real frontend pages), worked on new `feature/*` branches off `develop`.
+Current focus: **Phase 3 (merged Sprint 3 research + integration, CI/CD, and UI completion)**,
+active on `feature/*` and `integration/*` branches.

@@ -22,9 +22,11 @@ public static class DependencyInjection
     {
         services.AddScoped<IRoomService, RoomService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IReservationService, ReservationService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IBookingRuleEngine, BookingRuleEngine>();
+        services.AddSingleton(TimeProvider.System);
 
         services.AddScoped<IValidator<CreateReservationRequest>, CreateReservationRequestValidator>();
         services.AddScoped<IValidator<CreateRoomRequest>, CreateRoomRequestValidator>();

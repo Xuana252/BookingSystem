@@ -1,4 +1,4 @@
-import { getToken } from "./auth";
+import { getToken, notifyUnauthorized } from "./auth";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:5133/api";
 
@@ -18,7 +18,17 @@ function extractErrorMessage(body: string): string {
   }
 
   try {
-    const parsed = JSON.parse(body) as { detail?: string; title?: string };
+    const parsed = JSON.parse(body) as {
+      detail?: string;
+      title?: string;
+      errors?: Record<string, string[] | string>;
+    };
+    if (parsed.errors && typeof parsed.errors === "object") {
+      const messages = Object.values(parsed.errors).flat();
+      if (messages.length > 0) {
+        return messages.join(" ");
+      }
+    }
     return parsed.detail ?? parsed.title ?? body;
   } catch {
     return body;
@@ -37,6 +47,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 
   if (!response.ok) {
     const body = await response.text();
+
+    // Only a *carried* token being rejected means the session itself is invalid (expired,
+    // revoked, etc.) — a 401 on an anonymous request (e.g. a wrong-password login attempt, which
+    // has no token to send) is just a normal failed request, not a reason to log anyone out.
+    if (response.status === 401 && token) {
+      notifyUnauthorized();
+    }
+
     throw new ApiError(response.status, extractErrorMessage(body) || response.statusText);
   }
 

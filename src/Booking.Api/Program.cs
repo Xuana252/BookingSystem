@@ -5,6 +5,7 @@ using Booking.Api.Middleware;
 using Booking.Application;
 using Booking.Domain.Configuration;
 using Booking.Infrastructure;
+using Booking.Infrastructure.Hubs;
 using Booking.Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
@@ -30,14 +31,19 @@ builder.Services.AddHealthChecks();
 // Booking.UI is served from a different origin (Vite dev server or the dockerized nginx build
 // both land on localhost:5173 — see docker-compose.yml's ui service) than the Api (5133/8080),
 // so browser fetch() calls need an explicit CORS policy or they're blocked client-side even
-// though the Api itself responds fine. Bearer-token auth (no cookies), so no AllowCredentials.
+// though the Api itself responds fine.
 const string uiCorsPolicy = "BookingUi";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(uiCorsPolicy, policy => policy
         .WithOrigins("http://localhost:5173")
         .AllowAnyHeader()
-        .AllowAnyMethod());
+        .AllowAnyMethod()
+        // REST calls are bearer-token-only (no cookies), so this wasn't needed before. SignalR's
+        // negotiate request can fall back to a transport that relies on same-site cookies for
+        // connection affinity, and AllowCredentials requires a specific origin (already true
+        // here) rather than AllowAnyOrigin, so this is safe to add.
+        .AllowCredentials());
 });
 builder.Services.AddOpenApi(options =>
 {
@@ -64,7 +70,27 @@ builder.Services
             ValidAudience = jwtSettings.Audience,
             ValidateIssuerSigningKey = true,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Secret)),
-            ValidateLifetime = true
+            ValidateLifetime = true,
+            // JwtTokenGenerator issues a short "role" claim, not the default (long-URI)
+            // ClaimTypes.Role — MapInboundClaims = false below means it isn't auto-remapped, so
+            // [Authorize(Roles = ...)]/User.IsInRole(...) would silently never match without this.
+            RoleClaimType = "role"
+        };
+        // SignalR's WebSocket/SSE transports can't set a custom Authorization header, so the JS
+        // client sends the token as ?access_token=... instead (accessTokenFactory). Only honor
+        // that fallback for the hub path — everywhere else still requires a real Authorization
+        // header, unchanged.
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                if (!string.IsNullOrEmpty(accessToken) && context.HttpContext.Request.Path.StartsWithSegments("/hubs"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 builder.Services.AddAuthorization();
@@ -94,6 +120,7 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+app.MapHub<ReservationHub>("/hubs/reservations");
 app.MapHealthChecks("/health");
 
 if (app.Environment.IsDevelopment())

@@ -4,10 +4,22 @@ using Booking.Domain.Interfaces;
 
 namespace Booking.Application.Services;
 
-public class BookingRuleEngine(ReservationRuleSettings settings, BusinessSettings businessSettings) : IBookingRuleEngine
+public class BookingRuleEngine(
+    ReservationRuleSettings settings,
+    BusinessSettings businessSettings,
+    TimeProvider timeProvider) : IBookingRuleEngine
 {
-    public void Validate(Reservation candidate, IReadOnlyList<Reservation> existingReservationsForRoom)
+    public void Validate(Reservation candidate, IReadOnlyList<Reservation> existingReservationsForRoom, int roomCapacity, int attendeeCount)
     {
+        // Both sides are absolute instants (StartTime is UTC, GetUtcNow() is UTC), so this needs
+        // no timezone conversion, unlike the business-hours check below — "in the past" means the
+        // same thing everywhere. TimeProvider rather than DateTime.UtcNow directly so tests can
+        // fix "now" instead of racing the real clock against hardcoded candidate dates.
+        if (candidate.StartTime < timeProvider.GetUtcNow().UtcDateTime)
+        {
+            throw new ArgumentException("Reservation cannot start in the past.");
+        }
+
         // StartTime/EndTime are stored (and expected on the wire) as UTC — "business hours" is
         // meaningless without pinning down whose. Convert to the configured business time zone
         // before checking, rather than comparing UTC directly against an 08:00-18:00 window that
@@ -28,6 +40,15 @@ public class BookingRuleEngine(ReservationRuleSettings settings, BusinessSetting
         if (duration > TimeSpan.FromHours(settings.MaxDurationHours))
         {
             throw new ArgumentException($"Reservation duration cannot exceed {settings.MaxDurationHours} hour(s).");
+        }
+
+        // +1 for the host — Capacity means "how many people can physically be in the room",
+        // and the person creating the reservation is one of them.
+        var totalHeadcount = 1 + attendeeCount;
+        if (totalHeadcount > roomCapacity)
+        {
+            throw new ArgumentException(
+                $"This room's capacity is {roomCapacity}, but the reservation has {totalHeadcount} people (including the host).");
         }
 
         var overlaps = existingReservationsForRoom.Any(r =>

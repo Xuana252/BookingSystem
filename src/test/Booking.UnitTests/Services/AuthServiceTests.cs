@@ -100,4 +100,38 @@ public class AuthServiceTests
         // Assert
         await act.Should().ThrowAsync<UnauthorizedAccessException>();
     }
+
+    [Fact]
+    public async Task LoginAsync_DeactivatedUser_ThrowsUnauthorizedWithDeactivatedMessage()
+    {
+        // Arrange — password is correct here, deliberately, so this exercises the deactivated
+        // check rather than the generic wrong-credentials path.
+        var user = new User { Username = "alice", PasswordHash = "hashed-password", IsActive = false };
+        var request = new LoginRequest("alice", "p@ssword1");
+        _users.Setup(r => r.GetByUsernameAsync(request.Username, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _passwordHasher.Setup(h => h.Verify(request.Password, user.PasswordHash)).Returns(true);
+
+        // Act
+        var act = () => CreateSut().LoginAsync(request);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>().WithMessage("*deactivated*");
+    }
+
+    [Fact]
+    public async Task LoginAsync_WrongPasswordAgainstDeactivatedUser_GetsGenericMessageNotDeactivatedMessage()
+    {
+        // Arrange — proves the deactivated check only runs after a correct password, so a wrong
+        // guess never learns the account is deactivated in the first place.
+        var user = new User { Username = "alice", PasswordHash = "hashed-password", IsActive = false };
+        var request = new LoginRequest("alice", "wrong-password");
+        _users.Setup(r => r.GetByUsernameAsync(request.Username, It.IsAny<CancellationToken>())).ReturnsAsync(user);
+        _passwordHasher.Setup(h => h.Verify(request.Password, user.PasswordHash)).Returns(false);
+
+        // Act
+        var act = () => CreateSut().LoginAsync(request);
+
+        // Assert
+        await act.Should().ThrowAsync<UnauthorizedAccessException>().WithMessage("Invalid username or password.");
+    }
 }

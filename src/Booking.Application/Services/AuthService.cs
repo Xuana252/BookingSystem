@@ -36,6 +36,15 @@ public class AuthService(IUserRepository users, IPasswordHasher passwordHasher, 
             throw new UnauthorizedAccessException("Invalid username or password.");
         }
 
+        // Checked only after the password's already confirmed correct — so a wrong-password
+        // attempt against a deactivated account still just gets the generic message above,
+        // rather than leaking "this account exists and is deactivated" to someone who doesn't
+        // actually know the password. The genuine account owner (who does) gets told plainly.
+        if (!user.IsActive)
+        {
+            throw new UnauthorizedAccessException("Your account has been deactivated. Contact an administrator.");
+        }
+
         return new AuthResponse(jwtTokenGenerator.GenerateToken(user), user.Id, user.Username);
     }
 }

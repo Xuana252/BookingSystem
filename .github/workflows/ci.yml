@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main, develop]
+
+defaults:
+  run:
+    working-directory: src
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Unit tests
+        run: dotnet test test/Booking.UnitTests --no-build --configuration Release
+
+      # Booking.IntegrationTests' current tests (WireMock-backed) don't strictly need this yet,
+      # but this is the shape Phase 2/4's real integration tests (Postgres/Redis-backed
+      # repository tests) will need — bringing it up here now avoids re-touching this workflow
+      # later. Only the infra services, not api/worker/ui/splunk/fluent-bit — nothing here
+      # exercises the running app itself.
+      - name: Start infra (Postgres, Redis, Moto)
+        run: docker compose up -d postgres redis moto moto-init
+
+      - name: Integration tests
+        run: dotnet test test/Booking.IntegrationTests --no-build --configuration Release
+
+      - name: Tear down infra
+        if: always()
+        run: docker compose down -v

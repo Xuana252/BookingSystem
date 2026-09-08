@@ -31,9 +31,17 @@ namespace Booking.Infrastructure.Persistence.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<bool>("IsRead")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid>("ReservationId")
                         .HasColumnType("uuid");
@@ -54,6 +62,8 @@ namespace Booking.Infrastructure.Persistence.Migrations
                     b.HasIndex("ReservationId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("UserId", "IsRead");
 
                     b.ToTable("Notifications");
                 });
@@ -91,6 +101,28 @@ namespace Booking.Infrastructure.Persistence.Migrations
                     b.HasIndex("RoomId", "StartTime", "EndTime");
 
                     b.ToTable("Reservations");
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.ReservationAttendee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ReservationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("ReservationId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("ReservationAttendees");
                 });
 
             modelBuilder.Entity("Booking.Domain.Entities.Room", b =>
@@ -137,9 +169,15 @@ namespace Booking.Infrastructure.Persistence.Migrations
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
 
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Role")
+                        .HasColumnType("integer");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -155,6 +193,18 @@ namespace Booking.Infrastructure.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Users");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Email = "admin@bookingsystem.local",
+                            IsActive = true,
+                            PasswordHash = "$2a$11$wvqCJFb6sIzKGvEDm1DLwuqLLMXHixMb5nbebuuDZ5aMXtO8gKwwK",
+                            Role = 1,
+                            Username = "admin"
+                        });
                 });
 
             modelBuilder.Entity("Booking.Domain.Entities.Notification", b =>
@@ -177,6 +227,21 @@ namespace Booking.Infrastructure.Persistence.Migrations
                     b.HasOne("Booking.Domain.Entities.Room", null)
                         .WithMany()
                         .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Booking.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.ReservationAttendee", b =>
+                {
+                    b.HasOne("Booking.Domain.Entities.Reservation", null)
+                        .WithMany()
+                        .HasForeignKey("ReservationId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 

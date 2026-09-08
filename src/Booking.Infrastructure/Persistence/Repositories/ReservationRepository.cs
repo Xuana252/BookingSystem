@@ -9,6 +9,12 @@ public class ReservationRepository(BookingDbContext db) : IReservationRepository
     public async Task<IReadOnlyList<Reservation>> GetAllAsync(CancellationToken ct = default)
         => await db.Reservations.AsNoTracking().ToListAsync(ct);
 
+    // Deliberately tracked, unlike every other read here — callers (ReservationService.CancelAsync)
+    // mutate the returned entity and rely on EF Core's change tracking to persist it via
+    // SaveChangesAsync, rather than going through a separate UpdateAsync.
+    public Task<Reservation?> GetByIdAsync(Guid id, CancellationToken ct = default)
+        => db.Reservations.FirstOrDefaultAsync(r => r.Id == id, ct);
+
     public async Task<IReadOnlyList<Reservation>> GetByRoomIdAsync(Guid roomId, CancellationToken ct = default)
         => await db.Reservations.AsNoTracking().Where(r => r.RoomId == roomId).ToListAsync(ct);
 

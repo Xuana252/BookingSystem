@@ -1,5 +1,5 @@
 <!--
-Template for doc/notes/*.md. Copy this structure for new topic notes.
+Template for doc/notes/phase-<N>/*.md. Copy this structure for new topic notes.
 Delete this comment block when you copy it.
 -->
 
@@ -27,6 +27,13 @@ Concrete mapping to BookingSystem, one bullet per concept that's actually in use
 
 If nothing's applied yet, say so plainly and note why (e.g. "research-only per OJT Sprint 3 —
 no build dependency") rather than leaving the section blank.
+
+## Related Notes
+
+Link related topic notes with `[[note-name]]` (no `.md`, no path — just the filename), one bullet
+each with a short reason why they're related. This is what makes the Obsidian graph view actually
+show connections instead of a field of disconnected dots — a plain-text mention of another note's
+filename in prose does *not* count, only the `[[...]]` syntax does.
 
 ## Open Questions / Next Steps
 

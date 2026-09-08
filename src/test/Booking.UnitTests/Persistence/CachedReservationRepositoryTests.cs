@@ -22,6 +22,41 @@ public class CachedReservationRepositoryTests
     private CachedReservationRepository CreateSut() => new(_inner.Object, _redis.Object);
 
     [Fact]
+    public async Task GetAllAsync_CacheMiss_QueriesInnerAndPopulatesCache()
+    {
+        // Arrange
+        var expected = new List<Reservation> { new() { RoomId = Guid.NewGuid() } };
+        _database.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(RedisValue.Null);
+        _inner.Setup(r => r.GetAllAsync(It.IsAny<CancellationToken>())).ReturnsAsync(expected);
+
+        // Act
+        var result = await CreateSut().GetAllAsync();
+
+        // Assert
+        result.Should().BeEquivalentTo(expected);
+        _inner.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Once);
+        _database.Invocations.Should().Contain(i =>
+            i.Method.Name == nameof(IDatabase.StringSetAsync) && (RedisKey)i.Arguments[0]! == "reservations:all");
+    }
+
+    [Fact]
+    public async Task GetAllAsync_CacheHit_ReturnsCachedValueWithoutQueryingInner()
+    {
+        // Arrange
+        var cached = new List<Reservation> { new() { RoomId = Guid.NewGuid() } };
+        _database.Setup(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()))
+            .ReturnsAsync(new RedisValue(JsonSerializer.Serialize(cached)));
+
+        // Act
+        var result = await CreateSut().GetAllAsync();
+
+        // Assert
+        result.Should().BeEquivalentTo(cached);
+        _inner.Verify(r => r.GetAllAsync(It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public async Task GetByRoomIdAsync_CacheMiss_QueriesInnerAndPopulatesCache()
     {
         // Arrange
@@ -79,10 +114,76 @@ public class CachedReservationRepositoryTests
     }
 
     [Fact]
+    public async Task SaveChangesAsync_AfterAdd_InvalidatesTheFullListCacheKey()
+    {
+        // Arrange
+        var reservation = new Reservation { RoomId = Guid.NewGuid() };
+        var sut = CreateSut();
+        await sut.AddAsync(reservation);
+
+        // Act
+        await sut.SaveChangesAsync();
+
+        // Assert
+        _database.Verify(d => d.KeyDeleteAsync("reservations:all", It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Fact]
     public async Task SaveChangesAsync_NoPendingAdds_DoesNotTouchCache()
     {
         // Arrange
         var sut = CreateSut();
+
+        // Act
+        await sut.SaveChangesAsync();
+
+        // Assert
+        _database.Verify(d => d.KeyDeleteAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_DelegatesToInnerAndDoesNotCache()
+    {
+        // Arrange
+        var reservation = new Reservation { RoomId = Guid.NewGuid() };
+        _inner.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+
+        // Act
+        var result = await CreateSut().GetByIdAsync(reservation.Id);
+
+        // Assert
+        result.Should().Be(reservation);
+        _database.Verify(d => d.StringGetAsync(It.IsAny<RedisKey>(), It.IsAny<CommandFlags>()), Times.Never);
+        _database.Verify(d => d.StringSetAsync(
+            It.IsAny<RedisKey>(), It.IsAny<RedisValue>(), It.IsAny<TimeSpan?>(), It.IsAny<bool>(), It.IsAny<When>(), It.IsAny<CommandFlags>()),
+            Times.Never);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ThenSaveChangesAsync_InvalidatesThatReservationsRoomCacheKey()
+    {
+        // Arrange
+        var reservation = new Reservation { RoomId = Guid.NewGuid() };
+        _inner.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+        var sut = CreateSut();
+        await sut.GetByIdAsync(reservation.Id);
+
+        // Act
+        await sut.SaveChangesAsync();
+
+        // Assert
+        _database.Verify(d => d.KeyDeleteAsync($"room-availability:{reservation.RoomId}", It.IsAny<CommandFlags>()), Times.Once);
+        _database.Verify(d => d.KeyDeleteAsync("reservations:all", It.IsAny<CommandFlags>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_NotFound_DoesNotTrackAnyInvalidation()
+    {
+        // Arrange
+        var id = Guid.NewGuid();
+        _inner.Setup(r => r.GetByIdAsync(id, It.IsAny<CancellationToken>())).ReturnsAsync((Reservation?)null);
+        var sut = CreateSut();
+        await sut.GetByIdAsync(id);
 
         // Act
         await sut.SaveChangesAsync();

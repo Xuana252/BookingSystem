@@ -121,7 +121,8 @@ project's scale.
 
 ## Documentation conventions
 
-- **`doc/notes/`** — one file per OJT tracker topic, following `doc/notes/_TEMPLATE.md`: summary,
+- **`doc/notes/`** — organized into phase folders (`phase-1/`, `phase-2/`, `phase-3/`),
+  one file per OJT tracker topic, following `doc/notes/_TEMPLATE.md`: summary,
   key concepts, cheatsheet, and an **"Applied In This Project"** section mapping the concept to
   real files — or explicitly marked "Research only" with why. When a note's topic gets touched by
   new code, update its "Applied In This Project" section rather than leaving it stale.
