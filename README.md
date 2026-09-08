@@ -18,10 +18,9 @@ See [`doc/plan.md`](doc/plan.md) for the full sprint-by-sprint build plan and cu
   - `docker-compose.yml` — local infra (Postgres, Redis, Moto)
 - `ui/Booking.UI` — React (Vite) frontend
 - `doc/plan.md` — sprint-by-sprint build plan, key architectural decisions, current status
-- `doc/notes/` — one file per OJT tracker topic, following `doc/notes/_TEMPLATE.md`: summary, key
-  concepts, cheatsheet, and — critically — where (if anywhere) it's actually applied in this
-  project. Covers both applied topics (Docker, PostgreSQL, xUnit, ...) and research-only ones
-  (Sidecar pattern, Spec Kit, ...).
+- `doc/notes/` — organized into phase folders (`phase-1/` through `phase-3/`), one file per OJT
+  tracker topic following `doc/notes/_TEMPLATE.md`: summary, key concepts, cheatsheet, and
+  where (if anywhere) it's applied in this project. Covers both applied topics and research-only ones.
 - `doc/phase-outputs/` — one summary per sprint phase (what was built, verification results, demo steps)
 
 ## Quick start (development)

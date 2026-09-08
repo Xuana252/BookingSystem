@@ -161,7 +161,7 @@ correctly wraps the already-field-parsed records.
 
 **Output:** `src/docker-compose.yml` (`splunk`/`fluent-bit` services, `logging:` blocks on
 `api`/`worker`), `src/fluent-bit/{fluent-bit.conf,parsers.conf}`,
-`doc/notes/sidecar-pattern.md` (flipped from "Research only" to "Applied in project").
+`doc/notes/phase-2/sidecar-pattern.md` (flipped from "Research only" to "Applied in project").
 
 **Verification:** live, end to end — a real reservation-creation request was searched for and
 found in Splunk's own search UI by the user, after both fix cycles, each independently confirmed
@@ -175,7 +175,7 @@ honestly fit here (an append-only event/audit log). `sidecar-pattern.md` updated
 actually applied it — honestly caveated as one shared Fluent Bit instance for both services,
 architecturally closer to a node-level agent than a strict one-per-instance sidecar.
 
-**Output:** `doc/notes/dynamodb.md`, `doc/notes/sidecar-pattern.md`.
+**Output:** `doc/notes/phase-2/dynamodb.md`, `doc/notes/phase-2/sidecar-pattern.md`.
 
 **Verification:** n/a — documentation only.
 

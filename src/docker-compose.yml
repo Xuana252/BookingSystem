@@ -103,7 +103,7 @@ services:
       retries: 10
       start_period: 120s
 
-  # Log-shipping sidecar (see doc/notes/sidecar-pattern.md): api/worker only ever write
+  # Log-shipping sidecar (see doc/notes/phase-2/sidecar-pattern.md): api/worker only ever write
   # structured JSON to stdout and know nothing about Splunk. Docker's `fluentd` logging
   # driver on those two services forwards each line here; this container parses it and
   # ships it on to Splunk's HEC. One shared instance for both services rather than a

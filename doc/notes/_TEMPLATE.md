@@ -1,5 +1,5 @@
 <!--
-Template for doc/notes/*.md. Copy this structure for new topic notes.
+Template for doc/notes/phase-<N>/*.md. Copy this structure for new topic notes.
 Delete this comment block when you copy it.
 -->
 
