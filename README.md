@@ -77,7 +77,7 @@ test one change — `postgres`/`redis` always start regardless of profile flags:
 |---|---|---|
 | `backend` | `api`, `worker` | Iterating on API/Worker code. Skips Moto and Splunk/Fluent Bit entirely — no ~120s Splunk health-check wait. |
 | `mock-aws` | `moto`, `moto-init` | Add alongside `backend` to test against the local SNS/SQS mock instead of real AWS |
-| `frontend` | `ui` | Add alongside `backend` — `ui`'s nginx has nothing to proxy to without it |
+| `frontend` | `ui`, `nginx` | Frontend services (Vite UI container + Nginx reverse proxy gateway) |
 | `logging` | `splunk`, `fluent-bit` | Add when you actually need to check ingested logs |
 | `full` | everything | Same as the bare `docker compose up -d --build` above |
 

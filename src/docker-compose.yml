@@ -146,6 +146,14 @@ services:
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
       - Redis__ConnectionString=redis:6379
+      # New Relic APM (CoreCLR Profiler)
+      - CORECLR_ENABLE_PROFILING=${CORECLR_ENABLE_PROFILING:-1}
+      - CORECLR_PROFILER={36032161-FFC0-4B61-B559-F6C5D41BAE5A}
+      - CORECLR_NEWRELIC_HOME=/usr/local/newrelic-dotnet-agent
+      - CORECLR_PROFILER_PATH=/usr/local/newrelic-dotnet-agent/libNewRelicProfiler.so
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY:-}
+      - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME_API:-Booking.Api (Local)}
+      - NEW_RELIC_DISTRIBUTED_TRACING_ENABLED=true
     logging:
       driver: fluentd
       options:
@@ -189,6 +197,14 @@ services:
       - Redis__ConnectionString=redis:6379
       - Gmail__Username=${GMAIL_USERNAME:-}
       - Gmail__AppPassword=${GMAIL_APP_PASSWORD:-}
+      # New Relic APM (CoreCLR Profiler)
+      - CORECLR_ENABLE_PROFILING=${CORECLR_ENABLE_PROFILING:-1}
+      - CORECLR_PROFILER={36032161-FFC0-4B61-B559-F6C5D41BAE5A}
+      - CORECLR_NEWRELIC_HOME=/usr/local/newrelic-dotnet-agent
+      - CORECLR_PROFILER_PATH=/usr/local/newrelic-dotnet-agent/libNewRelicProfiler.so
+      - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY:-}
+      - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME_WORKER:-Booking.Worker (Local)}
+      - NEW_RELIC_DISTRIBUTED_TRACING_ENABLED=true
     logging:
       driver: fluentd
       options:
@@ -201,18 +217,30 @@ services:
       redis:
         condition: service_healthy
 
-  # Built static bundle served by nginx, which also reverse-proxies /api and /hubs to the api
-  # service (see ui/Booking.UI/nginx.conf) — VITE_API_BASE_URL is relative ("/api", the
-  # Dockerfile's default), so the browser only ever talks to this container's own origin.
+  # Built static bundle served via Vite preview on internal port 5173.
+  # Nginx reverse-proxies frontend requests here, and /api & /hubs to the api service.
   ui:
     build:
       context: ../ui/Booking.UI
     container_name: local-ui
     restart: unless-stopped
     profiles: ["frontend", "full"]
+    expose:
+      - "5173"
+
+  # Reverse-proxy gateway routing / to ui:5173, and /api & /hubs to api:8080.
+  # Uses dynamic DNS resolution (resolver 127.0.0.11) so it starts cleanly even if
+  # api is not currently running.
+  nginx:
+    image: nginx:alpine
+    container_name: local-nginx
+    restart: unless-stopped
+    profiles: ["frontend", "full"]
     depends_on:
-      api:
+      ui:
         condition: service_started
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "5173:80"
 

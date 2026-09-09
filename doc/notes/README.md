@@ -33,6 +33,7 @@ doc/notes/
 │   └── wiremock.md
 └── phase-3/                     # Sprint 3: Research, Integration, CI/CD & UI (Sep 1 – Sep 28, 2026)
     ├── new-relic.md
+    ├── nginx.md
     ├── pagerduty.md
     └── spec-kit.md
 ```
@@ -71,11 +72,12 @@ doc/notes/
 Merged final sprint covering research write-ups along with solution integration, SignalR real-time,
 GitHub Actions CI/CD, React UI completion, and Nginx proxying.
 
-### Research Notes
+### Notes
 
 | Note | Topic | Category | Status | Summary |
 | :--- | :--- | :--- | :--- | :--- |
 | [`new-relic.md`](file:///d:/Mock/MockProject/BookingSystem/doc/notes/phase-3/new-relic.md) | New Relic | DevOps / Observability | Research only | SaaS APM, M.E.L.T. telemetry, distributed tracing, Apdex, and NRQL. |
+| [`nginx.md`](file:///d:/Mock/MockProject/BookingSystem/doc/notes/phase-3/nginx.md) | Nginx Reverse Proxy Gateway | DevOps / Web Server | Applied | Standalone reverse-proxy gateway routing `/` to Vite UI, `/api/*`, and `/hubs/*` with dynamic Docker DNS. |
 | [`pagerduty.md`](file:///d:/Mock/MockProject/BookingSystem/doc/notes/phase-3/pagerduty.md) | PagerDuty | DevOps / Observability | Research only | On-call incident response, escalation policies, and Events API v2 routing. |
 | [`spec-kit.md`](file:///d:/Mock/MockProject/BookingSystem/doc/notes/phase-3/spec-kit.md) | Spec Kit | AI | Research only | Specification-driven development workflow and artifact structuring. |
 
@@ -84,7 +86,7 @@ GitHub Actions CI/CD, React UI completion, and Nginx proxying.
 - **GitHub Actions CI**: Automated build, test, and containerized integration test workflows (`.github/workflows/ci.yml`).
 - **SignalR Real-Time**: Live availability updates and notification feed backplane via Redis.
 - **React Frontend**: Room calendar, booking flow, and responsive UI with Tailwind (`ui/Booking.UI`).
-- **Nginx Reverse Proxy**: Single-origin reverse proxy for `/api/*`, `/hubs/*`, and UI static assets.
+- **Nginx Reverse Proxy Gateway**: Standalone single-origin reverse-proxy gateway for UI (`ui:5173`), `/api/*`, and `/hubs/*`.
 - **AWS Infrastructure Reading**: ECS, Parameter Store, CloudWatch, EC2, VPC, Codeship.
 
 ---
