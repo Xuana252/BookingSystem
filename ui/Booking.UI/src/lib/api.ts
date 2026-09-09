@@ -21,7 +21,8 @@ export interface CreateRoomRequest {
 }
 
 // Room endpoints
-export const getRooms = () => apiClient.get<Room[]>("/rooms");
+export const getRooms = (includeInactive = false) =>
+  apiClient.get<Room[]>(`/rooms${includeInactive ? "?includeInactive=true" : ""}`);
 export const getAllRooms = () => apiClient.get<Room[]>("/rooms/all");
 export const createRoom = (request: CreateRoomRequest) => apiClient.post<Room>("/rooms", request);
 export const deactivateRoom = (id: string) => apiClient.post<void>(`/rooms/${id}/deactivate`);

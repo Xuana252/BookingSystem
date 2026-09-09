@@ -51,7 +51,7 @@ export function HomePage() {
 
   const loadData = useCallback(async () => {
     try {
-      const [roomsResult, reservationsResult] = await Promise.all([getRooms(), getReservations()]);
+      const [roomsResult, reservationsResult] = await Promise.all([getRooms(true), getReservations()]);
       setRooms(roomsResult);
       setReservations(reservationsResult);
       setLoadError(null);
@@ -78,6 +78,12 @@ export function HomePage() {
   }, [loadData]);
 
   function openBookingForm(prefillRoomId?: string, prefillStartHour?: number, prefillEndHour?: number) {
+    if (prefillRoomId) {
+      const targetRoom = rooms.find((r) => r.id === prefillRoomId);
+      if (targetRoom && !targetRoom.isActive) {
+        return;
+      }
+    }
     setRoomId(prefillRoomId ?? "");
     setBookingDate(toDateInputValue(selectedDate));
     setStartTime(prefillStartHour !== undefined ? hourToTimeValue(prefillStartHour) : "");
@@ -291,7 +297,7 @@ export function HomePage() {
 
       {isFormOpen && (
         <BookingFormModal
-          rooms={rooms}
+          rooms={rooms.filter((r) => r.isActive)}
           roomId={roomId}
           date={bookingDate}
           startTime={startTime}

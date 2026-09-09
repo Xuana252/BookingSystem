@@ -11,8 +11,13 @@ namespace Booking.Api.Controllers;
 public class RoomsController(IRoomService roomService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<Room>>> GetAll(CancellationToken ct)
-        => Ok(await roomService.GetAllAsync(ct));
+    public async Task<ActionResult<IEnumerable<Room>>> GetAll([FromQuery] bool includeInactive = false, CancellationToken ct = default)
+    {
+        var result = includeInactive
+            ? await roomService.GetAllIncludingInactiveAsync(ct)
+            : await roomService.GetAllAsync(ct);
+        return Ok(result);
+    }
 
     [HttpGet("all")]
     [Authorize(Roles = "Admin")]

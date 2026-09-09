@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DoorClosed, Users } from "lucide-react";
+import { DoorClosed, Users, Wrench } from "lucide-react";
 import { ReservationStatus, type Reservation, type Room } from "../lib/types";
 import { BUSINESS_HOURS_END, BUSINESS_HOURS_START, hourLabel, isSameLocalDay } from "../lib/dates";
 
@@ -155,23 +155,48 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
             <div key={room.id} className="contents">
               {/* Sticky room rail cell */}
               <div
-                className="sticky left-0 z-30 flex items-center gap-3 border-t border-r border-border bg-card px-4"
+                className={`sticky left-0 z-30 flex items-center gap-3 border-t border-r border-border px-4 ${
+                  !room.isActive ? "bg-muted/70 dark:bg-muted/30" : "bg-card"
+                }`}
                 style={{ height: ROW_HEIGHT_PX }}
               >
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-primary/15 text-xs font-bold text-primary dark:bg-primary/25">
-                  {room.name[0]?.toUpperCase() ?? "R"}
+                <div
+                  className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                    !room.isActive
+                      ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
+                      : "bg-primary/15 text-primary dark:bg-primary/25"
+                  }`}
+                >
+                  {!room.isActive ? <Wrench className="size-4" /> : (room.name[0]?.toUpperCase() ?? "R")}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-semibold text-foreground leading-snug">{room.name}</div>
-                  <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
-                    <Users className="size-3 shrink-0" />
-                    <span>{room.capacity} seats</span>
+                  <div className={`truncate text-sm font-semibold leading-snug ${!room.isActive ? "text-muted-foreground" : "text-foreground"}`}>
+                    {room.name}
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    {!room.isActive ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-amber-500/15 px-1.5 py-0.2 text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+                        Maintenance
+                      </span>
+                    ) : (
+                      <>
+                        <Users className="size-3 shrink-0" />
+                        <span>{room.capacity} seats</span>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
 
               {/* Time slot row */}
-              <div className="relative border-t border-border bg-card" style={{ height: ROW_HEIGHT_PX }}>
+              <div
+                className={`relative border-t border-border ${
+                  !room.isActive
+                    ? "bg-[repeating-linear-gradient(45deg,rgba(245,158,11,0.04),rgba(245,158,11,0.04)_10px,transparent_10px,transparent_20px)] bg-muted/20"
+                    : "bg-card"
+                }`}
+                style={{ height: ROW_HEIGHT_PX }}
+              >
                 {/* Live current time vertical line across this row */}
                 {currentTimeLeftPx !== null && (
                   <div
@@ -181,18 +206,54 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
                 )}
 
                 {/* Hourly slots */}
-                {hours.map((hour, i) => (
-                  <button
-                    key={hour}
-                    type="button"
-                    disabled={occupiedHours.has(hour)}
-                    onMouseDown={() => setDrag({ roomId: room.id, anchorHour: hour, currentHour: hour })}
-                    onMouseEnter={() => setDrag((current) => (current && current.roomId === room.id ? { ...current, currentHour: hour } : current))}
-                    aria-label={`Book ${room.name} at ${hourLabel(hour)}`}
-                    className="absolute inset-y-0 border-l border-border/70 transition-colors enabled:hover:bg-primary/10 focus:outline-none"
-                    style={{ left: i * HOUR_WIDTH_PX, width: HOUR_WIDTH_PX }}
-                  />
-                ))}
+                {hours.map((hour, i) => {
+                  const isOccupied = occupiedHours.has(hour);
+                  const isDisabled = !room.isActive || isOccupied;
+
+                  return (
+                    <button
+                      key={hour}
+                      type="button"
+                      disabled={isDisabled}
+                      onMouseDown={() => {
+                        if (room.isActive) {
+                          setDrag({ roomId: room.id, anchorHour: hour, currentHour: hour });
+                        }
+                      }}
+                      onMouseEnter={() => {
+                        if (room.isActive) {
+                          setDrag((current) => (current && current.roomId === room.id ? { ...current, currentHour: hour } : current));
+                        }
+                      }}
+                      title={
+                        !room.isActive
+                          ? `${room.name} is under maintenance (booking unavailable)`
+                          : isOccupied
+                          ? `Occupied at ${hourLabel(hour)}`
+                          : `Book ${room.name} at ${hourLabel(hour)}`
+                      }
+                      aria-label={
+                        !room.isActive
+                          ? `${room.name} under maintenance`
+                          : `Book ${room.name} at ${hourLabel(hour)}`
+                      }
+                      className={`absolute inset-y-0 border-l border-border/70 transition-colors focus:outline-none ${
+                        !room.isActive
+                          ? "cursor-not-allowed opacity-30"
+                          : "enabled:hover:bg-primary/10"
+                      }`}
+                      style={{ left: i * HOUR_WIDTH_PX, width: HOUR_WIDTH_PX }}
+                    />
+                  );
+                })}
+
+                {/* Maintenance banner when no reservations */}
+                {!room.isActive && roomReservations.length === 0 && (
+                  <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center gap-1.5 text-xs font-medium text-amber-700/70 dark:text-amber-400/70">
+                    <Wrench className="size-3.5 shrink-0" />
+                    <span>Under Maintenance — Booking Unavailable</span>
+                  </div>
+                )}
 
                 {/* Drag selection preview box */}
                 {dragStart !== null && dragEnd !== null && (
