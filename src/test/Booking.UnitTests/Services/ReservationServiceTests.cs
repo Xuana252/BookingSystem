@@ -315,7 +315,14 @@ public class ReservationServiceTests
     public async Task CancelAsync_Owner_CancelsPersistsPublishesAndBroadcasts()
     {
         // Arrange
-        var reservation = new Reservation { UserId = Guid.NewGuid(), RoomId = Guid.NewGuid(), Status = ReservationStatus.Confirmed };
+        var reservation = new Reservation
+        {
+            UserId = Guid.NewGuid(),
+            RoomId = Guid.NewGuid(),
+            Status = ReservationStatus.Confirmed,
+            StartTime = DateTime.UtcNow.AddHours(2),
+            EndTime = DateTime.UtcNow.AddHours(3)
+        };
         _reservations.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
 
         // Act
@@ -327,6 +334,31 @@ public class ReservationServiceTests
         _eventPublisher.Verify(p => p.PublishAsync(
             It.Is<EventEnvelope>(e => e.EventType == EventTypes.ReservationCancelled), It.IsAny<CancellationToken>()), Times.Once);
         _realtimeNotifier.Verify(n => n.RoomAvailabilityChangedAsync(reservation.RoomId, It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task CancelAsync_StartTimeInThePast_ThrowsAndDoesNotPersistOrPublish()
+    {
+        // Arrange
+        var reservation = new Reservation
+        {
+            UserId = Guid.NewGuid(),
+            RoomId = Guid.NewGuid(),
+            Status = ReservationStatus.Confirmed,
+            StartTime = DateTime.UtcNow.AddHours(-1),
+            EndTime = DateTime.UtcNow.AddMinutes(-30)
+        };
+        _reservations.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
+
+        // Act
+        var act = () => CreateSut().CancelAsync(reservation.Id, reservation.UserId);
+
+        // Assert
+        await act.Should().ThrowAsync<InvalidOperationException>()
+            .WithMessage("Cannot cancel a reservation that has already started.");
+        _reservations.Verify(r => r.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Never);
+        _eventPublisher.Verify(p => p.PublishAsync(It.IsAny<EventEnvelope>(), It.IsAny<CancellationToken>()), Times.Never);
+        _realtimeNotifier.Verify(n => n.RoomAvailabilityChangedAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]
@@ -348,7 +380,13 @@ public class ReservationServiceTests
     public async Task CancelAsync_NotOwner_ThrowsAndDoesNotPersistOrPublish()
     {
         // Arrange
-        var reservation = new Reservation { UserId = Guid.NewGuid(), Status = ReservationStatus.Confirmed };
+        var reservation = new Reservation
+        {
+            UserId = Guid.NewGuid(),
+            Status = ReservationStatus.Confirmed,
+            StartTime = DateTime.UtcNow.AddHours(2),
+            EndTime = DateTime.UtcNow.AddHours(3)
+        };
         _reservations.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
 
         // Act
@@ -364,7 +402,13 @@ public class ReservationServiceTests
     public async Task CancelAsync_AlreadyCancelled_IsIdempotentAndDoesNotRepublish()
     {
         // Arrange
-        var reservation = new Reservation { UserId = Guid.NewGuid(), Status = ReservationStatus.Cancelled };
+        var reservation = new Reservation
+        {
+            UserId = Guid.NewGuid(),
+            Status = ReservationStatus.Cancelled,
+            StartTime = DateTime.UtcNow.AddHours(2),
+            EndTime = DateTime.UtcNow.AddHours(3)
+        };
         _reservations.Setup(r => r.GetByIdAsync(reservation.Id, It.IsAny<CancellationToken>())).ReturnsAsync(reservation);
 
         // Act

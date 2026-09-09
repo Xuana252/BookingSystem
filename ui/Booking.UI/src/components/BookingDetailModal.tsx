@@ -1,6 +1,6 @@
 import { Building2, Calendar, Clock, Loader2, MapPin, Trash2, User, Users, X } from "lucide-react";
 import { Modal } from "./Modal";
-import type { Reservation, Room } from "../lib/types";
+import { ReservationStatus, type Reservation, type Room } from "../lib/types";
 import { getCurrentUserId } from "../lib/auth";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -21,6 +21,8 @@ function formatTime(iso: string): string {
 export function BookingDetailModal({ reservation, room, isMine, isCancelling, onCancel, onClose }: BookingDetailModalProps) {
   const currentUserId = getCurrentUserId();
   const isAttending = !isMine && Boolean(reservation.attendees?.some((a) => a.userId === currentUserId));
+  const isPast = new Date(reservation.startTime) < new Date();
+  const isCancelled = reservation.status === ReservationStatus.Cancelled;
   return (
     <Modal onClose={onClose}>
       <div className="flex items-center justify-between border-b border-border pb-3">
@@ -91,8 +93,9 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
               <div className="text-muted-foreground">{isMine ? "Organizer (You)" : "Organizer"}</div>
             </div>
           </div>
-          {isMine && <Badge variant="indigo">Your Booking</Badge>}
-          {isAttending && (
+          {isCancelled && <Badge variant="destructive">Cancelled</Badge>}
+          {isMine && !isCancelled && <Badge variant="indigo">Your Booking</Badge>}
+          {isAttending && !isCancelled && (
             <Badge className="border-amber-500/30 bg-amber-500/15 text-amber-700 dark:text-amber-400 font-semibold">
               You are Attending
             </Badge>
@@ -145,7 +148,7 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
         )}
       </div>
 
-      {isMine && (
+      {isMine && !isPast && !isCancelled && (
         <div className="mt-5 border-t border-border pt-4">
           <Button
             onClick={onCancel}
@@ -166,6 +169,23 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
               </>
             )}
           </Button>
+        </div>
+      )}
+
+      {isMine && isPast && !isCancelled && (
+        <div className="mt-5 border-t border-border pt-4">
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-border/80 bg-muted/40 py-2.5 px-3 text-xs text-muted-foreground">
+            <Clock className="size-3.5" />
+            <span>Past reservations cannot be cancelled</span>
+          </div>
+        </div>
+      )}
+
+      {isCancelled && (
+        <div className="mt-5 border-t border-border pt-4">
+          <div className="flex items-center justify-center gap-2 rounded-lg border border-destructive/20 bg-destructive/10 py-2.5 px-3 text-xs font-medium text-destructive">
+            <span>This reservation has been cancelled</span>
+          </div>
         </div>
       )}
     </Modal>

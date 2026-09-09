@@ -17,7 +17,8 @@ public class ReservationService(
     IBookingRuleEngine ruleEngine,
     ICorrelationIdAccessor correlationIdAccessor,
     IRealtimeNotifier realtimeNotifier,
-    ILogger<ReservationService> logger) : IReservationService
+    ILogger<ReservationService> logger,
+    TimeProvider? timeProvider = null) : IReservationService
 {
     public async Task<IReadOnlyList<ReservationResponse>> GetAllAsync(CancellationToken ct = default)
     {
@@ -120,6 +121,12 @@ public class ReservationService(
         if (reservation.Status == ReservationStatus.Cancelled)
         {
             return;
+        }
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        if (reservation.StartTime < now)
+        {
+            throw new InvalidOperationException("Cannot cancel a reservation that has already started.");
         }
 
         reservation.Status = ReservationStatus.Cancelled;
