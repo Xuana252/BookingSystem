@@ -11,12 +11,13 @@ namespace Booking.Infrastructure.External;
 public static class EmailTemplateBuilder
 {
     public static readonly Regex ReminderRegex = new(
-        @"^Reminder: your reservation for (?<room>.*) starts at (?<time>.*) \((?<tz>.*)\)\.$",
+        @"^Reminder: (?:(?<host>your reservation for)|(?<attendee>you're attending a reservation for)) (?<room>.*?)(?: starts at|, starting at) (?<time>.*) \((?<tz>.*)\)\.$",
         RegexOptions.Compiled);
 
     /// <summary>
-    /// Builds an HTML email body from the notification message. If the message matches the reminder pattern,
-    /// a structured reminder card is produced; otherwise, a clean generic notification template is used.
+    /// Builds an HTML email body from the notification message. If the message matches the reminder pattern
+    /// (for either host or attendee), a structured reminder card is produced; otherwise, a clean generic
+    /// notification template is used.
     /// </summary>
     public static string BuildHtmlBody(string subject, string message, string? dashboardUrl = null)
     {
@@ -26,7 +27,8 @@ public static class EmailTemplateBuilder
             var room = match.Groups["room"].Value;
             var time = match.Groups["time"].Value;
             var tz = match.Groups["tz"].Value;
-            return BuildReminderHtml(subject, room, time, tz, dashboardUrl);
+            var isAttendee = match.Groups["attendee"].Success;
+            return BuildReminderHtml(subject, room, time, tz, dashboardUrl, isAttendee);
         }
 
         return BuildGenericHtml(subject, message, dashboardUrl);
@@ -34,13 +36,15 @@ public static class EmailTemplateBuilder
 
     /// <summary>
     /// Builds a styled HTML reservation reminder email with high-contrast room and time highlights.
+    /// Supports tailoring badges and guidance for either the booking host or an attendee.
     /// </summary>
     public static string BuildReminderHtml(
         string subject,
         string room,
         string time,
         string tz,
-        string? dashboardUrl = null)
+        string? dashboardUrl = null,
+        bool isAttendee = false)
     {
         var encodedSubject = WebUtility.HtmlEncode(subject);
         var encodedRoom = WebUtility.HtmlEncode(room);
@@ -48,6 +52,18 @@ public static class EmailTemplateBuilder
         var encodedTz = WebUtility.HtmlEncode(tz);
         var actionUrl = string.IsNullOrWhiteSpace(dashboardUrl) ? "#" : WebUtility.HtmlEncode(dashboardUrl);
         var currentYear = DateTime.UtcNow.Year;
+
+        var statusPillHtml = isAttendee
+            ? @"<span class=""status-pill"" style=""background-color: #fef3c7; color: #92400e; border-color: #fde68a;"">● You are Attending</span>"
+            : @"<span class=""status-pill"">● Confirmed Reservation</span>";
+
+        var introText = isAttendee
+            ? "Here are the details for the meeting you are attending:"
+            : "Here are the details for your upcoming reservation:";
+
+        var tipHtml = isAttendee
+            ? "<strong>Need to check details?</strong> You can view the meeting agenda, see other attendees, and check room location directly on the dashboard."
+            : "<strong>Need to make changes?</strong> You can invite attendees, update meeting details, or cancel your booking directly on the dashboard before the start time.";
 
         return $$"""
             <!DOCTYPE html>
@@ -234,10 +250,10 @@ public static class EmailTemplateBuilder
                             <h1>{{encodedSubject}}</h1>
                         </div>
                         <div class="content">
-                            <p class="intro">Here are the details for your upcoming reservation:</p>
+                            <p class="intro">{{introText}}</p>
                             
                             <div class="card">
-                                <span class="status-pill">● Confirmed Reservation</span>
+                                {{statusPillHtml}}
                                 
                                 <div class="field-group">
                                     <span class="field-label">Reserved Room</span>
@@ -261,7 +277,7 @@ public static class EmailTemplateBuilder
 
                             <div class="tip-card">
                                 <p class="tip-text">
-                                    <strong>Need to make changes?</strong> You can invite attendees, update meeting details, or cancel your booking directly on the dashboard before the start time.
+                                    {{tipHtml}}
                                 </p>
                             </div>
                         </div>

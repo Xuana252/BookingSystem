@@ -76,4 +76,29 @@ public class EmailTemplateBuilderTests
         // Assert
         html.Should().Contain("href=\"https://booking.company.internal/dashboard\"");
     }
+
+    [Fact]
+    public void BuildHtmlBody_WithAttendeeReminderFormat_RendersStyledReminderCardForAttendee()
+    {
+        // Arrange
+        var subject = "Upcoming Meeting Reminder";
+        var message = "Reminder: you're attending a reservation for Executive Suite, starting at Tuesday, October 12 at 3:30 PM (UTC).";
+
+        // Act
+        var html = EmailTemplateBuilder.BuildHtmlBody(subject, message);
+
+        // Assert
+        html.Should().Contain("Executive Suite");
+        html.Should().Contain("Tuesday, October 12 at 3:30 PM");
+        html.Should().Contain("UTC");
+        html.Should().Contain("You are Attending");
+        html.Should().Contain("meeting you are attending");
+        html.Should().Contain("brand-badge");
+        html.Should().Contain("room-value");
+        html.Should().Contain("time-value");
+        html.Should().Contain("tz-badge");
+        html.Should().Contain("btn-primary");
+        html.Should().Contain("tip-card");
+        html.Should().NotContain("cancel your booking");
+    }
 }
