@@ -17,7 +17,7 @@ export function MonthCalendar({ month, rooms, reservations, onSelectDay }: Month
   const firstOfMonth = startOfMonth(month);
   const gridStart = addDays(firstOfMonth, -firstOfMonth.getDay());
   const days = Array.from({ length: 42 }, (_, i) => addDays(gridStart, i));
-  const roomNameById = new Map(rooms.map((r) => [r.id, r.name]));
+  const roomById = new Map(rooms.map((r) => [r.id, r]));
   const today = new Date();
 
   return (
@@ -73,20 +73,26 @@ export function MonthCalendar({ month, rooms, reservations, onSelectDay }: Month
               {shown.map((r) => {
                 const isMine = r.userId === currentUserId;
                 const isAttending = !isMine && Boolean(r.attendees?.some((a) => a.userId === currentUserId));
+                const room = roomById.get(r.roomId);
+                const isInactive = room ? !room.isActive : false;
+                const roomLabel = room?.name ?? "Room";
 
                 return (
                   <span
                     key={r.id}
                     className={`w-full truncate rounded-md px-1.5 py-0.5 text-[11px] font-medium border ${
-                      isMine
+                      isInactive
+                        ? "border-amber-500/40 bg-amber-500/15 text-amber-800 dark:text-amber-300 font-semibold"
+                        : isMine
                         ? "border-primary/30 bg-primary/10 text-primary dark:bg-primary/20 dark:text-indigo-300"
                         : isAttending
                         ? "border-amber-500/30 bg-amber-500/15 text-amber-700 dark:bg-amber-500/25 dark:text-amber-300 font-semibold"
                         : "border-rose-500/20 bg-rose-500/10 text-rose-700 dark:text-rose-400"
                     }`}
+                    title={isInactive ? `${roomLabel} is under maintenance` : undefined}
                   >
-                    {roomNameById.get(r.roomId) ?? "Room"}
-                    {isAttending && " (Invited)"}
+                    {roomLabel}
+                    {isInactive ? " (Maint)" : isAttending ? " (Invited)" : ""}
                   </span>
                 );
               })}

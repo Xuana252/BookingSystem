@@ -52,7 +52,45 @@ export function HomePage() {
   const loadData = useCallback(async () => {
     try {
       const [roomsResult, reservationsResult] = await Promise.all([getRooms(true), getReservations()]);
-      setRooms(roomsResult);
+
+      // Ensure any room referenced by an existing reservation is present in rooms, even if
+      // deactivated or omitted by an older API response, so its schedule and reservations
+      // are consistently displayed on both Month and Day calendars.
+      const knownRoomIds = new Set(roomsResult.map((r) => r.id));
+      const cachedNames: Record<string, string> = (() => {
+        try {
+          return JSON.parse(localStorage.getItem("cached_room_names") ?? "{}");
+        } catch {
+          return {};
+        }
+      })();
+
+      // Update cache with fresh rooms
+      for (const r of roomsResult) {
+        cachedNames[r.id] = r.name;
+      }
+      try {
+        localStorage.setItem("cached_room_names", JSON.stringify(cachedNames));
+      } catch {
+        // ignore storage errors
+      }
+
+      const missingRoomIds = [...new Set(reservationsResult.map((r) => r.roomId))].filter(
+        (id) => !knownRoomIds.has(id),
+      );
+      const allRooms: Room[] = [
+        ...roomsResult,
+        ...missingRoomIds.map((id) => ({
+          id,
+          name: cachedNames[id] ?? "Room (Maintenance)",
+          location: "Unavailable",
+          capacity: 0,
+          isActive: false,
+          createdAt: new Date().toISOString(),
+        })),
+      ];
+
+      setRooms(allRooms);
       setReservations(reservationsResult);
       setLoadError(null);
     } catch (err) {
