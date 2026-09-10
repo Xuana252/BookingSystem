@@ -14,9 +14,9 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { createReservation, getReservations, getRooms, getUsers } from "../lib/api";
-import type { Reservation, Room, UserSummary } from "../lib/types";
-import { combineDateAndTime, toDateInputValue } from "../lib/dates";
+import { createReservation, getUsers } from "../lib/api";
+import type { UserSummary } from "../lib/types";
+import { getToken } from "../lib/auth";
 import { getCurrentUserId } from "../lib/auth";
 
 interface RecommendedRoom {
@@ -63,7 +63,9 @@ export function BookingChatbot() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  // Stable session ID — persists for the lifetime of this component mount.
+  // The server uses it to look up the right ChatHistory for context continuity.
+  const [sessionId] = useState(() => crypto.randomUUID());
   const [availableUsers, setAvailableUsers] = useState<UserSummary[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -79,15 +81,10 @@ export function BookingChatbot() {
     },
   ]);
 
-  // Load available rooms and colleagues on mount
+  // Load colleagues on mount so the attendee picker is pre-populated
   useEffect(() => {
-    getRooms()
-      .then((data) => setRooms(data.filter((r) => r.isActive)))
-      .catch((err) => console.warn("[Chatbot] Could not load rooms:", err));
-
     getUsers()
       .then((users) => {
-        // Exclude current user as host
         setAvailableUsers(users.filter((u) => u.id !== currentUserId));
       })
       .catch((err) => console.warn("[Chatbot] Could not load colleagues:", err));
@@ -142,7 +139,7 @@ export function BookingChatbot() {
   async function processUserInput(userText: string) {
     const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    // Add user message
+    // Add the user's message immediately so the UI feels responsive
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       sender: "user",
@@ -153,135 +150,46 @@ export function BookingChatbot() {
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI parsing and DB checking
-    setTimeout(async () => {
-      try {
-        const lower = userText.toLowerCase();
+    try {
+      const token = getToken();
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ sessionId, message: userText }),
+      });
 
-        // Extract capacity
-        const capacityMatch = lower.match(/(\d+)\s*(people|persons|seats|attendees)?/);
-        const minCapacity = capacityMatch ? parseInt(capacityMatch[1], 10) : 4;
-
-        // Extract date
-        const targetDate = new Date();
-        if (lower.includes("tomorrow")) {
-          targetDate.setDate(targetDate.getDate() + 1);
-        } else if (lower.includes("friday")) {
-          const day = targetDate.getDay();
-          const diff = (5 - day + 7) % 7 || 7;
-          targetDate.setDate(targetDate.getDate() + diff);
-        }
-
-        const dateStr = toDateInputValue(targetDate);
-        let startHour = "14:00";
-        let endHour = "15:00";
-
-        if (lower.includes("10 am") || lower.includes("10am")) {
-          startHour = "10:00";
-          endHour = "11:00";
-        } else if (lower.includes("30 min sync") || lower.includes("sync today")) {
-          startHour = "15:00";
-          endHour = "15:30";
-        } else if (lower.includes("morning")) {
-          startHour = "09:00";
-          endHour = "10:00";
-        }
-
-        const startIso = combineDateAndTime(dateStr, startHour).toISOString();
-        const endIso = combineDateAndTime(dateStr, endHour).toISOString();
-
-        // Fetch current reservations to filter out conflicts
-        let reservations: Reservation[] = [];
-        try {
-          reservations = await getReservations();
-        } catch {
-          // Fallback to room capacity filtering if reservations fail
-        }
-
-        // Filter rooms matching capacity and not conflicting
-        const conflictingRoomIds = new Set(
-          reservations
-            .filter((res) => {
-              const resStart = new Date(res.startTime).getTime();
-              const resEnd = new Date(res.endTime).getTime();
-              const reqStart = new Date(startIso).getTime();
-              const reqEnd = new Date(endIso).getTime();
-              return reqStart < resEnd && reqEnd > resStart;
-            })
-            .map((res) => res.roomId)
-        );
-
-        const available = rooms
-          .filter((r) => r.capacity >= minCapacity && !conflictingRoomIds.has(r.id))
-          .sort((a, b) => a.capacity - b.capacity);
-
-        // Check if any colleagues are mentioned in text
-        const mentionedAttendeeIds: string[] = [];
-        for (const user of availableUsers) {
-          if (lower.includes(user.username.toLowerCase())) {
-            mentionedAttendeeIds.push(user.id);
-          }
-        }
-
-        const timeLabel = `${targetDate.toLocaleDateString([], {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        })} · ${startHour} – ${endHour}`;
-
-        if (available.length > 0) {
-          const recommendations: RecommendedRoom[] = available.slice(0, 3).map((r, idx) => ({
-            id: r.id,
-            name: r.name,
-            location: r.location,
-            capacity: r.capacity,
-            timeSlotText: timeLabel,
-            startIso,
-            endIso,
-            tag: idx === 0 ? "Best Match" : "Available",
-          }));
-
-          const attendeeHint =
-            mentionedAttendeeIds.length > 0
-              ? ` (I found ${mentionedAttendeeIds.length} colleague${mentionedAttendeeIds.length === 1 ? "" : "s"} mentioned)`
-              : "";
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              sender: "bot",
-              text: `I checked room availability for **${timeLabel}** for **${minCapacity}+ attendees**${attendeeHint}. Choose an option below to invite attendees or book directly:`,
-              recommendations,
-              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            },
-          ]);
-        } else {
-          // If no rooms matched exact criteria, suggest alternative
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              sender: "bot",
-              text: `I couldn't find any vacant rooms with capacity for ${minCapacity} at that exact time slot. Would you like me to look for a different time today or tomorrow?`,
-              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            },
-          ]);
-        }
-      } catch {
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: crypto.randomUUID(),
-            sender: "bot",
-            text: "I ran into a temporary issue checking room calendars. Please try again or specify another time.",
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ]);
-      } finally {
-        setIsTyping(false);
+      if (!res.ok) {
+        throw new Error(`Chat API returned ${res.status}`);
       }
-    }, 700);
+
+      const data = (await res.json()) as { reply: string };
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "bot",
+          text: data.reply,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } catch (err) {
+      console.error("[Chatbot] Chat API error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "bot",
+          text: "I ran into a temporary issue reaching the AI service. Please try again in a moment.",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
   }
 
   function handleSelectRoomForAttendees(rec: RecommendedRoom) {

@@ -1,10 +1,13 @@
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
+using Booking.Application.Plugins;
 using Booking.Application.Services;
 using Booking.Application.Validators;
 using Booking.Domain.Interfaces;
 using FluentValidation;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.SemanticKernel;
 
 namespace Booking.Application;
 
@@ -32,6 +35,42 @@ public static class DependencyInjection
         services.AddScoped<IValidator<CreateRoomRequest>, CreateRoomRequestValidator>();
         services.AddScoped<IValidator<RegisterRequest>, RegisterRequestValidator>();
         services.AddScoped<IValidator<LoginRequest>, LoginRequestValidator>();
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers Microsoft Semantic Kernel with the OpenAI chat completion backend,
+    /// the two read-only booking plugins, and <see cref="IChatService"/>.
+    /// Call this from Booking.Api's Program.cs after AddBookingApplication().
+    /// </summary>
+    public static IServiceCollection AddBookingChat(
+        this IServiceCollection services, IConfiguration configuration)
+    {
+        var apiKey = configuration["Chat:OpenAI:ApiKey"]
+            ?? throw new InvalidOperationException(
+                "Chat:OpenAI:ApiKey is required. Set it in appsettings.json or via the OPENAI_API_KEY environment variable.");
+
+        var model = configuration["Chat:OpenAI:Model"] ?? "gpt-4o-mini";
+
+        // Build a kernel per DI scope so that scoped services (IRoomService,
+        // IReservationService) can be injected into plugins safely.
+        services.AddScoped<RoomPlugin>();
+        services.AddScoped<ReservationPlugin>();
+
+        services.AddScoped<Kernel>(sp =>
+        {
+            var kernelBuilder = Kernel.CreateBuilder();
+            kernelBuilder.AddOpenAIChatCompletion(model, apiKey);
+
+            // Build the kernel, then attach the scoped plugins from DI.
+            var kernel = kernelBuilder.Build();
+            kernel.Plugins.AddFromObject(sp.GetRequiredService<RoomPlugin>(), "rooms");
+            kernel.Plugins.AddFromObject(sp.GetRequiredService<ReservationPlugin>(), "reservations");
+            return kernel;
+        });
+
+        services.AddScoped<IChatService, ChatService>();
 
         return services;
     }
