@@ -200,7 +200,7 @@ documented; full interactive demo works end to end.
 ### Part A: Research & Documentation (Domain-Agnostic)
 
 Deliverable is summarized research notes under `doc/notes/phase-3/`: SpecKit, AI workflow/skills
-basics, MCP (server/client), plus AWS reading (ECS, Parameter Store, CloudWatch, EC2, VPC, Codeship).
+basics, MCP (server/client), plus AWS reading (ECS, Parameter Store, CloudWatch, EC2, VPC).
 
 - **New Relic + PagerDuty detect → escalate pipeline**:
   New Relic evaluates alert conditions on metrics/logs (error rate, latency, service down) and
@@ -208,7 +208,7 @@ basics, MCP (server/client), plus AWS reading (ECS, Parameter Store, CloudWatch,
   escalation works. Research-only in this sprint (Splunk covers local self-hosted logging);
   detailed in `doc/notes/phase-3/new-relic.md` and `doc/notes/phase-3/pagerduty.md`.
 - **Spec Kit & AI Workflows**: `doc/notes/phase-3/spec-kit.md`.
-- **AWS Infrastructure Reading**: ECS, Parameter Store, CloudWatch, EC2, VPC, Codeship.
+- **AWS Infrastructure Reading**: ECS, Parameter Store, CloudWatch, EC2, VPC.
 
 ### Part B: Integration, CI/CD & UI Completion (Build Scope)
 
