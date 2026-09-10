@@ -76,6 +76,7 @@ GitHub Actions CI/CD, React UI completion, and Nginx proxying.
 
 | Note | Topic | Category | Status | Summary |
 | :--- | :--- | :--- | :--- | :--- |
+| [`github-actions.md`](file:///d:/Mock/MockProject/BookingSystem/doc/notes/phase-3/github-actions.md) | GitHub Actions CI/CD | DevOps / CI/CD | Applied | Automated build, test, and containerized integration test workflows for .NET and React. |
 | [`new-relic.md`](file:///d:/Mock/MockProject/BookingSystem/doc/notes/phase-3/new-relic.md) | New Relic | DevOps / Observability | Research only | SaaS APM, M.E.L.T. telemetry, distributed tracing, Apdex, and NRQL. |
 | [`nginx.md`](file:///d:/Mock/MockProject/BookingSystem/doc/notes/phase-3/nginx.md) | Nginx Reverse Proxy Gateway | DevOps / Web Server | Applied | Standalone reverse-proxy gateway routing `/` to Vite UI, `/api/*`, and `/hubs/*` with dynamic Docker DNS. |
 | [`pagerduty.md`](file:///d:/Mock/MockProject/BookingSystem/doc/notes/phase-3/pagerduty.md) | PagerDuty | DevOps / Observability | Research only | On-call incident response, escalation policies, and Events API v2 routing. |
