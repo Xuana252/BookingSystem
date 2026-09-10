@@ -19,6 +19,16 @@ RUN dotnet publish Booking.Api/Booking.Api.csproj -c Release -o /app --no-restor
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+
+# Install New Relic .NET Agent for APM
+RUN mkdir -p /etc/apt/keyrings \
+    && apt-get update && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+    && echo 'deb [signed-by=/etc/apt/keyrings/newrelic-apt.gpg] http://apt.newrelic.com/debian/ newrelic non-free' | tee /etc/apt/sources.list.d/newrelic.list \
+    && curl -fsSL https://download.newrelic.com/NEWRELIC_APT_2DAD550E.public | gpg --dearmor -o /etc/apt/keyrings/newrelic-apt.gpg \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends newrelic-dotnet-agent \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app .
 EXPOSE 8080
 ENTRYPOINT ["dotnet", "Booking.Api.dll"]
