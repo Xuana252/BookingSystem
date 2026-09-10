@@ -5,7 +5,7 @@
 
 ## Summary
 
-Codeship (acquired by CloudBees) is a hosted Continuous Integration and Continuous Delivery (CI/CD) platform designed to automate application testing, container building, and cloud deployments. Codeship offers two distinct architectural tiers: **Codeship Basic** (a turnkey, pre-configured VM environment suited for standard web stacks) and **Codeship Pro** (a Docker-native, configuration-as-code CI/CD engine driven by `codeship-services.yml` and `codeship-steps.yml`). Within cloud-native DevOps and AWS ecosystems, Codeship Pro became widely adopted for microservice architectures due to its first-class multi-container workflow, local pipeline reproducibility via the **Jet CLI**, and automated deployment integrations with AWS Elastic Container Registry (ECR) and AWS Elastic Container Service (ECS).
+Codeship (acquired by CloudBees in 2018 and officially sunset / reached **End of Life in January 2026**) is a hosted Continuous Integration and Continuous Delivery (CI/CD) platform designed to automate application testing, container building, and cloud deployments. Codeship offered two distinct architectural tiers: **Codeship Basic** (a turnkey, pre-configured VM environment suited for standard web stacks) and **Codeship Pro** (a paid, Docker-native, configuration-as-code CI/CD engine driven by `codeship-services.yml` and `codeship-steps.yml`). Within cloud-native DevOps and AWS ecosystems, Codeship Pro became widely adopted for microservice architectures due to its first-class multi-container workflow, local pipeline reproducibility via the **Jet CLI**, and automated deployment integrations with AWS Elastic Container Registry (ECR) and AWS Elastic Container Service (ECS).
 
 ---
 
@@ -182,7 +182,8 @@ Both platforms serve modern CI/CD needs, but approach configuration and executio
 | **Integration Test Infra** | Multi-container composition defined in `codeship-services.yml` | Docker Compose invoked via CLI (`docker compose up -d`) on host VM |
 | **Ecosystem & Marketplace** | Official Docker utility images (`codeship/aws-deployment`) | Expansive GitHub Actions Marketplace (`actions/*`, community actions) |
 | **Secrets & Encryption** | Client-side encrypted files committed to Git (`codeship.aes`) | Repository / Environment Secrets stored securely in GitHub platform |
-| **Current Industry Adoption** | Legacy / niche; CloudBees focus shifted to CloudBees CI | Dominant industry standard for GitHub-hosted repositories |
+| **Pricing & Availability** | Paid-only for private repos (historically starting at ~$75/mo); **Discontinued / End of Life (Jan 2026)** | Free tier (2,000 min/mo private repos, unlimited public); actively maintained |
+| **Current Industry Adoption** | Sunset in January 2026 by CloudBees; migrations directed to GitHub Actions / GitLab CI | Dominant industry standard for GitHub-hosted repositories |
 
 ---
 
