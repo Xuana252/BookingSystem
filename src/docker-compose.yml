@@ -154,6 +154,8 @@ services:
       - NEW_RELIC_LICENSE_KEY=${NEW_RELIC_LICENSE_KEY:-}
       - NEW_RELIC_APP_NAME=${NEW_RELIC_APP_NAME_API:-Booking.Api (Local)}
       - NEW_RELIC_DISTRIBUTED_TRACING_ENABLED=true
+      # AI Chatbot (Semantic Kernel). Set OPENAI_API_KEY in .env (see .env.example).
+      - Chat__OpenAI__ApiKey=${OPENAI_API_KEY:-}
     logging:
       driver: fluentd
       options:

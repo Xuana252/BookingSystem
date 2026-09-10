@@ -56,5 +56,8 @@
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
     <!-- Pinned to 7.2.2: FluentAssertions 8+ requires a paid commercial license. -->
     <PackageVersion Include="FluentAssertions" Version="7.2.2" />
+    <!-- Semantic Kernel — AI chatbot (Booking.Application) -->
+    <PackageVersion Include="Microsoft.SemanticKernel" Version="1.80.1" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.80.1" />
   </ItemGroup>
 </Project>
