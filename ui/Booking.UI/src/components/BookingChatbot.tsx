@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { createReservation, getUsers } from "../lib/api";
+import { apiClient } from "../lib/apiClient";
 import type { UserSummary } from "../lib/types";
 import { getToken } from "../lib/auth";
 import { getCurrentUserId } from "../lib/auth";
@@ -151,21 +152,10 @@ export function BookingChatbot() {
     setIsTyping(true);
 
     try {
-      const token = getToken();
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ sessionId, message: userText }),
+      const data = await apiClient.post<{ reply: string }>("/chat", {
+        sessionId,
+        message: userText,
       });
-
-      if (!res.ok) {
-        throw new Error(`Chat API returned ${res.status}`);
-      }
-
-      const data = (await res.json()) as { reply: string };
 
       setMessages((prev) => [
         ...prev,
