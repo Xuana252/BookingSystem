@@ -1,0 +1,35 @@
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# Copy all project files to restore and build
+COPY . .
+
+# Publish API
+RUN dotnet publish Booking.Api/Booking.Api.csproj -c Release -o /app/api
+
+# Publish Worker
+RUN dotnet publish Booking.Worker/Booking.Worker.csproj -c Release -o /app/worker
+
+# Final runtime image
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+
+# Install New Relic Agent (since it was in your original Dockerfiles)
+RUN mkdir -p /etc/apt/keyrings \
+    && apt-get update && apt-get install -y --no-install-recommends curl ca-certificates gnupg \
+    && echo 'deb [signed-by=/etc/apt/keyrings/newrelic-apt.gpg] http://apt.newrelic.com/debian/ newrelic non-free' | tee /etc/apt/sources.list.d/newrelic.list \
+    && curl -fsSL https://download.newrelic.com/NEWRELIC_APT_2DAD550E.public | gpg --dearmor -o /etc/apt/keyrings/newrelic-apt.gpg \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends newrelic-dotnet-agent \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy compiled apps from build stage
+COPY --from=build /app/api /app/api
+COPY --from=build /app/worker /app/worker
+
+# Copy the bash script that will run both
+COPY render-entrypoint.sh /app/render-entrypoint.sh
+RUN chmod +x /app/render-entrypoint.sh
+
+# Start the entrypoint script
+ENTRYPOINT ["/app/render-entrypoint.sh"]
