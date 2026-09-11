@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Bot,
   Building2,
+  Check,
   CheckCircle2,
   Clock,
   Maximize2,
@@ -9,12 +10,14 @@ import {
   RotateCcw,
   Send,
   Sparkles,
+  UserPlus,
   Users,
   X,
 } from "lucide-react";
-import { createReservation, getReservations, getRooms } from "../lib/api";
-import type { Reservation, Room } from "../lib/types";
-import { combineDateAndTime, toDateInputValue } from "../lib/dates";
+import { createReservation, getUsers, cancelReservation } from "../lib/api";
+import { apiClient } from "../lib/apiClient";
+import type { UserSummary } from "../lib/types";
+import { getCurrentUserId } from "../lib/auth";
 
 interface RecommendedRoom {
   id: string;
@@ -27,10 +30,16 @@ interface RecommendedRoom {
   tag?: string;
 }
 
+interface PendingBookingState {
+  room: RecommendedRoom;
+  selectedAttendeeIds: string[];
+}
+
 interface ConfirmedBookingInfo {
   bookingRef: string;
   roomName: string;
   timeText: string;
+  attendeeNames?: string[];
 }
 
 interface ChatMessage {
@@ -39,7 +48,20 @@ interface ChatMessage {
   text?: string;
   timestamp: string;
   recommendations?: RecommendedRoom[];
+  pendingBooking?: PendingBookingState;
   confirmedBooking?: ConfirmedBookingInfo;
+  reservations?: ChatReservation[];
+}
+
+export interface ChatReservation {
+  id: string;
+  roomName: string;
+  roomLocation: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  bookedByUsername: string;
+  attendeeUsernames: string[];
 }
 
 const QUICK_PROMPTS = [
@@ -48,30 +70,104 @@ const QUICK_PROMPTS = [
   "Quick 30 min sync today for 3 people",
 ];
 
+/**
+ * Lightweight inline markdown renderer — no external deps.
+ * Handles: **bold**, *italic*, `code`, numbered lists, bullet lists, blank-line paragraphs.
+ * Safe: never uses dangerouslySetInnerHTML.
+ */
+function MarkdownText({ text, className }: { text: string; className?: string }) {
+  // Split on blank lines to get paragraphs / list blocks
+  const blocks = text.split(/\n{2,}/);
+
+  return (
+    <div className={className}>
+      {blocks.map((block, bi) => {
+        const lines = block.split("\n");
+
+        // Numbered list block: every line starts with `N.` or `N)`
+        if (lines.every((l) => /^\s*\d+[.)]\s/.test(l))) {
+          return (
+            <ol key={bi} className="list-decimal list-inside space-y-0.5 my-1">
+              {lines.map((l, li) => (
+                <li key={li}>{renderInline(l.replace(/^\s*\d+[.)]\s*/, ""))}</li>
+              ))}
+            </ol>
+          );
+        }
+
+        // Bullet list block: every line starts with `-`, `*`, or `•`
+        if (lines.every((l) => /^\s*[-*•]\s/.test(l))) {
+          return (
+            <ul key={bi} className="list-disc list-inside space-y-0.5 my-1">
+              {lines.map((l, li) => (
+                <li key={li}>{renderInline(l.replace(/^\s*[-*•]\s*/, ""))}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        // Regular paragraph — preserve single newlines as <br>
+        return (
+          <p key={bi} className={bi > 0 ? "mt-2" : undefined}>
+            {lines.map((l, li) => (
+              <span key={li}>
+                {li > 0 && <br />}
+                {renderInline(l)}
+              </span>
+            ))}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Renders a single line with **bold**, *italic*, and `code` spans. */
+function renderInline(text: string): React.ReactNode {
+  // Tokenise: **bold**, *italic*, `code`
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**"))
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*"))
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    if (part.startsWith("`") && part.endsWith("`"))
+      return <code key={i} className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[0.85em]">{part.slice(1, -1)}</code>;
+    return part;
+  });
+}
+
 export function BookingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  const [rooms, setRooms] = useState<Room[]>([]);
+  // Stable session ID — persists for the lifetime of this component mount.
+  // The server uses it to look up the right ChatHistory for context continuity.
+  const [sessionId] = useState(() => crypto.randomUUID());
+  const [availableUsers, setAvailableUsers] = useState<UserSummary[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const currentUserId = getCurrentUserId();
 
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: "welcome-1",
       sender: "bot",
-      text: "Hello! I'm your AI Booking Concierge. Tell me what kind of meeting you're planning — group size, preferred time, or location — and I'll find and reserve the best available room for you.",
+      text: "Hello! I'm your AI Booking Concierge. Tell me what kind of meeting you're planning — group size, preferred time, or colleagues to invite — and I'll find and reserve the best available room for you.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
 
-  // Load available rooms on mount
+  // Load colleagues on mount so the attendee picker is pre-populated
   useEffect(() => {
-    getRooms()
-      .then((data) => setRooms(data.filter((r) => r.isActive)))
-      .catch((err) => console.warn("[Chatbot] Could not load rooms:", err));
-  }, []);
+    getUsers()
+      .then((users) => {
+        setAvailableUsers(users.filter((u) => u.id !== currentUserId));
+      })
+      .catch((err) => console.warn("[Chatbot] Could not load colleagues:", err));
+  }, [currentUserId]);
 
   // Listen for external toggle events (e.g. from sidebar navigation)
   useEffect(() => {
@@ -122,7 +218,7 @@ export function BookingChatbot() {
   async function processUserInput(userText: string) {
     const timeNow = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-    // Add user message
+    // Add the user's message immediately so the UI feels responsive
     const userMsg: ChatMessage = {
       id: crypto.randomUUID(),
       sender: "user",
@@ -133,125 +229,129 @@ export function BookingChatbot() {
     setInput("");
     setIsTyping(true);
 
-    // Simulate AI parsing and DB checking
-    setTimeout(async () => {
-      try {
-        const lower = userText.toLowerCase();
+    try {
+      const data = await apiClient.post<{
+        reply: string;
+        rooms?: { id: string; name: string; location: string; capacity: number }[];
+        slotStart?: string;
+        slotEnd?: string;
+        reservations?: ChatReservation[];
+      }>("/chat", { sessionId, message: userText });
 
-        // Extract capacity
-        const capacityMatch = lower.match(/(\d+)\s*(people|persons|seats|attendees)?/);
-        const minCapacity = capacityMatch ? parseInt(capacityMatch[1], 10) : 4;
+      const botTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-        // Extract date
-        const targetDate = new Date();
-        if (lower.includes("tomorrow")) {
-          targetDate.setDate(targetDate.getDate() + 1);
-        } else if (lower.includes("friday")) {
-          const day = targetDate.getDay();
-          const diff = (5 - day + 7) % 7 || 7;
-          targetDate.setDate(targetDate.getDate() + diff);
-        }
+      if (data.rooms && data.rooms.length > 0) {
+        // Use the exact time slot the model queried, so cards show the correct window.
+        // Fall back to tomorrow 14:00–15:00 for ListRooms calls with no time constraint.
+        const slotStart = data.slotStart
+          ? new Date(data.slotStart)
+          : (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() + 1); d.setUTCHours(14, 0, 0, 0); return d; })();
+        const slotEnd = data.slotEnd
+          ? new Date(data.slotEnd)
+          : (() => { const d = new Date(slotStart); d.setUTCHours(d.getUTCHours() + 1); return d; })();
 
-        const dateStr = toDateInputValue(targetDate);
-        let startHour = "14:00";
-        let endHour = "15:00";
+        const timeSlotText = `${slotStart.toLocaleDateString([], {
+          weekday: "short", month: "short", day: "numeric",
+        })} · ${slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} – ${slotEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
-        if (lower.includes("10 am") || lower.includes("10am")) {
-          startHour = "10:00";
-          endHour = "11:00";
-        } else if (lower.includes("30 min sync") || lower.includes("sync today")) {
-          startHour = "15:00";
-          endHour = "15:30";
-        } else if (lower.includes("morning")) {
-          startHour = "09:00";
-          endHour = "10:00";
-        }
+        const recommendations: RecommendedRoom[] = data.rooms.map((r, idx) => ({
+          id: r.id,
+          name: r.name,
+          location: r.location,
+          capacity: r.capacity,
+          timeSlotText,
+          startIso: slotStart.toISOString(),
+          endIso: slotEnd.toISOString(),
+          tag: idx === 0 ? "Best Match" : "Available",
+        }));
 
-        const startIso = combineDateAndTime(dateStr, startHour).toISOString();
-        const endIso = combineDateAndTime(dateStr, endHour).toISOString();
-
-        // Fetch current reservations to filter out conflicts
-        let reservations: Reservation[] = [];
-        try {
-          reservations = await getReservations();
-        } catch {
-          // Fallback to room capacity filtering if reservations fail
-        }
-
-        // Filter rooms matching capacity and not conflicting
-        const conflictingRoomIds = new Set(
-          reservations
-            .filter((res) => {
-              const resStart = new Date(res.startTime).getTime();
-              const resEnd = new Date(res.endTime).getTime();
-              const reqStart = new Date(startIso).getTime();
-              const reqEnd = new Date(endIso).getTime();
-              return reqStart < resEnd && reqEnd > resStart;
-            })
-            .map((res) => res.roomId)
-        );
-
-        const available = rooms
-          .filter((r) => r.capacity >= minCapacity && !conflictingRoomIds.has(r.id))
-          .sort((a, b) => a.capacity - b.capacity);
-
-        const timeLabel = `${targetDate.toLocaleDateString([], {
-          weekday: "short",
-          month: "short",
-          day: "numeric",
-        })} · ${startHour} – ${endHour}`;
-
-        if (available.length > 0) {
-          const recommendations: RecommendedRoom[] = available.slice(0, 3).map((r, idx) => ({
-            id: r.id,
-            name: r.name,
-            location: r.location,
-            capacity: r.capacity,
-            timeSlotText: timeLabel,
-            startIso,
-            endIso,
-            tag: idx === 0 ? "Best Match" : "Available",
-          }));
-
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              sender: "bot",
-              text: `I checked room availability for **${timeLabel}** for a group of **${minCapacity}+ attendees**. Here are my top recommendations:`,
-              recommendations,
-              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            },
-          ]);
-        } else {
-          // If no rooms matched exact criteria, suggest alternative
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: crypto.randomUUID(),
-              sender: "bot",
-              text: `I couldn't find any vacant rooms with capacity for ${minCapacity} at that exact time slot. Would you like me to look for a different time today or tomorrow?`,
-              timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            },
-          ]);
-        }
-      } catch {
         setMessages((prev) => [
           ...prev,
           {
             id: crypto.randomUUID(),
             sender: "bot",
-            text: "I ran into a temporary issue checking room calendars. Please try again or specify another time.",
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+            text: data.reply,
+            recommendations,
+            timestamp: botTimestamp,
           },
         ]);
-      } finally {
-        setIsTyping(false);
+      } else if (data.reservations && data.reservations.length > 0) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            sender: "bot",
+            text: data.reply,
+            reservations: data.reservations,
+            timestamp: botTimestamp,
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            sender: "bot",
+            text: data.reply,
+            timestamp: botTimestamp,
+          },
+        ]);
       }
-    }, 700);
+    } catch (err) {
+      console.error("[Chatbot] Chat API error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "bot",
+          text: "I ran into a temporary issue reaching the AI service. Please try again in a moment.",
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
   }
 
-  async function handleBookNow(rec: RecommendedRoom) {
+  function handleSelectRoomForAttendees(rec: RecommendedRoom) {
+    setMessages((prev) => [
+      ...prev,
+      {
+        id: crypto.randomUUID(),
+        sender: "bot",
+        text: `You selected **${rec.name}** (capacity: ${rec.capacity} people) for **${rec.timeSlotText}**.\n\nWho will be joining you? Select colleagues below to invite them as attendees:`,
+        pendingBooking: {
+          room: rec,
+          selectedAttendeeIds: [],
+        },
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      },
+    ]);
+  }
+
+  function toggleAttendeeInPending(messageId: string, userId: string) {
+    setMessages((prev) =>
+      prev.map((m) => {
+        if (m.id !== messageId || !m.pendingBooking) return m;
+        const current = m.pendingBooking.selectedAttendeeIds;
+        const isSelected = current.includes(userId);
+        const maxAttendees = Math.max(0, m.pendingBooking.room.capacity - 1);
+        if (!isSelected && current.length >= maxAttendees) {
+          return m;
+        }
+        const next = isSelected ? current.filter((id) => id !== userId) : [...current, userId];
+        return {
+          ...m,
+          pendingBooking: {
+            ...m.pendingBooking,
+            selectedAttendeeIds: next,
+          },
+        };
+      })
+    );
+  }
+
+  async function handleConfirmBooking(rec: RecommendedRoom, attendeeIds: string[]) {
     setIsTyping(true);
     try {
       // Execute booking via API
@@ -259,9 +359,13 @@ export function BookingChatbot() {
         roomId: rec.id,
         startTime: rec.startIso,
         endTime: rec.endIso,
+        attendeeUserIds: attendeeIds.length > 0 ? attendeeIds : undefined,
       });
 
       const bookingRef = `BK-${res.id.slice(0, 8).toUpperCase()}`;
+      const attendeeNames = availableUsers
+        .filter((u) => attendeeIds.includes(u.id))
+        .map((u) => u.username);
 
       // Dispatch event to refresh calendar if open on HomePage
       window.dispatchEvent(new CustomEvent("refresh-reservations"));
@@ -275,6 +379,7 @@ export function BookingChatbot() {
             bookingRef,
             roomName: rec.name,
             timeText: rec.timeSlotText,
+            attendeeNames,
           },
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
@@ -286,6 +391,36 @@ export function BookingChatbot() {
           id: crypto.randomUUID(),
           sender: "bot",
           text: `Could not complete the booking for ${rec.name}. It may have just been reserved by someone else or exceeds business hours.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  }
+
+  async function handleCancelChatReservation(reservationId: string) {
+    setIsTyping(true);
+    try {
+      await cancelReservation(reservationId);
+      
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "bot",
+          text: `Reservation cancelled successfully.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } catch (err) {
+      console.error("[Chatbot] Cancel error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "bot",
+          text: "Failed to cancel the reservation. It may have already been cancelled or you do not have permission.",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
@@ -406,7 +541,11 @@ export function BookingChatbot() {
                           : "rounded-tl-xs border border-border bg-muted/40 text-foreground"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                      {msg.sender === "bot" ? (
+                        <MarkdownText text={msg.text} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                      )}
                     </div>
                   )}
 
@@ -448,14 +587,104 @@ export function BookingChatbot() {
                           <div className="mt-2.5 flex items-center gap-2 pt-2 border-t border-border/50">
                             <button
                               type="button"
-                              onClick={() => handleBookNow(rec)}
-                              className="flex-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-center text-xs font-semibold text-white shadow-xs transition-all hover:bg-indigo-500 active:scale-98"
+                              onClick={() => handleSelectRoomForAttendees(rec)}
+                              className="flex-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-center text-xs font-semibold text-white shadow-xs transition-all hover:bg-indigo-500 active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer"
                             >
-                              Book Now
+                              <Users className="size-3.5" />
+                              <span>Invite Attendees & Book</span>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleConfirmBooking(rec, [])}
+                              title="Book directly without attendees"
+                              className="rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground cursor-pointer"
+                            >
+                              Quick Solo
                             </button>
                           </div>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Pending Booking & Attendee Selection Card */}
+                  {msg.pendingBooking && (
+                    <div className="space-y-3 rounded-xl border border-indigo-500/30 bg-card p-3.5 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-border/60 pb-2">
+                        <div className="flex items-center gap-2">
+                          <Users className="size-4 text-primary" />
+                          <span className="text-xs font-bold text-foreground">Select Attendees</span>
+                        </div>
+                        <span className="text-[11px] font-medium text-muted-foreground">
+                          <span className="font-semibold text-foreground">
+                            {1 + msg.pendingBooking.selectedAttendeeIds.length}
+                          </span>{" "}
+                          / {msg.pendingBooking.room.capacity} seats filled
+                        </span>
+                      </div>
+
+                      {availableUsers.length > 0 ? (
+                        <div className="flex flex-wrap gap-1.5 pt-1">
+                          {availableUsers.map((user) => {
+                            const isSelected = msg.pendingBooking?.selectedAttendeeIds.includes(user.id);
+                            const maxAttendees = Math.max(0, (msg.pendingBooking?.room.capacity ?? 1) - 1);
+                            const isFull =
+                              !isSelected &&
+                              (msg.pendingBooking?.selectedAttendeeIds.length ?? 0) >= maxAttendees;
+
+                            return (
+                              <button
+                                key={user.id}
+                                type="button"
+                                disabled={isFull}
+                                onClick={() => toggleAttendeeInPending(msg.id, user.id)}
+                                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                                  isSelected
+                                    ? "bg-primary text-primary-foreground shadow-xs ring-2 ring-primary/30"
+                                    : isFull
+                                    ? "border border-dashed border-border bg-muted/40 text-muted-foreground/40 cursor-not-allowed"
+                                    : "border border-border bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                                }`}
+                              >
+                                {isSelected ? <Check className="size-3" /> : <UserPlus className="size-3" />}
+                                <span>{user.username}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <p className="text-[11px] text-muted-foreground">No other colleagues found.</p>
+                      )}
+
+                      {1 + msg.pendingBooking.selectedAttendeeIds.length >= msg.pendingBooking.room.capacity && (
+                        <p className="text-[10px] text-amber-600 dark:text-amber-400">
+                          Maximum room capacity reached ({msg.pendingBooking.room.capacity} seats).
+                        </p>
+                      )}
+
+                      <div className="flex items-center gap-2 pt-1 border-t border-border/50">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            handleConfirmBooking(
+                              msg.pendingBooking!.room,
+                              msg.pendingBooking!.selectedAttendeeIds
+                            )
+                          }
+                          className="flex-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-center text-xs font-semibold text-white shadow-xs transition-all hover:bg-indigo-500 active:scale-98 cursor-pointer"
+                        >
+                          Confirm Reservation (
+                          {1 + msg.pendingBooking.selectedAttendeeIds.length}{" "}
+                          {1 + msg.pendingBooking.selectedAttendeeIds.length === 1 ? "person" : "people"})
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleConfirmBooking(msg.pendingBooking!.room, [])}
+                          className="rounded-lg border border-border bg-muted/40 px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-all hover:bg-muted hover:text-foreground cursor-pointer"
+                        >
+                          Book Solo
+                        </button>
+                      </div>
                     </div>
                   )}
 
@@ -467,7 +696,7 @@ export function BookingChatbot() {
                         <span>Booking Confirmed!</span>
                       </div>
                       <p className="text-[11px] text-emerald-700 dark:text-emerald-300/90 mb-2">
-                        Your reservation is confirmed and updated on the live calendar.
+                        Your reservation is confirmed and invitations sent to attendees.
                       </p>
                       <div className="space-y-1 rounded-lg border border-emerald-500/20 bg-card/80 p-2.5 text-[11px]">
                         <div className="flex justify-between">
@@ -478,11 +707,69 @@ export function BookingChatbot() {
                           <span className="text-muted-foreground">Slot:</span>
                           <span className="font-semibold text-foreground">{msg.confirmedBooking.timeText}</span>
                         </div>
+                        {msg.confirmedBooking.attendeeNames && msg.confirmedBooking.attendeeNames.length > 0 && (
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Attending:</span>
+                            <span className="font-semibold text-amber-600 dark:text-amber-400">
+                              {msg.confirmedBooking.attendeeNames.join(", ")}
+                            </span>
+                          </div>
+                        )}
                         <div className="flex justify-between">
                           <span className="text-muted-foreground">Reference:</span>
                           <span className="font-mono font-bold text-indigo-500">{msg.confirmedBooking.bookingRef}</span>
                         </div>
                       </div>
+                    </div>
+                  )}
+
+                  {/* Reservation Cards */}
+                  {msg.reservations && msg.reservations.length > 0 && (
+                    <div className="flex w-full snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pl-1">
+                      {msg.reservations.map((res) => (
+                        <div
+                          key={res.id}
+                          className="flex w-64 shrink-0 snap-center flex-col justify-between rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md"
+                        >
+                          <div>
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-bold text-indigo-500 uppercase tracking-wide">
+                                {res.status}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-bold text-foreground line-clamp-1">{res.roomName}</h4>
+                            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Building2 className="size-3.5" />
+                              <span className="line-clamp-1">{res.roomLocation}</span>
+                            </div>
+                            <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="size-3.5" />
+                                <span>
+                                  {new Date(res.startTime).toLocaleDateString([], { month: "short", day: "numeric" })} ·{" "}
+                                  {new Date(res.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
+                                  {new Date(res.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                            </div>
+                            {res.attendeeUsernames.length > 0 && (
+                              <div className="mt-1 flex items-start gap-1.5 text-xs text-muted-foreground">
+                                <Users className="size-3.5 mt-0.5" />
+                                <span className="line-clamp-2">With: {res.attendeeUsernames.join(", ")}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3 border-t border-border/50 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleCancelChatReservation(res.id)}
+                              className="w-full rounded-lg bg-red-600/10 px-3 py-1.5 text-center text-xs font-semibold text-red-600 transition-all hover:bg-red-600 hover:text-white cursor-pointer"
+                            >
+                              Cancel Reservation
+                            </button>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
 
