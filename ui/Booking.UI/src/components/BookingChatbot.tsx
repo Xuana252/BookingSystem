@@ -17,7 +17,6 @@ import {
 import { createReservation, getUsers } from "../lib/api";
 import { apiClient } from "../lib/apiClient";
 import type { UserSummary } from "../lib/types";
-import { getToken } from "../lib/auth";
 import { getCurrentUserId } from "../lib/auth";
 
 interface RecommendedRoom {
