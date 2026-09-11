@@ -35,15 +35,19 @@ builder.Services.AddHealthChecks();
 const string uiCorsPolicy = "BookingUi";
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy(uiCorsPolicy, policy => policy
-        .WithOrigins("http://localhost:5173")
+    options.AddPolicy(uiCorsPolicy, policy => 
+    {
+        var origins = builder.Configuration.GetValue<string>("AllowedOrigins")?.Split(',') ?? new[] { "http://localhost:5173" };
+        policy
+        .WithOrigins(origins)
         .AllowAnyHeader()
         .AllowAnyMethod()
         // REST calls are bearer-token-only (no cookies), so this wasn't needed before. SignalR's
         // negotiate request can fall back to a transport that relies on same-site cookies for
         // connection affinity, and AllowCredentials requires a specific origin (already true
         // here) rather than AllowAnyOrigin, so this is safe to add.
-        .AllowCredentials());
+        .AllowCredentials();
+    });
 });
 builder.Services.AddOpenApi(options =>
 {
