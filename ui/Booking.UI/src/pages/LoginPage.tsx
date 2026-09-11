@@ -5,7 +5,6 @@ import {
   Calendar,
   Eye,
   EyeOff,
-  KeyRound,
   Loader2,
   Lock,
   Moon,
@@ -43,11 +42,6 @@ export function LoginPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }
-
-  function fillDemoAdmin() {
-    setUsername("admin");
-    setPassword("Admin@12345");
   }
 
   return (
@@ -150,22 +144,6 @@ export function LoginPage() {
             )}
           </Button>
 
-          {/* Demo account quick-fill pill */}
-          <div className="border-t border-border pt-3">
-            <button
-              type="button"
-              onClick={fillDemoAdmin}
-              className="flex w-full items-center justify-between rounded-lg border border-dashed border-border bg-muted px-3 py-2 text-left text-xs transition-colors hover:border-primary/50 hover:bg-muted/80"
-            >
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <KeyRound className="size-3.5 text-primary" />
-                <span>Use seeded Admin account</span>
-              </div>
-              <span className="rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-semibold text-primary">
-                admin
-              </span>
-            </button>
-          </div>
         </form>
       </div>
     </div>
