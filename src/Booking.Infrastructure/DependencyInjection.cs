@@ -131,6 +131,10 @@ public static class DependencyInjection
             gmailSettings.Username = Environment.GetEnvironmentVariable("GMAIL_USERNAME") ?? string.Empty;
         if (string.IsNullOrWhiteSpace(gmailSettings.AppPassword))
             gmailSettings.AppPassword = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD") ?? string.Empty;
+        
+        var envPort = Environment.GetEnvironmentVariable("GMAIL_PORT");
+        if (!string.IsNullOrWhiteSpace(envPort) && int.TryParse(envPort, out var port))
+            gmailSettings.Port = port;
             
         services.AddSingleton(gmailSettings);
         services.AddScoped<INotificationSender, SmtpNotificationSender>();

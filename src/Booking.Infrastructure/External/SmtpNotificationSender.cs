@@ -41,7 +41,19 @@ public sealed class SmtpNotificationSender(GmailSmtpSettings settings, ILogger<S
         try
         {
             using var client = new SmtpClient();
-            await client.ConnectAsync(settings.Host, settings.Port, SecureSocketOptions.StartTls, ct);
+            
+            // PaaS providers (like Render) often have partial/broken IPv6 routing. 
+            // If DNS resolves an IPv6 address for smtp.gmail.com first and it blackholes,
+            // MailKit's ConnectAsync times out before it can fall back to IPv4.
+            // We resolve DNS manually and force IPv4 to bypass this.
+            var ips = await System.Net.Dns.GetHostAddressesAsync(settings.Host, ct);
+            var ipv4 = ips.FirstOrDefault(ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+                ?? throw new InvalidOperationException($"No IPv4 address found for {settings.Host}");
+
+            using var socket = new System.Net.Sockets.Socket(System.Net.Sockets.AddressFamily.InterNetwork, System.Net.Sockets.SocketType.Stream, System.Net.Sockets.ProtocolType.Tcp);
+            await socket.ConnectAsync(ipv4, settings.Port, ct);
+            
+            await client.ConnectAsync(socket, settings.Host, settings.Port, SecureSocketOptions.Auto, ct);
             await client.AuthenticateAsync(settings.Username, settings.AppPassword, ct);
             await client.SendAsync(email, ct);
             await client.DisconnectAsync(true, ct);
