@@ -242,7 +242,7 @@ export function BookingChatbot() {
 
       if (data.rooms && data.rooms.length > 0) {
         // Use the exact time slot the model queried, so cards show the correct window.
-        // Fall back to tomorrow 14:00ΓÇô15:00 for ListRooms calls with no time constraint.
+        // Fall back to tomorrow 14:00-15:00 for ListRooms calls with no time constraint.
         const slotStart = data.slotStart
           ? new Date(data.slotStart)
           : (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() + 1); d.setUTCHours(14, 0, 0, 0); return d; })();
@@ -252,7 +252,7 @@ export function BookingChatbot() {
 
         const timeSlotText = `${slotStart.toLocaleDateString([], {
           weekday: "short", month: "short", day: "numeric",
-        })} ┬╖ ${slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ΓÇô ${slotEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+        })} ┬╖ ${slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slotEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
 
         const recommendations: RecommendedRoom[] = data.rooms.map((r, idx) => ({
           id: r.id,
@@ -747,7 +747,7 @@ export function BookingChatbot() {
                                 <Clock className="size-3.5" />
                                 <span>
                                   {new Date(res.startTime).toLocaleDateString([], { month: "short", day: "numeric" })} ┬╖{" "}
-                                  {new Date(res.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ΓÇô{" "}
+                                  {new Date(res.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} -{" "}
                                   {new Date(res.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                 </span>
                               </div>
