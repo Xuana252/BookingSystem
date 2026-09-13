@@ -1,4 +1,4 @@
-﻿using Booking.Application.DTOs;
+using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Application.Plugins;
 using Booking.Application.Services;
@@ -47,8 +47,12 @@ public static class DependencyInjection
     public static IServiceCollection AddBookingChat(
         this IServiceCollection services, IConfiguration configuration)
     {
-        var apiKey = configuration["Chat:OpenAI:ApiKey"]
-            ?? throw new InvalidOperationException(
+        var apiKey = configuration["Chat:OpenAI:ApiKey"];
+        if (string.IsNullOrWhiteSpace(apiKey))
+            apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+
+        if (string.IsNullOrWhiteSpace(apiKey))
+            throw new InvalidOperationException(
                 "Chat:OpenAI:ApiKey is required. Set it in appsettings.json or via the OPENAI_API_KEY environment variable.");
 
         var model = configuration["Chat:OpenAI:Model"] ?? "gpt-4o-mini";
