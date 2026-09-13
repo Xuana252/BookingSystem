@@ -71,9 +71,22 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
     Authorization = []
 });
 
-app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<IReservationReminderService>(
-    "reservation-reminder-scan",
-    svc => svc.ScanAndPublishDueRemindersAsync(CancellationToken.None),
-    reminderSettings.CronExpression);
+var maxRetries = 5;
+for (int i = 0; i < maxRetries; i++)
+{
+    try
+    {
+        app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<IReservationReminderService>(
+            "reservation-reminder-scan",
+            svc => svc.ScanAndPublishDueRemindersAsync(CancellationToken.None),
+            reminderSettings.CronExpression);
+        break;
+    }
+    catch (Exception ex) when (ex.GetType().Name.Contains("DistributedLockException") && i < maxRetries - 1)
+    {
+        Log.Warning(ex, "[Hangfire] Failed to acquire recurring job lock (attempt {Attempt}/{Max}). Retrying in 5s...", i + 1, maxRetries);
+        Thread.Sleep(5000);
+    }
+}
 
 app.Run();
