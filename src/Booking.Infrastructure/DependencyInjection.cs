@@ -127,6 +127,11 @@ public static class DependencyInjection
         services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();
 
         var gmailSettings = configuration.GetSection("Gmail").Get<GmailSmtpSettings>() ?? new GmailSmtpSettings();
+        if (string.IsNullOrWhiteSpace(gmailSettings.Username))
+            gmailSettings.Username = Environment.GetEnvironmentVariable("GMAIL_USERNAME") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(gmailSettings.AppPassword))
+            gmailSettings.AppPassword = Environment.GetEnvironmentVariable("GMAIL_APP_PASSWORD") ?? string.Empty;
+            
         services.AddSingleton(gmailSettings);
         services.AddScoped<INotificationSender, SmtpNotificationSender>();
 
