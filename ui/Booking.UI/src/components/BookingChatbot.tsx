@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+﻿import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Bot,
   Building2,
@@ -14,7 +14,7 @@ import {
   Users,
   X,
 } from "lucide-react";
-import { createReservation, getUsers } from "../lib/api";
+import { createReservation, getUsers, cancelReservation } from "../lib/api";
 import { apiClient } from "../lib/apiClient";
 import type { UserSummary } from "../lib/types";
 import { getCurrentUserId } from "../lib/auth";
@@ -50,6 +50,18 @@ interface ChatMessage {
   recommendations?: RecommendedRoom[];
   pendingBooking?: PendingBookingState;
   confirmedBooking?: ConfirmedBookingInfo;
+  reservations?: ChatReservation[];
+}
+
+export interface ChatReservation {
+  id: string;
+  roomName: string;
+  roomLocation: string;
+  startTime: string;
+  endTime: string;
+  status: string;
+  bookedByUsername: string;
+  attendeeUsernames: string[];
 }
 
 const QUICK_PROMPTS = [
@@ -58,12 +70,79 @@ const QUICK_PROMPTS = [
   "Quick 30 min sync today for 3 people",
 ];
 
+/**
+ * Lightweight inline markdown renderer ΓÇö no external deps.
+ * Handles: **bold**, *italic*, `code`, numbered lists, bullet lists, blank-line paragraphs.
+ * Safe: never uses dangerouslySetInnerHTML.
+ */
+function MarkdownText({ text, className }: { text: string; className?: string }) {
+  // Split on blank lines to get paragraphs / list blocks
+  const blocks = text.split(/\n{2,}/);
+
+  return (
+    <div className={className}>
+      {blocks.map((block, bi) => {
+        const lines = block.split("\n");
+
+        // Numbered list block: every line starts with `N.` or `N)`
+        if (lines.every((l) => /^\s*\d+[.)]\s/.test(l))) {
+          return (
+            <ol key={bi} className="list-decimal list-inside space-y-0.5 my-1">
+              {lines.map((l, li) => (
+                <li key={li}>{renderInline(l.replace(/^\s*\d+[.)]\s*/, ""))}</li>
+              ))}
+            </ol>
+          );
+        }
+
+        // Bullet list block: every line starts with `-`, `*`, or `ΓÇó`
+        if (lines.every((l) => /^\s*[-*ΓÇó]\s/.test(l))) {
+          return (
+            <ul key={bi} className="list-disc list-inside space-y-0.5 my-1">
+              {lines.map((l, li) => (
+                <li key={li}>{renderInline(l.replace(/^\s*[-*ΓÇó]\s*/, ""))}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        // Regular paragraph ΓÇö preserve single newlines as <br>
+        return (
+          <p key={bi} className={bi > 0 ? "mt-2" : undefined}>
+            {lines.map((l, li) => (
+              <span key={li}>
+                {li > 0 && <br />}
+                {renderInline(l)}
+              </span>
+            ))}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Renders a single line with **bold**, *italic*, and `code` spans. */
+function renderInline(text: string): React.ReactNode {
+  // Tokenise: **bold**, *italic*, `code`
+  const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|`[^`]+`)/);
+  return parts.map((part, i) => {
+    if (part.startsWith("**") && part.endsWith("**"))
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    if (part.startsWith("*") && part.endsWith("*"))
+      return <em key={i}>{part.slice(1, -1)}</em>;
+    if (part.startsWith("`") && part.endsWith("`"))
+      return <code key={i} className="rounded bg-black/10 dark:bg-white/10 px-1 font-mono text-[0.85em]">{part.slice(1, -1)}</code>;
+    return part;
+  });
+}
+
 export function BookingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  // Stable session ID — persists for the lifetime of this component mount.
+  // Stable session ID ΓÇö persists for the lifetime of this component mount.
   // The server uses it to look up the right ChatHistory for context continuity.
   const [sessionId] = useState(() => crypto.randomUUID());
   const [availableUsers, setAvailableUsers] = useState<UserSummary[]>([]);
@@ -76,7 +155,7 @@ export function BookingChatbot() {
     {
       id: "welcome-1",
       sender: "bot",
-      text: "Hello! I'm your AI Booking Concierge. Tell me what kind of meeting you're planning — group size, preferred time, or colleagues to invite — and I'll find and reserve the best available room for you.",
+      text: "Hello! I'm your AI Booking Concierge. Tell me what kind of meeting you're planning ΓÇö group size, preferred time, or colleagues to invite ΓÇö and I'll find and reserve the best available room for you.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -151,20 +230,73 @@ export function BookingChatbot() {
     setIsTyping(true);
 
     try {
-      const data = await apiClient.post<{ reply: string }>("/chat", {
-        sessionId,
-        message: userText,
-      });
+      const data = await apiClient.post<{
+        reply: string;
+        rooms?: { id: string; name: string; location: string; capacity: number }[];
+        slotStart?: string;
+        slotEnd?: string;
+        reservations?: ChatReservation[];
+      }>("/chat", { sessionId, message: userText });
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: crypto.randomUUID(),
-          sender: "bot",
-          text: data.reply,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
+      const botTimestamp = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+      if (data.rooms && data.rooms.length > 0) {
+        // Use the exact time slot the model queried, so cards show the correct window.
+        // Fall back to tomorrow 14:00ΓÇô15:00 for ListRooms calls with no time constraint.
+        const slotStart = data.slotStart
+          ? new Date(data.slotStart)
+          : (() => { const d = new Date(); d.setUTCDate(d.getUTCDate() + 1); d.setUTCHours(14, 0, 0, 0); return d; })();
+        const slotEnd = data.slotEnd
+          ? new Date(data.slotEnd)
+          : (() => { const d = new Date(slotStart); d.setUTCHours(d.getUTCHours() + 1); return d; })();
+
+        const timeSlotText = `${slotStart.toLocaleDateString([], {
+          weekday: "short", month: "short", day: "numeric",
+        })} ┬╖ ${slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ΓÇô ${slotEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
+        const recommendations: RecommendedRoom[] = data.rooms.map((r, idx) => ({
+          id: r.id,
+          name: r.name,
+          location: r.location,
+          capacity: r.capacity,
+          timeSlotText,
+          startIso: slotStart.toISOString(),
+          endIso: slotEnd.toISOString(),
+          tag: idx === 0 ? "Best Match" : "Available",
+        }));
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            sender: "bot",
+            text: data.reply,
+            recommendations,
+            timestamp: botTimestamp,
+          },
+        ]);
+      } else if (data.reservations && data.reservations.length > 0) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            sender: "bot",
+            text: data.reply,
+            reservations: data.reservations,
+            timestamp: botTimestamp,
+          },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: crypto.randomUUID(),
+            sender: "bot",
+            text: data.reply,
+            timestamp: botTimestamp,
+          },
+        ]);
+      }
     } catch (err) {
       console.error("[Chatbot] Chat API error:", err);
       setMessages((prev) => [
@@ -259,6 +391,36 @@ export function BookingChatbot() {
           id: crypto.randomUUID(),
           sender: "bot",
           text: `Could not complete the booking for ${rec.name}. It may have just been reserved by someone else or exceeds business hours.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } finally {
+      setIsTyping(false);
+    }
+  }
+
+  async function handleCancelChatReservation(reservationId: string) {
+    setIsTyping(true);
+    try {
+      await cancelReservation(reservationId);
+      
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "bot",
+          text: `Reservation cancelled successfully.`,
+          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        },
+      ]);
+    } catch (err) {
+      console.error("[Chatbot] Cancel error:", err);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: crypto.randomUUID(),
+          sender: "bot",
+          text: "Failed to cancel the reservation. It may have already been cancelled or you do not have permission.",
           timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
         },
       ]);
@@ -379,7 +541,11 @@ export function BookingChatbot() {
                           : "rounded-tl-xs border border-border bg-muted/40 text-foreground"
                       }`}
                     >
-                      <p className="whitespace-pre-wrap">{msg.text}</p>
+                      {msg.sender === "bot" ? (
+                        <MarkdownText text={msg.text} />
+                      ) : (
+                        <p className="whitespace-pre-wrap">{msg.text}</p>
+                      )}
                     </div>
                   )}
 
@@ -557,6 +723,56 @@ export function BookingChatbot() {
                     </div>
                   )}
 
+                  {/* Reservation Cards */}
+                  {msg.reservations && msg.reservations.length > 0 && (
+                    <div className="flex w-full snap-x snap-mandatory gap-3 overflow-x-auto pb-2 pl-1">
+                      {msg.reservations.map((res) => (
+                        <div
+                          key={res.id}
+                          className="flex w-64 shrink-0 snap-center flex-col justify-between rounded-xl border border-border bg-card p-3 shadow-sm transition-all hover:shadow-md"
+                        >
+                          <div>
+                            <div className="mb-2 flex items-center justify-between">
+                              <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-[10px] font-bold text-indigo-500 uppercase tracking-wide">
+                                {res.status}
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-bold text-foreground line-clamp-1">{res.roomName}</h4>
+                            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                              <Building2 className="size-3.5" />
+                              <span className="line-clamp-1">{res.roomLocation}</span>
+                            </div>
+                            <div className="mt-1 flex flex-col gap-0.5 text-xs text-muted-foreground">
+                              <div className="flex items-center gap-1.5">
+                                <Clock className="size-3.5" />
+                                <span>
+                                  {new Date(res.startTime).toLocaleDateString([], { month: "short", day: "numeric" })} ┬╖{" "}
+                                  {new Date(res.startTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} ΓÇô{" "}
+                                  {new Date(res.endTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                </span>
+                              </div>
+                            </div>
+                            {res.attendeeUsernames.length > 0 && (
+                              <div className="mt-1 flex items-start gap-1.5 text-xs text-muted-foreground">
+                                <Users className="size-3.5 mt-0.5" />
+                                <span className="line-clamp-2">With: {res.attendeeUsernames.join(", ")}</span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="mt-3 border-t border-border/50 pt-2">
+                            <button
+                              type="button"
+                              onClick={() => handleCancelChatReservation(res.id)}
+                              className="w-full rounded-lg bg-red-600/10 px-3 py-1.5 text-center text-xs font-semibold text-red-600 transition-all hover:bg-red-600 hover:text-white cursor-pointer"
+                            >
+                              Cancel Reservation
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
                   <div className="text-[9px] text-muted-foreground px-1">{msg.timestamp}</div>
                 </div>
               </div>
@@ -601,7 +817,7 @@ export function BookingChatbot() {
               </button>
             </form>
             <div className="mt-1.5 flex items-center justify-between px-1 text-[10px] text-muted-foreground">
-              <span>OpenAI Ready · Natural Language Search</span>
+              <span>OpenAI Ready ┬╖ Natural Language Search</span>
               <span>Instant Conflict Checks</span>
             </div>
           </div>

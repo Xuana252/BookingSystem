@@ -1,4 +1,4 @@
-using System.Text.Json.Serialization;
+﻿using System.Text.Json.Serialization;
 
 namespace Booking.Application.DTOs;
 
@@ -20,7 +20,7 @@ public record ChatReservationResult(
 
 /// <summary>
 /// The structured JSON shape the LLM is required to always respond with.
-/// The model explicitly selects which roomIds/reservationIds to surface as cards —
+/// The model explicitly selects which roomIds/reservationIds to surface as cards ΓÇö
 /// this removes the "last plugin ran" ambiguity where internal tool calls leaked as cards.
 /// </summary>
 public sealed class AssistantStructuredResponse
@@ -45,7 +45,7 @@ public sealed class AssistantStructuredResponse
 
 /// <summary>
 /// The full result of a chat turn returned to the controller.
-/// Rooms/Reservations contain only what the model explicitly nominated — never a full unfiltered list.
+/// Rooms/Reservations contain only what the model explicitly nominated ΓÇö never a full unfiltered list.
 /// SlotStart/SlotEnd carry the queried time window so booking cards pre-fill the right slot.
 /// </summary>
 public record ChatResult(

@@ -1,36 +1,99 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
+using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
 using Microsoft.SemanticKernel;
 
 namespace Booking.Application.Plugins;
 
-/// <summary>
-/// Semantic Kernel plugin that gives the LLM read-only access to reservation data.
-/// </summary>
-public sealed class ReservationPlugin(IReservationService reservationService)
+public sealed class ReservationQueryResult
 {
+    public IReadOnlyList<ChatReservationResult> Reservations { get; init; } = [];
+}
+
+/// <summary>
+/// SK plugin for reservation data. Supports both read and write.
+/// SetCurrentUserId must be called by ChatService before each LLM turn.
+/// </summary>
+public sealed class ReservationPlugin(IReservationService reservationService, IRoomService roomService)
+{
+    private Guid _currentUserId;
+
+    public ReservationQueryResult? LastQueryResult { get; private set; }
+
+    public void SetCurrentUserId(Guid userId) => _currentUserId = userId;
+
     [KernelFunction, Description(
-        "List all reservations in the system. " +
-        "Returns each reservation's room, time slot, status (Confirmed/Cancelled), and who booked it.")]
-    public async Task<string> ListReservationsAsync(CancellationToken cancellationToken = default)
+        "List all upcoming confirmed reservations booked by the current user. " +
+        "Use when the user asks about 'my reservations', 'my upcoming bookings', or wants to view/cancel their bookings. " +
+        "Returns structured data; include the IDs you want to show in reservationIds.")]
+    public async Task<ReservationQueryResult> GetMyReservationsAsync(CancellationToken cancellationToken = default)
     {
-        var all = await reservationService.GetAllAsync(cancellationToken);
+        var allReservations = await reservationService.GetAllAsync(cancellationToken);
+        var allRooms = await roomService.GetAllAsync(cancellationToken);
+        var roomDict = allRooms.ToDictionary(r => r.Id);
 
-        var confirmed = all.Where(r => r.Status == ReservationStatus.Confirmed).ToList();
+        var myUpcoming = allReservations
+            .Where(r => r.UserId == _currentUserId && r.Status == ReservationStatus.Confirmed && r.EndTime > DateTime.UtcNow)
+            .OrderBy(r => r.StartTime)
+            .Select(r =>
+            {
+                roomDict.TryGetValue(r.RoomId, out var room);
+                return new ChatReservationResult(
+                    r.Id,
+                    room?.Name ?? "Unknown Room",
+                    room?.Location ?? "Unknown Location",
+                    r.StartTime,
+                    r.EndTime,
+                    r.Status.ToString(),
+                    r.Username,
+                    r.Attendees.Select(a => a.Username).ToList());
+            })
+            .ToList();
 
-        if (confirmed.Count == 0)
-            return "There are no confirmed reservations at the moment.";
+        var result = new ReservationQueryResult { Reservations = myUpcoming };
+        LastQueryResult = result;
+        return result;
+    }
 
-        var lines = confirmed.Select(r =>
-            $"- Room {r.RoomId} | {r.StartTime:ddd dd MMM, HH:mm} – {r.EndTime:HH:mm} UTC | Booked by: {r.Username}");
+    [KernelFunction, Description(
+        "Create a new room reservation for the current user. " +
+        "ALWAYS confirm the room name, date, and time with the user before calling this. " +
+        "Use the room ID (UUID) from a previous ListRooms or GetAvailableRooms call. " +
+        "Returns a confirmation message with the booking reference.")]
+    public async Task<string> CreateReservationAsync(
+        [Description("The room ID (UUID) to book — taken from a previous rooms tool result.")] string roomId,
+        [Description("Reservation start time in ISO 8601 UTC format, e.g. 2026-09-12T09:00:00Z.")] DateTime startTime,
+        [Description("Reservation end time in ISO 8601 UTC format, e.g. 2026-09-12T10:00:00Z.")] DateTime endTime,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(roomId, out var roomGuid))
+            return "Error: invalid room ID format. Please use the UUID from a rooms tool result.";
 
-        return $"Confirmed reservations ({confirmed.Count} total):\n{string.Join("\n", lines)}";
+        try
+        {
+            var reservation = await reservationService.CreateAsync(
+                new CreateReservationRequest(roomGuid, startTime, endTime),
+                _currentUserId,
+                cancellationToken);
+
+            return $"Reservation created! Reference: BK-{reservation.Id.ToString()[..8].ToUpperInvariant()}. " +
+                   $"{reservation.StartTime:ddd dd MMM} from {reservation.StartTime:HH:mm} to {reservation.EndTime:HH:mm} UTC.";
+        }
+        catch (ArgumentException ex)
+        {
+            return $"Could not create reservation: {ex.Message}";
+        }
+        catch (Exception)
+        {
+            return "An unexpected error occurred while creating the reservation. Please try again.";
+        }
     }
 
     [KernelFunction, Description(
         "Check whether any rooms are available (not already booked) during a requested time window. " +
-        "Provide a start time and an end time in ISO 8601 format (e.g. 2026-09-11T14:00:00Z).")]
+        "Provide start and end times in ISO 8601 format. Prefer GetAvailableRooms in RoomPlugin when " +
+        "you also need to filter by capacity — it handles availability + capacity in one call.")]
     public async Task<string> CheckAvailabilityAsync(
         [Description("Requested start time in ISO 8601 format.")] DateTime startTime,
         [Description("Requested end time in ISO 8601 format.")] DateTime endTime,
@@ -38,21 +101,16 @@ public sealed class ReservationPlugin(IReservationService reservationService)
     {
         var all = await reservationService.GetAllAsync(cancellationToken);
 
-        // Collect room IDs that have a conflicting confirmed reservation in the window
         var conflictingRoomIds = all
-            .Where(r =>
-                r.Status == ReservationStatus.Confirmed &&
-                startTime < r.EndTime && endTime > r.StartTime)
+            .Where(r => r.Status == ReservationStatus.Confirmed && startTime < r.EndTime && endTime > r.StartTime)
             .Select(r => r.RoomId)
             .ToHashSet();
 
-        if (conflictingRoomIds.Count == 0)
-            return $"No reservations conflict with {startTime:HH:mm} – {endTime:HH:mm} UTC on {startTime:ddd dd MMM yyyy}. " +
-                   "All rooms appear to be available in that window.";
+        LastQueryResult = null;
 
-        return $"{conflictingRoomIds.Count} room(s) are already booked for " +
-               $"{startTime:HH:mm} – {endTime:HH:mm} UTC on {startTime:ddd dd MMM yyyy}. " +
-               $"Use ListRooms and cross-reference with ListReservations to see which specific rooms are free.";
+        if (conflictingRoomIds.Count == 0)
+            return $"No conflicts for {startTime:HH:mm}–{endTime:HH:mm} UTC on {startTime:ddd dd MMM yyyy}. All rooms appear free.";
+
+        return $"{conflictingRoomIds.Count} room(s) are booked during {startTime:HH:mm}–{endTime:HH:mm} UTC on {startTime:ddd dd MMM yyyy}.";
     }
 }
-
