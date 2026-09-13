@@ -29,6 +29,19 @@ public static class DependencyInjection
         services.AddDbContext<BookingDbContext>(options => options.UseNpgsql(connectionString));
 
         var awsSettings = configuration.GetSection("Aws").Get<AwsSettings>() ?? new AwsSettings();
+
+        // Fallback to standard AWS-style env vars for each field.
+        // Render (and most PaaS) set AWS_REGION etc. directly; ASP.NET config binding
+        // only picks up Aws__Region (double-underscore prefix), so we read them manually.
+        if (string.IsNullOrWhiteSpace(awsSettings.EndpointUrl))
+            awsSettings.EndpointUrl = Environment.GetEnvironmentVariable("AWS_ENDPOINT_URL") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(awsSettings.Region))
+            awsSettings.Region = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1";
+        if (string.IsNullOrWhiteSpace(awsSettings.SnsTopicArn))
+            awsSettings.SnsTopicArn = Environment.GetEnvironmentVariable("AWS_SNS_TOPIC_ARN") ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(awsSettings.SqsQueueUrl))
+            awsSettings.SqsQueueUrl = Environment.GetEnvironmentVariable("AWS_SQS_QUEUE_URL") ?? string.Empty;
+
         services.AddSingleton(awsSettings);
 
         // Toggle between Moto and real AWS purely via config: Aws:EndpointUrl set (contains
