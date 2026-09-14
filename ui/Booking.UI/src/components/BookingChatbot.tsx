@@ -252,7 +252,7 @@ export function BookingChatbot() {
 
         const timeSlotText = `${slotStart.toLocaleDateString([], {
           weekday: "short", month: "short", day: "numeric",
-        })} ┬╖ ${slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slotEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+        })} (${slotStart.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} - ${slotEnd.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })})`;
 
         const recommendations: RecommendedRoom[] = data.rooms.map((r, idx) => ({
           id: r.id,

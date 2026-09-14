@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
@@ -10,7 +10,7 @@ namespace Booking.Application.Plugins;
 /// Typed result returned by room tool calls. Returning a class (not a string) means SK:
 ///   1. Serialises it to JSON so the LLM can reason over the data.
 ///   2. Stores the original object in FunctionResultContent.Result so ChatService can
-///      cast it back to structured card data ΓÇö no second DB round-trip needed.
+///      cast it back to structured card data - no second DB round-trip needed.
 /// </summary>
 public sealed class RoomQueryResult
 {
@@ -26,7 +26,7 @@ public sealed class RoomPlugin(IRoomService roomService, IReservationService res
 {
     /// <summary>
     /// Set by each tool call so ChatService can read the exact filtered result
-    /// without a second DB fetch. Safe because RoomPlugin is registered as Scoped ΓÇö
+    /// without a second DB fetch. Safe because RoomPlugin is registered as Scoped -
     /// the same instance is used by the Kernel and by ChatService within one request.
     /// </summary>
     public RoomQueryResult? LastQueryResult { get; private set; }
@@ -58,6 +58,9 @@ public sealed class RoomPlugin(IRoomService roomService, IReservationService res
         [Description("Minimum required seating capacity. Pass 0 or omit for no capacity filter.")] int minCapacity = 0,
         CancellationToken cancellationToken = default)
     {
+        if (startTime.Kind != DateTimeKind.Utc) startTime = startTime.ToUniversalTime();
+        if (endTime.Kind != DateTimeKind.Utc) endTime = endTime.ToUniversalTime();
+
         var allRooms = await roomService.GetAllAsync(cancellationToken);
         var allReservations = await reservationService.GetAllAsync(cancellationToken);
 

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
@@ -70,6 +70,9 @@ public sealed class ReservationPlugin(IReservationService reservationService, IR
         if (!Guid.TryParse(roomId, out var roomGuid))
             return "Error: invalid room ID format. Please use the UUID from a rooms tool result.";
 
+        if (startTime.Kind != DateTimeKind.Utc) startTime = startTime.ToUniversalTime();
+        if (endTime.Kind != DateTimeKind.Utc) endTime = endTime.ToUniversalTime();
+
         try
         {
             var reservation = await reservationService.CreateAsync(
@@ -99,6 +102,9 @@ public sealed class ReservationPlugin(IReservationService reservationService, IR
         [Description("Requested end time in ISO 8601 format.")] DateTime endTime,
         CancellationToken cancellationToken = default)
     {
+        if (startTime.Kind != DateTimeKind.Utc) startTime = startTime.ToUniversalTime();
+        if (endTime.Kind != DateTimeKind.Utc) endTime = endTime.ToUniversalTime();
+        
         var all = await reservationService.GetAllAsync(cancellationToken);
 
         var conflictingRoomIds = all
