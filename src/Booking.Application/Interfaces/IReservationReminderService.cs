@@ -1,4 +1,4 @@
-namespace Booking.Application.Interfaces;
+﻿namespace Booking.Application.Interfaces;
 
 public interface IReservationReminderService
 {

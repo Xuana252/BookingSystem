@@ -1,4 +1,4 @@
-using Booking.Infrastructure.External;
+﻿using Booking.Infrastructure.External;
 using FluentAssertions;
 
 namespace Booking.UnitTests.External;

@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Booking.Api.Middleware;
 using FluentAssertions;
 using Microsoft.AspNetCore.Http;

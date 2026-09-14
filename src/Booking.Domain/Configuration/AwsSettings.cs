@@ -1,4 +1,4 @@
-namespace Booking.Domain.Configuration;
+﻿namespace Booking.Domain.Configuration;
 
 /// <summary>
 /// AWS endpoint config. Points at Moto locally, real AWS in production.

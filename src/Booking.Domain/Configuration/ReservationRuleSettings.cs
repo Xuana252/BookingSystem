@@ -1,4 +1,4 @@
-namespace Booking.Domain.Configuration;
+﻿namespace Booking.Domain.Configuration;
 
 public class ReservationRuleSettings
 {

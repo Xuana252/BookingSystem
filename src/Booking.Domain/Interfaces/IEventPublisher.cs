@@ -1,4 +1,4 @@
-using Booking.Domain.Events;
+﻿using Booking.Domain.Events;
 
 namespace Booking.Domain.Interfaces;
 

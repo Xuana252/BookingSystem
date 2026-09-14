@@ -1,4 +1,4 @@
-namespace Booking.Domain.Interfaces;
+﻿namespace Booking.Domain.Interfaces;
 
 public interface IPasswordHasher
 {

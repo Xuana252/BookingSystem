@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
 using StackExchange.Redis;

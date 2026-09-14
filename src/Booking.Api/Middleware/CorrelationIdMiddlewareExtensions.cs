@@ -1,4 +1,4 @@
-namespace Booking.Api.Middleware;
+﻿namespace Booking.Api.Middleware;
 
 public static class CorrelationIdMiddlewareExtensions
 {

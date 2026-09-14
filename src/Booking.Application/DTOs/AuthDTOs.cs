@@ -1,4 +1,4 @@
-namespace Booking.Application.DTOs;
+﻿namespace Booking.Application.DTOs;
 
 public record RegisterRequest(string Username, string Email, string Password);
 public record LoginRequest(string Username, string Password);

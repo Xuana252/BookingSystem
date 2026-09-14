@@ -1,4 +1,4 @@
-namespace Booking.Domain.Events;
+﻿namespace Booking.Domain.Events;
 
 /// <summary>
 /// Standard envelope for all events flowing through SNS → SQS.

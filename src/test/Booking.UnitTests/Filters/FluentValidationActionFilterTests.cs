@@ -1,4 +1,4 @@
-using Booking.Api.Filters;
+﻿using Booking.Api.Filters;
 using Booking.Application.DTOs;
 using Booking.Application.Validators;
 using FluentAssertions;

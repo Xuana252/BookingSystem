@@ -1,4 +1,4 @@
-namespace Booking.Api.Middleware;
+﻿namespace Booking.Api.Middleware;
 
 /// <summary>
 /// Generates (or accepts an inbound) correlation ID for the whole request, stashes it in

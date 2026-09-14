@@ -1,4 +1,4 @@
-using Booking.Application.DTOs;
+﻿using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Application.Plugins;
 using Booking.Application.Services;
@@ -14,12 +14,12 @@ namespace Booking.Application;
 public static class DependencyInjection
 {
     /// <summary>
-    /// Api-only. Booking.Worker doesn't call this ΓÇö it registers its own two services
+    /// Api-only. Booking.Worker doesn't call this - it registers its own two services
     /// (IReservationReminderService/INotificationDispatchService) directly in its own
     /// Program.cs instead, since nothing here is actually shared between the two composition
     /// roots. (Previously both were registered here regardless of which root used them, which
     /// crashed at startup whenever a service's settings dependency was only bound in the other
-    /// root's Program.cs ΓÇö DI validation checks the whole graph, not just what gets resolved.)
+    /// root's Program.cs - DI validation checks the whole graph, not just what gets resolved.)
     /// </summary>
     public static IServiceCollection AddBookingApplication(this IServiceCollection services)
     {

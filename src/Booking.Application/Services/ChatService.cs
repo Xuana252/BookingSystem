@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Text.Json;
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
@@ -31,9 +31,9 @@ public sealed class ChatService(
 
     private const string SystemPrompt =
         """
-        You are a helpful AI concierge for the Booking System ΓÇö a room reservation platform.
+        You are a helpful AI concierge for the Booking System - a room reservation platform.
 
-        ΓöÇΓöÇ TOOLS ΓöÇΓöÇ
+        -- TOOLS --
         - GetAvailableRooms : use when the user specifies a time window (and optional capacity).
           Always prefer this over separate ListRooms + CheckAvailability calls.
         - ListRooms         : use when the user wants to browse rooms with no time constraint.
@@ -42,10 +42,10 @@ public sealed class ChatService(
           with the user FIRST. Never book without explicit confirmation.
         - CheckAvailability : use only when you need to check a window without capacity filtering.
 
-        Never invent room names, capacities, or availability ΓÇö always use the tools.
+        Never invent room names, capacities, or availability - always use the tools.
 
-        ΓöÇΓöÇ RESPONSE FORMAT (REQUIRED) ΓöÇΓöÇ
-        You MUST respond with valid JSON matching this exact schema ΓÇö no markdown, no extra text:
+        -- RESPONSE FORMAT (REQUIRED) --
+        You MUST respond with valid JSON matching this exact schema - no markdown, no extra text:
 
         {
           "reply": "Your conversational response to the user (plain text, no JSON inside).",
@@ -54,18 +54,25 @@ public sealed class ChatService(
         }
 
         Rules for roomIds:
-        ΓÇó Include ONLY the IDs of rooms you want the UI to render as interactive booking cards.
-        ΓÇó Be selective: if the user asked for rooms with exactly N seats, only include rooms
+        - Include ONLY the IDs of rooms you want the UI to render as interactive booking cards.
+        - Be selective: if the user asked for rooms with exactly N seats, only include rooms
           whose capacity matches. Do not include every room the tool returned.
-        ΓÇó Leave empty ([]) when rooms were fetched internally (e.g. to confirm availability
-          before booking) ΓÇö the user does not need to see a card list in that case.
-        ΓÇó Leave empty after CreateReservation succeeds (the booking is done, no card needed).
+        - Leave empty ([]) when rooms were fetched internally (e.g. to confirm availability
+          before booking) - the user does not need to see a card list in that case.
+        - Leave empty after CreateReservation succeeds (the booking is done, no card needed).
 
         Rules for reservationIds:
-        ΓÇó Include IDs only when the user explicitly asked to view/manage their reservations.
-        ΓÇó Leave empty ([]) for all other queries.
+        - Include IDs only when the user explicitly asked to view/manage their reservations.
+        - Leave empty ([]) for all other queries.
 
-        Both arrays MUST be present even when empty. Today UTC: {NOW}.
+        Both arrays MUST be present even when empty. 
+
+        TIMEZONE INSTRUCTIONS:
+        - The server time is currently {NOW} (UTC).
+        - Assume the user is in UTC+7 (Indochina Time) unless they specify otherwise.
+        - When the user asks to book a room at "9am", they mean 9:00 AM UTC+7. 
+        - You MUST convert their local time to UTC before passing DateTimes to the tool parameters.
+        - When responding to the user in text, display times in their local timezone (UTC+7).
         """;
 
     public async Task<ChatResult> ChatAsync(
@@ -119,7 +126,7 @@ public sealed class ChatService(
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or OperationCanceledException)
         {
             if (history.Count > 0) history.RemoveAt(history.Count - 1);
-            logger.LogWarning(ex, "OpenAI unavailable ΓÇö falling back for session {SessionId}", sessionId);
+            logger.LogWarning(ex, "OpenAI unavailable - falling back for session {SessionId}", sessionId);
             return await DirectPluginFallbackAsync(message, ct);
         }
     }
@@ -137,7 +144,7 @@ public sealed class ChatService(
         }
         catch (JsonException ex)
         {
-            // Model didn't follow the JSON format ΓÇö treat the whole content as the reply text.
+            // Model didn't follow the JSON format - treat the whole content as the reply text.
             // Log so we can tune the prompt if this happens often.
             _ = ex; // suppress unused warning
         }

@@ -1,4 +1,4 @@
-namespace Booking.Domain.Entities;
+﻿namespace Booking.Domain.Entities;
 
 /// <summary>
 /// A bookable resource (meeting room, desk, facility).

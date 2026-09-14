@@ -1,4 +1,4 @@
-using System.Net;
+﻿using System.Net;
 using Booking.Infrastructure.External;
 using FluentAssertions;
 using Microsoft.Extensions.Logging.Abstractions;

@@ -1,4 +1,4 @@
-using Booking.Domain.Interfaces;
+﻿using Booking.Domain.Interfaces;
 
 namespace Booking.Infrastructure.Security;
 

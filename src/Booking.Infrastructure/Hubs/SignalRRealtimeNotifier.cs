@@ -1,4 +1,4 @@
-using Booking.Domain.Interfaces;
+﻿using Booking.Domain.Interfaces;
 using Microsoft.AspNetCore.SignalR;
 
 namespace Booking.Infrastructure.Hubs;

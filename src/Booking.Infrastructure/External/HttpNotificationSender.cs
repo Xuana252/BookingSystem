@@ -1,4 +1,4 @@
-using System.Net.Http.Json;
+﻿using System.Net.Http.Json;
 using Booking.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 

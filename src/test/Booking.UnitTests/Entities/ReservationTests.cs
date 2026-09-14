@@ -1,4 +1,4 @@
-using Booking.Domain.Entities;
+﻿using Booking.Domain.Entities;
 using FluentAssertions;
 
 namespace Booking.UnitTests.Entities;

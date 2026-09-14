@@ -1,4 +1,4 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using Booking.Domain.Configuration;
 using Booking.Domain.Entities;
 using Booking.Infrastructure.Security;

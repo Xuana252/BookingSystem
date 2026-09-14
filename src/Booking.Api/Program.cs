@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Booking.Api.Configuration;
 using Booking.Api.Filters;
 using Booking.Api.Middleware;

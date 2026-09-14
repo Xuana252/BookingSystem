@@ -1,4 +1,4 @@
-using Booking.Domain.Configuration;
+﻿using Booking.Domain.Configuration;
 using Booking.Domain.Interfaces;
 using MailKit.Net.Smtp;
 using MailKit.Security;

@@ -1,4 +1,4 @@
-namespace Booking.Domain.Entities;
+﻿namespace Booking.Domain.Entities;
 
 public enum ReservationStatus
 {

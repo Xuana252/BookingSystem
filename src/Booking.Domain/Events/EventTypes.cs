@@ -1,4 +1,4 @@
-namespace Booking.Domain.Events;
+﻿namespace Booking.Domain.Events;
 
 /// <summary>
 /// Canonical EventType strings. Format: "bookingsystem.{domain}.{action}.v{version}".

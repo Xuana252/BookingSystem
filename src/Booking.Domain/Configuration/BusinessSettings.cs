@@ -1,4 +1,4 @@
-namespace Booking.Domain.Configuration;
+﻿namespace Booking.Domain.Configuration;
 
 /// <summary>
 /// Shared across Api and Worker (bound in AddBookingInfrastructure, not one composition root's

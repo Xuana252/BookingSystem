@@ -1,4 +1,4 @@
-using System.Text.Json;
+﻿using System.Text.Json;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Booking.Application.Interfaces;

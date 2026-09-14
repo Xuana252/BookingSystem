@@ -1,4 +1,4 @@
-using Booking.Infrastructure.Security;
+﻿using Booking.Infrastructure.Security;
 using FluentAssertions;
 
 namespace Booking.UnitTests.Security;

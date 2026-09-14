@@ -10,7 +10,7 @@ public record ChatRequest(string SessionId, string Message);
 
 /// <param name="Reply">The assistant text reply.</param>
 /// <param name="Rooms">
-/// Populated when the LLM called a rooms tool this turn ΓÇö the exact filtered set
+/// Populated when the LLM called a rooms tool this turn - the exact filtered set
 /// the model worked with. Frontend uses this to render booking cards.
 /// </param>
 /// <param name="SlotStart">Requested slot start (from GetAvailableRooms), pre-fills booking card times.</param>

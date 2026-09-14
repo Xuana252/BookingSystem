@@ -1,4 +1,4 @@
-namespace Booking.Domain.Entities;
+﻿namespace Booking.Domain.Entities;
 
 /// <summary>A non-host participant on a <see cref="Reservation"/> — the host is Reservation.UserId
 /// itself, not a row here.</summary>
