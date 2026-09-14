@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
@@ -118,5 +118,36 @@ public sealed class ReservationPlugin(IReservationService reservationService, IR
             return $"No conflicts for {startTime:HH:mm}–{endTime:HH:mm} UTC on {startTime:ddd dd MMM yyyy}. All rooms appear free.";
 
         return $"{conflictingRoomIds.Count} room(s) are booked during {startTime:HH:mm}–{endTime:HH:mm} UTC on {startTime:ddd dd MMM yyyy}.";
+    }
+
+    [KernelFunction, Description(
+        "Cancel an existing room reservation for the current user. " +
+        "You MUST fetch the user's reservations first to get the correct Reservation ID (UUID). " +
+        "ALWAYS confirm the exact room name and time with the user before calling this tool, " +
+        "especially if they have multiple reservations. Never guess the ID.")]
+    public async Task<string> CancelReservationAsync(
+        [Description("The reservation ID (UUID) to cancel, obtained from GetMyReservations.")] string reservationId,
+        CancellationToken cancellationToken = default)
+    {
+        if (!Guid.TryParse(reservationId, out var resGuid))
+            return "Error: invalid reservation ID format. Please use the UUID from a reservations tool result.";
+
+        try
+        {
+            await reservationService.CancelAsync(resGuid, _currentUserId, cancellationToken);
+            return $"Successfully cancelled reservation {resGuid}.";
+        }
+        catch (KeyNotFoundException)
+        {
+            return $"Error: Reservation {resGuid} not found.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return $"Error: You do not have permission to cancel reservation {resGuid}.";
+        }
+        catch (Exception ex)
+        {
+            return $"An unexpected error occurred while cancelling: {ex.Message}";
+        }
     }
 }

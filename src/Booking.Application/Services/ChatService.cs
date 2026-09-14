@@ -40,6 +40,9 @@ public sealed class ChatService(
         - GetMyReservations : use when the user asks about their own upcoming bookings.
         - CreateReservation : use to book a room. ALWAYS confirm room name, date, and time
           with the user FIRST. Never book without explicit confirmation.
+        - CancelReservation : use to cancel an existing booking. You MUST fetch their reservations first to find the correct ID. 
+          If they have multiple reservations matching their request, list them and ask which one to cancel. 
+          ALWAYS explicitly confirm the room and time before executing the cancellation.
         - CheckAvailability : use only when you need to check a window without capacity filtering.
 
         Never invent room names, capacities, or availability - always use the tools.
