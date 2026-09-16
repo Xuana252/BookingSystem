@@ -16,6 +16,7 @@ import {
   ShieldAlert,
   Users,
   Wrench,
+  Webhook
 } from "lucide-react";
 import { isAdmin } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
@@ -24,6 +25,8 @@ import type { Room } from "../lib/types";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { WebhooksModal } from "../components/WebhooksModal";
+import { RoomModal } from "../components/RoomModal";
 
 type StatusFilter = "all" | "active" | "inactive";
 
@@ -38,6 +41,9 @@ export function ManageRoomsPage() {
   const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [webhookRoom, setWebhookRoom] = useState<Room | null>(null);
+  const [isRoomModalOpen, setIsRoomModalOpen] = useState(false);
+  const [roomToEdit, setRoomToEdit] = useState<Room | null>(null);
 
   useEffect(() => {
     if (location.state && typeof location.state === "object" && "successMessage" in location.state) {
@@ -154,13 +160,16 @@ export function ManageRoomsPage() {
             <span>Refresh</span>
           </Button>
 
-          <Link
-            to="/admin/rooms/new"
+          <button
+            onClick={() => {
+              setRoomToEdit(null);
+              setIsRoomModalOpen(true);
+            }}
             className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md bg-gradient-to-r from-primary to-indigo-600 px-2.5 text-[0.8rem] font-medium text-primary-foreground shadow-sm shadow-primary/25 hover:opacity-95"
           >
             <Plus className="size-4" />
             <span>Create Room</span>
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -275,13 +284,16 @@ export function ManageRoomsPage() {
             {searchQuery ? "Try refining your search query." : "No rooms have been added in this category yet."}
           </p>
           {!searchQuery && (
-            <Link
-              to="/admin/rooms/new"
+            <button
+              onClick={() => {
+                setRoomToEdit(null);
+                setIsRoomModalOpen(true);
+              }}
               className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-muted"
             >
               <Plus className="size-3.5" />
               <span>Create Room</span>
-            </Link>
+            </button>
           )}
         </div>
       ) : (
@@ -350,7 +362,29 @@ export function ManageRoomsPage() {
                 </div>
 
                 {/* Card Action */}
-                <div className="mt-4 pt-3 border-t border-border/60">
+                <div className="mt-4 pt-3 border-t border-border/60 flex flex-col gap-2">
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => {
+                        setRoomToEdit(room);
+                        setIsRoomModalOpen(true);
+                      }}
+                      className="flex h-8 w-full items-center justify-center gap-2 rounded-md border border-input bg-background text-[11px] font-medium shadow-sm hover:bg-muted hover:text-foreground transition-colors"
+                    >
+                      <Building2 className="size-3.5" />
+                      <span>Edit Details</span>
+                    </button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setWebhookRoom(room)}
+                      className="gap-2 h-8 text-[11px] font-medium text-indigo-600 hover:bg-indigo-50 dark:text-indigo-400 dark:hover:bg-indigo-950/30"
+                    >
+                      <Webhook className="size-3.5" />
+                      <span>Webhooks ({room.webhookUrls?.length || 0})</span>
+                    </Button>
+                  </div>
+                  
                   <Button
                     variant={room.isActive ? "outline" : "default"}
                     size="sm"
@@ -385,6 +419,35 @@ export function ManageRoomsPage() {
           })}
         </div>
       )}
+
+      {webhookRoom && (
+        <WebhooksModal
+          room={webhookRoom}
+          onClose={() => setWebhookRoom(null)}
+          onSuccess={(newUrls) => {
+            setRooms((prev) => 
+              prev.map(r => r.id === webhookRoom.id ? { ...r, webhookUrls: newUrls } : r)
+            );
+            setWebhookRoom(null);
+            setSuccessMessage(`Webhooks for ${webhookRoom.name} updated successfully.`);
+          }}
+        />
+      )}
+
+      <RoomModal
+        isOpen={isRoomModalOpen}
+        onClose={() => {
+          setIsRoomModalOpen(false);
+          setRoomToEdit(null);
+        }}
+        roomToEdit={roomToEdit}
+        onSuccess={(msg) => {
+          setIsRoomModalOpen(false);
+          setRoomToEdit(null);
+          setSuccessMessage(msg);
+          loadRooms();
+        }}
+      />
     </div>
   );
 }

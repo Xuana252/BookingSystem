@@ -32,6 +32,7 @@ import { type UserManagementItem, UserRole } from "../lib/types";
 import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { UserModal } from "../components/UserModal";
 
 type RoleFilter = "all" | "admin" | "employee";
 type StatusFilter = "all" | "active" | "inactive";
@@ -48,6 +49,7 @@ export function ManageUsersPage() {
   const currentUserId = getCurrentUserId();
   const location = useLocation();
   const [users, setUsers] = useState<UserManagementItem[]>([]);
+  const [isUserModalOpen, setIsUserModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(
@@ -203,13 +205,13 @@ export function ManageUsersPage() {
             <span>Refresh</span>
           </Button>
 
-          <Link
-            to="/admin/users/new"
+          <button
+            onClick={() => setIsUserModalOpen(true)}
             className="inline-flex h-7 items-center justify-center gap-1.5 rounded-md bg-gradient-to-r from-primary to-indigo-600 px-2.5 text-[0.8rem] font-medium text-primary-foreground shadow-sm shadow-primary/25 hover:opacity-95"
           >
             <UserPlus className="size-4" />
             <span>Create User</span>
-          </Link>
+          </button>
         </div>
       </div>
 
@@ -346,13 +348,13 @@ export function ManageUsersPage() {
               {searchQuery ? "Try refining your search term." : "No accounts match the current filters."}
             </p>
             {!searchQuery && (
-              <Link
-                to="/admin/users/new"
+              <button
+                onClick={() => setIsUserModalOpen(true)}
                 className="mt-4 inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1.5 text-xs font-medium shadow-xs hover:bg-muted"
               >
                 <UserPlus className="size-3.5" />
                 <span>Create User</span>
-              </Link>
+              </button>
             )}
           </div>
         ) : (
@@ -530,6 +532,16 @@ export function ManageUsersPage() {
           </div>
         )}
       </div>
+      
+      <UserModal
+        isOpen={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+        onSuccess={(msg) => {
+          setIsUserModalOpen(false);
+          setSuccessMessage(msg);
+          loadUsers();
+        }}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-﻿using System.Net.Http.Json;
+using System.Net.Http.Json;
 using Booking.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -10,7 +10,7 @@ namespace Booking.Infrastructure.External;
 /// </summary>
 public sealed class HttpNotificationSender(HttpClient httpClient, ILogger<HttpNotificationSender> logger) : INotificationSender
 {
-    public async Task<bool> SendAsync(string recipientEmail, string subject, string message, CancellationToken ct = default)
+    public async Task<bool> SendAsync(string recipientEmail, string subject, string message, string? icsContent = null, CancellationToken ct = default)
     {
         HttpResponseMessage response;
         try

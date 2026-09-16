@@ -1,4 +1,4 @@
-﻿using Booking.Application.Services;
+using Booking.Application.Services;
 using Booking.Domain.Configuration;
 using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
@@ -49,7 +49,7 @@ public class NotificationDispatchServiceTests
 
         // Assert
         _notifications.Verify(n => n.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()), Times.Never);
-        _sender.Verify(s => s.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sender.Verify(s => s.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         _realtimeNotifier.Verify(n => n.NotifyUserAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
@@ -68,7 +68,7 @@ public class NotificationDispatchServiceTests
         // Assert
         _notifications.Verify(n => n.AddAsync(It.IsAny<Notification>(), It.IsAny<CancellationToken>()), Times.Once);
         _notifications.Verify(n => n.SaveChangesAsync(It.IsAny<CancellationToken>()), Times.Once);
-        _sender.Verify(s => s.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        _sender.Verify(s => s.SendAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()), Times.Never);
         // The live channel doesn't depend on the user record at all (it only needs the id
         // already on the reservation), so it still fires even when email delivery can't happen.
         _realtimeNotifier.Verify(n => n.NotifyUserAsync(reservation.UserId, It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Once);
@@ -83,7 +83,7 @@ public class NotificationDispatchServiceTests
         _notifications.Setup(n => n.ExistsForReservationAsync(reservation.Id, reservation.UserId, NotificationType.ReservationReminder, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _users.Setup(u => u.GetByIdAsync(reservation.UserId, It.IsAny<CancellationToken>())).ReturnsAsync(user);
-        _sender.Setup(s => s.SendAsync(user.Email, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _sender.Setup(s => s.SendAsync(user.Email, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
 
         Notification? persisted = null;
@@ -134,7 +134,7 @@ public class NotificationDispatchServiceTests
         _notifications.Setup(n => n.ExistsForReservationAsync(reservation.Id, reservation.UserId, NotificationType.ReservationReminder, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         _users.Setup(u => u.GetByIdAsync(reservation.UserId, It.IsAny<CancellationToken>())).ReturnsAsync(user);
-        _sender.Setup(s => s.SendAsync(user.Email, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        _sender.Setup(s => s.SendAsync(user.Email, It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
 
         Notification? persisted = null;

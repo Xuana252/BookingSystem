@@ -6,9 +6,11 @@ import {
   Calendar,
   ChevronLeft,
   ChevronRight,
+  Filter,
   Info,
   Loader2,
   Plus,
+  X,
 } from "lucide-react";
 import { getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
@@ -17,13 +19,16 @@ import type { Reservation, Room } from "../lib/types";
 import { addDays, combineDateAndTime, hourToTimeValue, startOfDay, toDateInputValue } from "../lib/dates";
 import { useReservationHub } from "../hooks/useReservationHub";
 import { RoomCalendar } from "../components/RoomCalendar";
+import { WeekCalendar } from "../components/WeekCalendar";
 import { MonthCalendar } from "../components/MonthCalendar";
 import { StatsPanel } from "../components/StatsPanel";
 import { BookingFormModal } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
+import { RoomDetailModal } from "../components/RoomDetailModal";
 import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 
-type ViewMode = "day" | "month";
+type ViewMode = "day" | "week" | "month";
 
 export function HomePage() {
   const authenticated = isAuthenticated();
@@ -36,6 +41,10 @@ export function HomePage() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
   const [viewMode, setViewMode] = useState<ViewMode>("day");
+  
+  const [searchQuery, setSearchQuery] = useState("");
+  const [minCapacity, setMinCapacity] = useState("");
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [roomId, setRoomId] = useState("");
@@ -48,6 +57,8 @@ export function HomePage() {
 
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
   const loadData = useCallback(async () => {
     try {
@@ -85,6 +96,8 @@ export function HomePage() {
           name: cachedNames[id] ?? "Room (Maintenance)",
           location: "Unavailable",
           capacity: 0,
+          amenities: [],
+          webhookUrls: [],
           isActive: false,
           createdAt: new Date().toISOString(),
         })),
@@ -212,8 +225,16 @@ export function HomePage() {
   const dateLabel =
     viewMode === "day"
       ? selectedDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+      : viewMode === "week"
+      ? `Week of ${selectedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
       : selectedDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
   const isToday = selectedDate.getTime() === startOfDay(new Date()).getTime();
+
+  const filteredRooms = rooms.filter((r) => {
+    if (searchQuery && !r.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (minCapacity && r.capacity < parseInt(minCapacity, 10)) return false;
+    return true;
+  });
 
   return (
     <div className="space-y-4">
@@ -223,7 +244,7 @@ export function HomePage() {
           {/* Date navigator */}
           <div className="flex items-center rounded-lg border border-border bg-muted p-0.5">
             <button
-              onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? -1 : -30))}
+              onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? -1 : viewMode === "week" ? -7 : -30))}
               aria-label="Previous"
               className="flex size-7.5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus:outline-none"
             >
@@ -234,7 +255,7 @@ export function HomePage() {
               <span>{dateLabel}</span>
             </div>
             <button
-              onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? 1 : 30))}
+              onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? 1 : viewMode === "week" ? 7 : 30))}
               aria-label="Next"
               className="flex size-7.5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus:outline-none"
             >
@@ -253,7 +274,7 @@ export function HomePage() {
 
           {/* View mode segmented switcher */}
           <div className="flex rounded-lg border border-border bg-muted p-0.5">
-            {(["day", "month"] as const).map((mode) => (
+            {(["day", "week", "month"] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setViewMode(mode)}
@@ -266,6 +287,85 @@ export function HomePage() {
                 {mode}
               </button>
             ))}
+          </div>
+
+          {/* Filter Popover Toggle */}
+          <div className="relative">
+            <button
+              onClick={() => setIsFilterOpen(!isFilterOpen)}
+              className={`flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${
+                isFilterOpen || searchQuery || minCapacity
+                  ? "border-primary bg-primary/10 text-primary"
+                  : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+              }`}
+            >
+              <Filter className="size-3.5" />
+              <span>Filters</span>
+              {(searchQuery || minCapacity) && (
+                <span className="flex size-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold">
+                  {(searchQuery ? 1 : 0) + (minCapacity ? 1 : 0)}
+                </span>
+              )}
+            </button>
+
+            {isFilterOpen && (
+              <>
+                {/* Backdrop to close when clicking outside */}
+                <div 
+                  className="fixed inset-0 z-40" 
+                  onClick={() => setIsFilterOpen(false)}
+                />
+                
+                {/* Popover container */}
+                <div className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-border bg-card p-4 shadow-xl">
+                  <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
+                    <h3 className="text-sm font-semibold">Filter Rooms</h3>
+                    <button 
+                      onClick={() => setIsFilterOpen(false)}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-foreground">Search Room</label>
+                      <Input
+                        type="text"
+                        className="h-8 text-xs bg-background"
+                        placeholder="e.g. Conference A"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5 flex flex-col">
+                      <label className="text-xs font-semibold text-foreground">Min Capacity</label>
+                      <Input
+                        type="number"
+                        className="h-8 text-xs bg-background"
+                        placeholder="Seats"
+                        value={minCapacity}
+                        onChange={(e) => setMinCapacity(e.target.value)}
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  
+                  {(searchQuery || minCapacity) && (
+                    <button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setMinCapacity("");
+                      }}
+                      className="mt-4 w-full rounded-lg bg-muted py-1.5 text-xs font-medium text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+                    >
+                      Clear Filters
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
           </div>
         </div>
 
@@ -297,7 +397,7 @@ export function HomePage() {
         </div>
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
           <Info className="size-3.5" />
-          <span>{viewMode === "day" ? "Click or drag an open slot to book, or click a booking to view details." : "Click any day in the grid to jump to its schedule."}</span>
+          <span>{viewMode === "day" ? "Click or drag an open slot to book, or click a booking to view details." : viewMode === "week" ? "Click a booking to view details, or click a day to jump to its schedule." : "Click any day in the grid to jump to its schedule."}</span>
         </div>
       </div>
 
@@ -319,18 +419,27 @@ export function HomePage() {
           ) : viewMode === "day" ? (
             <RoomCalendar
               date={selectedDate}
-              rooms={rooms}
+              rooms={filteredRooms}
               reservations={reservations}
               currentUserId={currentUserId}
               onSlotSelect={(clickedRoomId, startHour, endHour) => openBookingForm(clickedRoomId, startHour, endHour)}
               onBlockClick={setSelectedReservation}
+              onRoomClick={setSelectedRoom}
+            />
+          ) : viewMode === "week" ? (
+            <WeekCalendar
+              weekStart={selectedDate}
+              rooms={filteredRooms}
+              reservations={reservations}
+              onSelectDay={handleSelectMonthDay}
+              onBlockClick={setSelectedReservation}
             />
           ) : (
-            <MonthCalendar month={selectedDate} rooms={rooms} reservations={reservations} onSelectDay={handleSelectMonthDay} />
+            <MonthCalendar month={selectedDate} rooms={filteredRooms} reservations={reservations} onSelectDay={handleSelectMonthDay} />
           )}
         </div>
 
-        {!isLoading && <StatsPanel rooms={rooms} reservations={reservations} currentUserId={currentUserId} />}
+        {!isLoading && <StatsPanel rooms={filteredRooms} reservations={reservations} currentUserId={currentUserId} />}
       </div>
 
       {isFormOpen && (
@@ -361,6 +470,14 @@ export function HomePage() {
           isCancelling={cancellingId === selectedReservation.id}
           onCancel={() => handleCancel(selectedReservation.id)}
           onClose={() => setSelectedReservation(null)}
+        />
+      )}
+
+      {selectedRoom && (
+        <RoomDetailModal
+          room={selectedRoom}
+          onClose={() => setSelectedRoom(null)}
+          onBookClick={(roomId) => openBookingForm(roomId)}
         />
       )}
     </div>

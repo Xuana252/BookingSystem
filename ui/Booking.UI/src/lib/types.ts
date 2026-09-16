@@ -11,6 +11,8 @@ export interface Room {
   name: string;
   location: string;
   capacity: number;
+  amenities: string[];
+  webhookUrls: string[];
   isActive: boolean;
   createdAt: string;
 }

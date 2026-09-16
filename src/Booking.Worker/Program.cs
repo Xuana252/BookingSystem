@@ -1,4 +1,4 @@
-﻿using Booking.Application.Interfaces;
+using Booking.Application.Interfaces;
 using Booking.Application.Services;
 using Booking.Domain.Configuration;
 using Booking.Infrastructure;
@@ -71,22 +71,13 @@ app.UseHangfireDashboard("/hangfire", new DashboardOptions
     Authorization = []
 });
 
-var maxRetries = 5;
-for (int i = 0; i < maxRetries; i++)
+try
 {
-    try
-    {
-        app.Services.GetRequiredService<IRecurringJobManager>().AddOrUpdate<IReservationReminderService>(
-            "reservation-reminder-scan",
-            svc => svc.ScanAndPublishDueRemindersAsync(CancellationToken.None),
-            reminderSettings.CronExpression);
-        break;
-    }
-    catch (Exception ex) when (ex.GetType().Name.Contains("DistributedLockException") && i < maxRetries - 1)
-    {
-        Log.Warning(ex, "[Hangfire] Failed to acquire recurring job lock (attempt {Attempt}/{Max}). Retrying in 5s...", i + 1, maxRetries);
-        Thread.Sleep(5000);
-    }
+    app.Services.GetRequiredService<IRecurringJobManager>().RemoveIfExists("reservation-reminder-scan");
+}
+catch (Exception ex)
+{
+    Log.Warning(ex, "[Hangfire] Failed to remove old recurring job. It may have already been removed.");
 }
 
 app.Run();

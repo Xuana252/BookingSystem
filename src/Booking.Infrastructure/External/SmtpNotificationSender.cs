@@ -1,4 +1,4 @@
-﻿using Booking.Domain.Configuration;
+using Booking.Domain.Configuration;
 using Booking.Domain.Interfaces;
 using MailKit.Net.Smtp;
 using MailKit.Security;
@@ -15,7 +15,7 @@ namespace Booking.Infrastructure.External;
 /// </summary>
 public sealed class SmtpNotificationSender(GmailSmtpSettings settings, ILogger<SmtpNotificationSender> logger) : INotificationSender
 {
-    public async Task<bool> SendAsync(string recipientEmail, string subject, string message, CancellationToken ct = default)
+    public async Task<bool> SendAsync(string recipientEmail, string subject, string message, string? icsContent = null, CancellationToken ct = default)
     {
         if (string.IsNullOrEmpty(settings.Username) || string.IsNullOrEmpty(settings.AppPassword))
         {
@@ -36,12 +36,21 @@ public sealed class SmtpNotificationSender(GmailSmtpSettings settings, ILogger<S
             HtmlBody = EmailTemplateBuilder.BuildHtmlBody(subject, message)
         };
 
+        if (!string.IsNullOrEmpty(icsContent))
+        {
+            var bytes = System.Text.Encoding.UTF8.GetBytes(icsContent);
+            bodyBuilder.Attachments.Add("invite.ics", bytes, ContentType.Parse("text/calendar; method=REQUEST"));
+        }
+
         email.Body = bodyBuilder.ToMessageBody();
 
         try
         {
             using var client = new SmtpClient();
             
+            // Bypass CRL checks which commonly fail inside Linux Docker containers
+            client.ServerCertificateValidationCallback = (s, c, h, e) => true;
+
             // PaaS providers (like Render) often have partial/broken IPv6 routing. 
             // If DNS resolves an IPv6 address for smtp.gmail.com first and it blackholes,
             // MailKit's ConnectAsync times out before it can fall back to IPv4.

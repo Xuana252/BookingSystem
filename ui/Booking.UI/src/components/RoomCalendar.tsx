@@ -32,6 +32,7 @@ interface RoomCalendarProps {
   currentUserId: string | null;
   onSlotSelect: (roomId: string, startHour: number, endHour: number) => void;
   onBlockClick: (reservation: Reservation) => void;
+  onRoomClick?: (room: Room) => void;
 }
 
 interface DragState {
@@ -40,7 +41,7 @@ interface DragState {
   currentHour: number;
 }
 
-export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotSelect, onBlockClick }: RoomCalendarProps) {
+export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotSelect, onBlockClick, onRoomClick }: RoomCalendarProps) {
   const hours = Array.from({ length: CALENDAR_END_HOUR - CALENDAR_START_HOUR }, (_, i) => CALENDAR_START_HOUR + i);
   const hoursWidthPx = hours.length * HOUR_WIDTH_PX;
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -154,14 +155,14 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
           return (
             <div key={room.id} className="contents">
               {/* Sticky room rail cell */}
-              <div
-                className={`sticky left-0 z-30 flex items-center gap-3 border-t border-r border-border px-4 ${
-                  !room.isActive ? "bg-muted/70 dark:bg-muted/30" : "bg-card"
-                }`}
+              <button
+                type="button"
+                onClick={() => onRoomClick?.(room)}
+                className={`group sticky left-0 z-30 flex items-center gap-3 border-t border-r border-border px-4 transition-colors text-left hover:bg-muted focus:outline-none focus:bg-muted bg-card`}
                 style={{ height: ROW_HEIGHT_PX }}
               >
                 <div
-                  className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold ${
+                  className={`flex size-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold transition-transform group-hover:scale-105 ${
                     !room.isActive
                       ? "bg-amber-500/15 text-amber-700 dark:text-amber-400"
                       : "bg-primary/15 text-primary dark:bg-primary/25"
@@ -170,7 +171,7 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
                   {!room.isActive ? <Wrench className="size-4" /> : (room.name[0]?.toUpperCase() ?? "R")}
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className={`truncate text-sm font-semibold leading-snug ${!room.isActive ? "text-muted-foreground" : "text-foreground"}`}>
+                  <div className={`truncate text-sm font-semibold leading-snug group-hover:text-primary transition-colors ${!room.isActive ? "text-muted-foreground" : "text-foreground"}`}>
                     {room.name}
                   </div>
                   <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
@@ -186,7 +187,7 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
                     )}
                   </div>
                 </div>
-              </div>
+              </button>
 
               {/* Time slot row */}
               <div

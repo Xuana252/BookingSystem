@@ -71,7 +71,7 @@ const QUICK_PROMPTS = [
 ];
 
 /**
- * Lightweight inline markdown renderer ΓÇö no external deps.
+ * Lightweight inline markdown renderer  no external deps.
  * Handles: **bold**, *italic*, `code`, numbered lists, bullet lists, blank-line paragraphs.
  * Safe: never uses dangerouslySetInnerHTML.
  */
@@ -106,7 +106,7 @@ function MarkdownText({ text, className }: { text: string; className?: string })
           );
         }
 
-        // Regular paragraph ΓÇö preserve single newlines as <br>
+        // Regular paragraph  preserve single newlines as <br>
         return (
           <p key={bi} className={bi > 0 ? "mt-2" : undefined}>
             {lines.map((l, li) => (
@@ -142,7 +142,7 @@ export function BookingChatbot() {
   const [isExpanded, setIsExpanded] = useState(false);
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
-  // Stable session ID ΓÇö persists for the lifetime of this component mount.
+  // Stable session ID  persists for the lifetime of this component mount.
   // The server uses it to look up the right ChatHistory for context continuity.
   const [sessionId] = useState(() => crypto.randomUUID());
   const [availableUsers, setAvailableUsers] = useState<UserSummary[]>([]);
@@ -155,7 +155,7 @@ export function BookingChatbot() {
     {
       id: "welcome-1",
       sender: "bot",
-      text: "Hello! I'm your AI Booking Concierge. Tell me what kind of meeting you're planning ΓÇö group size, preferred time, or colleagues to invite ΓÇö and I'll find and reserve the best available room for you.",
+      text: "Hello! I'm your AI Booking Concierge. Tell me what kind of meeting you're planning  group size, preferred time, or colleagues to invite  and I'll find and reserve the best available room for you.",
       timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     },
   ]);
@@ -435,15 +435,13 @@ export function BookingChatbot() {
       {!isOpen && (
         <button
           onClick={() => setIsOpen(true)}
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 px-4 py-3 text-white shadow-xl shadow-indigo-500/25 transition-all duration-200 hover:scale-105 hover:shadow-indigo-500/40 active:scale-95 focus:outline-none"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2.5 rounded-full bg-gradient-to-r from-indigo-600 via-indigo-500 to-violet-600 p-4 text-white shadow-xl shadow-indigo-500/25 transition-all duration-200 hover:scale-105 hover:shadow-indigo-500/40 active:scale-95 focus:outline-none"
           title="Open AI Booking Concierge"
           aria-label="Open AI Booking Concierge"
         >
           <div className="relative flex items-center justify-center">
             <Sparkles className="size-5 animate-pulse" />
           </div>
-          <span className="text-xs font-bold tracking-wide">AI Assistant</span>
-          <span className="flex size-2 rounded-full bg-emerald-400 ring-2 ring-indigo-900" />
         </button>
       )}
 
@@ -816,10 +814,6 @@ export function BookingChatbot() {
                 <Send className="size-3.5" />
               </button>
             </form>
-            <div className="mt-1.5 flex items-center justify-between px-1 text-[10px] text-muted-foreground">
-              <span>OpenAI Ready ┬╖ Natural Language Search</span>
-              <span>Instant Conflict Checks</span>
-            </div>
           </div>
         </div>
       )}

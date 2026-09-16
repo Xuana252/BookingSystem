@@ -1,4 +1,4 @@
-﻿using Amazon;
+using Amazon;
 using Amazon.Runtime;
 using Amazon.SimpleNotificationService;
 using Amazon.SQS;
@@ -138,6 +138,7 @@ public static class DependencyInjection
             
         services.AddSingleton(gmailSettings);
         services.AddScoped<INotificationSender, SmtpNotificationSender>();
+        services.AddHttpClient<Booking.Domain.Interfaces.ITeamsNotificationService, TeamsNotificationService>();
 
         return services;
     }

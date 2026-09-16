@@ -18,6 +18,15 @@ export interface CreateRoomRequest {
   name: string;
   location: string;
   capacity: number;
+  amenities?: string[];
+}
+
+export interface UpdateRoomRequest {
+  name: string;
+  location: string;
+  capacity: number;
+  amenities?: string[];
+  webhookUrls?: string[];
 }
 
 // Room endpoints
@@ -25,8 +34,13 @@ export const getRooms = (includeInactive = false) =>
   apiClient.get<Room[]>(`/rooms${includeInactive ? "?includeInactive=true" : ""}`);
 export const getAllRooms = () => apiClient.get<Room[]>("/rooms/all");
 export const createRoom = (request: CreateRoomRequest) => apiClient.post<Room>("/rooms", request);
+export const updateRoom = (id: string, request: UpdateRoomRequest) => apiClient.put<Room>(`/rooms/${id}`, request);
 export const deactivateRoom = (id: string) => apiClient.post<void>(`/rooms/${id}/deactivate`);
 export const activateRoom = (id: string) => apiClient.post<void>(`/rooms/${id}/activate`);
+export const updateRoomWebhooks = (id: string, webhookUrls: string[]) =>
+  apiClient.put<void>(`/rooms/${id}/webhooks`, webhookUrls);
+export const updateRoomAmenities = (id: string, amenities: string[]) =>
+  apiClient.put<void>(`/rooms/${id}/amenities`, amenities);
 
 // Reservation endpoints
 export const getReservations = () => apiClient.get<Reservation[]>("/reservations");

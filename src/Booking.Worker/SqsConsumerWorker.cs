@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Amazon.SQS;
 using Amazon.SQS.Model;
 using Booking.Application.Interfaces;
@@ -114,6 +114,84 @@ public class SqsConsumerWorker(
         if (envelope?.EventType == EventTypes.ReservationReminderDue)
         {
             await CreateReminderNotificationAsync(envelope, ct);
+        }
+        else if (envelope?.EventType == EventTypes.ReservationCreated)
+        {
+            await ScheduleReminderJobAsync(envelope, ct);
+        }
+        else if (envelope?.EventType == EventTypes.ReservationCancelled)
+        {
+            await CancelReminderJobAsync(envelope, ct);
+        }
+    }
+
+    private async Task ScheduleReminderJobAsync(EventEnvelope envelope, CancellationToken ct)
+    {
+        var reservation = JsonSerializer.Deserialize<Reservation>(envelope.Payload);
+        if (reservation is null) return;
+
+        using var scope = scopeFactory.CreateScope();
+        
+        // Dispatch the calendar invite immediately
+        var dispatcher = scope.ServiceProvider.GetRequiredService<INotificationDispatchService>();
+        await dispatcher.DispatchCalendarInviteAsync(reservation, ct);
+
+        // Dispatch MS Teams Webhook notifications
+        var roomRepo = scope.ServiceProvider.GetRequiredService<Booking.Domain.Interfaces.IRoomRepository>();
+        var room = await roomRepo.GetByIdAsync(reservation.RoomId, ct);
+        if (room != null && room.WebhookUrls.Any())
+        {
+            var teamsService = scope.ServiceProvider.GetRequiredService<Booking.Domain.Interfaces.ITeamsNotificationService>();
+            foreach (var url in room.WebhookUrls)
+            {
+                await teamsService.SendBookingCardAsync(url, reservation, room, ct);
+            }
+        }
+
+        var settings = scope.ServiceProvider.GetRequiredService<ReservationReminderSettings>();
+        
+        var scheduledTime = reservation.StartTime.AddMinutes(-settings.WindowMinutes);
+        string? jobId = null;
+
+        if (scheduledTime > DateTime.UtcNow)
+        {
+            jobId = Hangfire.BackgroundJob.Schedule<INotificationDispatchService>(
+                svc => svc.DispatchReminderAsync(reservation, CancellationToken.None),
+                scheduledTime);
+        }
+        else if (reservation.StartTime > DateTime.UtcNow)
+        {
+            // Edge case: Booked within the reminder window. Fire it immediately!
+            jobId = Hangfire.BackgroundJob.Enqueue<INotificationDispatchService>(
+                svc => svc.DispatchReminderAsync(reservation, CancellationToken.None));
+        }
+
+        if (jobId != null)
+        {
+            var repo = scope.ServiceProvider.GetRequiredService<Booking.Domain.Interfaces.IReservationRepository>();
+            var dbReservation = await repo.GetByIdAsync(reservation.Id, ct);
+            if (dbReservation != null)
+            {
+                dbReservation.ReminderJobId = jobId;
+                await repo.SaveChangesAsync(ct);
+            }
+            logger.LogInformation("[SqsConsumerWorker] Scheduled reminder job {JobId} for Reservation {ReservationId}", jobId, reservation.Id);
+        }
+    }
+
+    private async Task CancelReminderJobAsync(EventEnvelope envelope, CancellationToken ct)
+    {
+        var reservation = JsonSerializer.Deserialize<Reservation>(envelope.Payload);
+        if (reservation is null) return;
+
+        using var scope = scopeFactory.CreateScope();
+        var repo = scope.ServiceProvider.GetRequiredService<Booking.Domain.Interfaces.IReservationRepository>();
+        var dbReservation = await repo.GetByIdAsync(reservation.Id, ct);
+        
+        if (dbReservation?.ReminderJobId != null)
+        {
+            Hangfire.BackgroundJob.Delete(dbReservation.ReminderJobId);
+            logger.LogInformation("[SqsConsumerWorker] Deleted scheduled reminder job {JobId} for Reservation {ReservationId}", dbReservation.ReminderJobId, reservation.Id);
         }
     }
 

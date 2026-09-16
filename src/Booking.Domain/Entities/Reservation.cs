@@ -1,4 +1,4 @@
-﻿namespace Booking.Domain.Entities;
+namespace Booking.Domain.Entities;
 
 public enum ReservationStatus
 {
@@ -26,6 +26,12 @@ public class Reservation
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
     public ReservationStatus Status { get; set; } = ReservationStatus.Confirmed;
+
+    /// <summary>
+    /// ID of the Hangfire background job scheduled to send a reminder for this reservation.
+    /// </summary>
+    public string? ReminderJobId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 
     /// <summary>True if the slot is well-formed (end strictly after start).</summary>
