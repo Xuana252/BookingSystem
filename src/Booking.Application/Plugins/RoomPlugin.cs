@@ -1,7 +1,9 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
+using Booking.Application.Features.Rooms.Queries;
 using Booking.Domain.Entities;
+using MediatR;
 using Microsoft.SemanticKernel;
 
 namespace Booking.Application.Plugins;
@@ -22,7 +24,7 @@ public sealed class RoomQueryResult
 /// <summary>
 /// Semantic Kernel plugin that gives the LLM read-only access to room data.
 /// </summary>
-public sealed class RoomPlugin(IRoomService roomService, IReservationService reservationService)
+public sealed class RoomPlugin(IMediator mediator, IReservationService reservationService)
 {
     /// <summary>
     /// Set by each tool call so ChatService can read the exact filtered result
@@ -37,7 +39,7 @@ public sealed class RoomPlugin(IRoomService roomService, IReservationService res
         [Description("Minimum required seating capacity. Pass 0 or omit to show all rooms.")] int minCapacity = 0,
         CancellationToken cancellationToken = default)
     {
-        var rooms = await roomService.GetAllAsync(cancellationToken);
+        var rooms = await mediator.Send(new GetRoomsQuery(false), cancellationToken);
 
         var filtered = (minCapacity > 0 ? rooms.Where(r => r.Capacity >= minCapacity) : rooms)
             .OrderBy(r => r.Capacity)
@@ -61,7 +63,7 @@ public sealed class RoomPlugin(IRoomService roomService, IReservationService res
         if (startTime.Kind != DateTimeKind.Utc) startTime = startTime.ToUniversalTime();
         if (endTime.Kind != DateTimeKind.Utc) endTime = endTime.ToUniversalTime();
 
-        var allRooms = await roomService.GetAllAsync(cancellationToken);
+        var allRooms = await mediator.Send(new GetRoomsQuery(false), cancellationToken);
         var allReservations = await reservationService.GetAllAsync(cancellationToken);
 
         var conflictingRoomIds = allReservations

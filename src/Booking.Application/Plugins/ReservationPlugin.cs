@@ -1,21 +1,25 @@
 using System.ComponentModel;
 using Booking.Application.DTOs;
+using Booking.Application.Features.Rooms.Queries;
 using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
+using MediatR;
 using Microsoft.SemanticKernel;
 
 namespace Booking.Application.Plugins;
 
+/// <summary>
+/// Result returned by reservation tool calls for the ChatService to format into cards.
+/// </summary>
 public sealed class ReservationQueryResult
 {
     public IReadOnlyList<ChatReservationResult> Reservations { get; init; } = [];
 }
 
 /// <summary>
-/// SK plugin for reservation data. Supports both read and write.
-/// SetCurrentUserId must be called by ChatService before each LLM turn.
+/// Semantic Kernel plugin that gives the LLM read-only access to reservation data.
 /// </summary>
-public sealed class ReservationPlugin(IReservationService reservationService, IRoomService roomService)
+public sealed class ReservationPlugin(IReservationService reservationService, IMediator mediator)
 {
     private Guid _currentUserId;
 
@@ -30,7 +34,7 @@ public sealed class ReservationPlugin(IReservationService reservationService, IR
     public async Task<ReservationQueryResult> GetMyReservationsAsync(CancellationToken cancellationToken = default)
     {
         var allReservations = await reservationService.GetAllAsync(cancellationToken);
-        var allRooms = await roomService.GetAllAsync(cancellationToken);
+        var allRooms = await mediator.Send(new GetRoomsQuery(true), cancellationToken);
         var roomDict = allRooms.ToDictionary(r => r.Id);
 
         var myUpcoming = allReservations

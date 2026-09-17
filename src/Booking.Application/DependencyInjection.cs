@@ -1,4 +1,4 @@
-﻿using Booking.Application.DTOs;
+using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Application.Plugins;
 using Booking.Application.Services;
@@ -23,7 +23,7 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddBookingApplication(this IServiceCollection services)
     {
-        services.AddScoped<IRoomService, RoomService>();
+        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IReservationService, ReservationService>();
