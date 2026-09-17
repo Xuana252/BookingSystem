@@ -1,9 +1,13 @@
+using Booking.Application.Features.Common.Caching;
 using Booking.Domain.Interfaces;
 using MediatR;
 
 namespace Booking.Application.Features.Rooms.Commands;
 
-public record SetRoomActiveStateCommand(Guid Id, bool IsActive) : IRequest;
+public record SetRoomActiveStateCommand(Guid Id, bool IsActive) : ICacheInvalidatorCommand
+{
+    public string[] CacheKeysToInvalidate => ["Rooms_All_True", "Rooms_All_False"];
+}
 
 public class SetRoomActiveStateCommandHandler : IRequestHandler<SetRoomActiveStateCommand>
 {

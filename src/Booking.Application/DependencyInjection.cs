@@ -23,7 +23,14 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddBookingApplication(this IServiceCollection services)
     {
-        services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly));
+        services.AddMemoryCache();
+        
+        services.AddMediatR(cfg => {
+            cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
+            cfg.AddOpenBehavior(typeof(Booking.Application.Features.Common.Caching.CachingBehavior<,>));
+            cfg.AddOpenBehavior(typeof(Booking.Application.Features.Common.Caching.CacheInvalidationBehavior<,>));
+        });
+        
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IReservationService, ReservationService>();

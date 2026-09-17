@@ -11,8 +11,10 @@
     <!-- Pinned explicitly: Npgsql.EntityFrameworkCore.PostgreSQL 10.0.3 transitively brings an
          older 10.0.4 Relational, conflicting with the 10.0.10 the other EF Core packages use. -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.Relational" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.11" />
-    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.11" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Caching.Memory" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.12" />
     <!-- Pinned explicitly: the default 2.0.0 has a known high-severity DoS vulnerability
          (GHSA-v5pm-xwqc-g5wc); patched in the 2.x line at 2.7.5+. Stay on 2.x — 3.x has
          breaking API changes incompatible with Microsoft.AspNetCore.OpenApi's source generator. -->
