@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Booking.Api.Configuration;
 using Booking.Api.Filters;
 using Booking.Api.Middleware;
@@ -58,8 +58,7 @@ builder.Services.AddBookingInfrastructure(builder.Configuration);
 builder.Services.AddBookingApplication();
 builder.Services.AddBookingChat(builder.Configuration);
 
-var reservationRuleSettings = builder.Configuration.GetSection("ReservationRules").Get<ReservationRuleSettings>() ?? new ReservationRuleSettings();
-builder.Services.AddSingleton(reservationRuleSettings);
+
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
 builder.Services

@@ -13,7 +13,7 @@ public class NotificationDispatchService(
     IReservationAttendeeRepository attendees,
     INotificationSender sender,
     IRealtimeNotifier realtimeNotifier,
-    BusinessSettings businessSettings,
+    ISystemSettingsRepository systemSettings,
     ILogger<NotificationDispatchService> logger) : INotificationDispatchService
 {
     public async Task DispatchReminderAsync(Reservation reservation, CancellationToken ct = default)
@@ -29,9 +29,10 @@ public class NotificationDispatchService(
         var room = await rooms.GetByIdAsync(reservation.RoomId, ct);
         var roomLabel = room?.Name ?? reservation.RoomId.ToString();
 
-        var businessTimeZone = TimeZoneInfo.FindSystemTimeZoneById(businessSettings.TimeZoneId);
+        var settings = await systemSettings.GetSettingsAsync(ct);
+        var businessTimeZone = TimeZoneInfo.FindSystemTimeZoneById(settings.TimeZoneId);
         var localStart = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(reservation.StartTime, DateTimeKind.Utc), businessTimeZone);
-        var whenText = $"{localStart:dddd, MMMM d 'at' h:mm tt} ({businessSettings.TimeZoneId})";
+        var whenText = $"{localStart:dddd, MMMM d 'at' h:mm tt} ({settings.TimeZoneId})";
 
         var attendeeIds = await attendees.GetAttendeeUserIdsAsync(reservation.Id, ct);
 
