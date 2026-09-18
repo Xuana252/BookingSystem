@@ -26,7 +26,12 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Missing ConnectionStrings:DefaultConnection.");
 
-        services.AddDbContext<BookingDbContext>(options => options.UseNpgsql(connectionString));
+        services.AddSingleton<Booking.Infrastructure.Persistence.Interceptors.AuditInterceptor>();
+        services.AddDbContext<BookingDbContext>((sp, options) => 
+        {
+            options.UseNpgsql(connectionString);
+            options.AddInterceptors(sp.GetRequiredService<Booking.Infrastructure.Persistence.Interceptors.AuditInterceptor>());
+        });
 
         var awsSettings = configuration.GetSection("Aws").Get<AwsSettings>() ?? new AwsSettings();
 
@@ -99,11 +104,13 @@ public static class DependencyInjection
         services.AddScoped<IUserRepository, UserRepository>();
         services.AddScoped<INotificationRepository, NotificationRepository>();
         services.AddScoped<IReservationAttendeeRepository, ReservationAttendeeRepository>();
+        services.AddScoped<Booking.Domain.Interfaces.ISystemSettingsRepository, Booking.Infrastructure.Repositories.SystemSettingsRepository>();
+        services.AddScoped<Booking.Domain.Interfaces.IMaintenanceRepository, Booking.Infrastructure.Persistence.Repositories.MaintenanceRepository>();
+        services.AddScoped<Booking.Domain.Interfaces.IAuditLogRepository, Booking.Infrastructure.Persistence.Repositories.AuditLogRepository>();
 
         // Shared here (not one composition root's own Program.cs) since both BookingRuleEngine
         // (Api) and NotificationDispatchService (Worker) need it.
-        var businessSettings = configuration.GetSection("Business").Get<BusinessSettings>() ?? new BusinessSettings();
-        services.AddSingleton(businessSettings);
+
 
         var redisSettings = configuration.GetSection("Redis").Get<RedisSettings>() ?? new RedisSettings();
         services.AddSingleton(redisSettings);

@@ -6,7 +6,12 @@ import {
   ShieldCheck,
   Sparkles,
   User,
-  Users
+  Users,
+  Settings,
+  ShieldAlert,
+  Wrench,
+  Contact,
+  Sliders
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { getCurrentUsername, isAdmin } from "../lib/auth";
@@ -39,6 +44,14 @@ export function Sidebar() {
             <NavLink to="/my-bookings" className={navItemClass}>
               <Calendar className="size-4 shrink-0 transition-transform group-hover:scale-110" />
               <span>My Bookings</span>
+            </NavLink>
+            <NavLink to="/directory" className={navItemClass}>
+              <Contact className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+              <span>Team Directory</span>
+            </NavLink>
+            <NavLink to="/preferences" className={navItemClass}>
+              <Sliders className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+              <span>My Preferences</span>
             </NavLink>
             <button
               type="button"
@@ -75,6 +88,18 @@ export function Sidebar() {
               <NavLink to="/admin/users" className={navItemClass}>
                 <Users className="size-4 shrink-0 transition-transform group-hover:scale-110" />
                 <span>Manage Users</span>
+              </NavLink>
+              <NavLink to="/admin/settings" className={navItemClass}>
+                <Settings className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Global Settings</span>
+              </NavLink>
+              <NavLink to="/admin/logs" className={navItemClass}>
+                <ShieldAlert className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Audit Logs</span>
+              </NavLink>
+              <NavLink to="/admin/maintenance" className={navItemClass}>
+                <Wrench className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                <span>Maintenance</span>
               </NavLink>
             </nav>
           </div>

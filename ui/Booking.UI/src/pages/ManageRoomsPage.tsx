@@ -130,7 +130,7 @@ export function ManageRoomsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+      <div className="flex flex-col sm:flex-row justify-between gap-4 border-b border-border/50 pb-6">
         <div>
           <Link
             to="/"
@@ -139,8 +139,8 @@ export function ManageRoomsPage() {
             <ArrowLeft className="size-3.5" />
             <span>Back to calendar</span>
           </Link>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">Room Management</h1>
-          <p className="text-xs text-muted-foreground">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Room Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Control room availability, set spaces to maintenance, and add new conference rooms.
           </p>
         </div>

@@ -23,6 +23,83 @@ namespace Booking.Infrastructure.Persistence.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("Booking.Domain.Entities.AuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("EntityId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("EntityName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTime>("Timestamp")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("UserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Timestamp");
+
+                    b.ToTable("AuditLogs");
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.MaintenanceIssue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ReporterUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RoomId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReporterUserId");
+
+                    b.HasIndex("RoomId");
+
+                    b.ToTable("MaintenanceIssues");
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -74,6 +151,12 @@ namespace Booking.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
+
+                    b.Property<string>("AutoCancelJobId")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime?>("CheckedInAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
@@ -167,19 +250,72 @@ namespace Booking.Infrastructure.Persistence.Migrations
                     b.ToTable("Rooms");
                 });
 
+            modelBuilder.Entity("Booking.Domain.Entities.SystemSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("AutoCancelMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<TimeSpan>("BusinessHoursEnd")
+                        .HasColumnType("interval");
+
+                    b.Property<TimeSpan>("BusinessHoursStart")
+                        .HasColumnType("interval");
+
+                    b.Property<int>("MaxBookingLeadTimeDays")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxDurationHours")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("SystemSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            AutoCancelMinutes = 15,
+                            BusinessHoursEnd = new TimeSpan(0, 18, 0, 0, 0),
+                            BusinessHoursStart = new TimeSpan(0, 8, 0, 0, 0),
+                            MaxBookingLeadTimeDays = 30,
+                            MaxDurationHours = 4,
+                            TimeZoneId = "Asia/Ho_Chi_Minh"
+                        });
+                });
+
             modelBuilder.Entity("Booking.Domain.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AutoDeclineConflicts")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(256)
                         .HasColumnType("character varying(256)");
+
+                    b.Property<bool>("EmailAlertsEnabled")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
@@ -190,6 +326,11 @@ namespace Booking.Infrastructure.Persistence.Migrations
 
                     b.Property<int>("Role")
                         .HasColumnType("integer");
+
+                    b.Property<string>("TimeZoneId")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
 
                     b.Property<string>("Username")
                         .IsRequired()
@@ -210,13 +351,32 @@ namespace Booking.Infrastructure.Persistence.Migrations
                         new
                         {
                             Id = new Guid("00000000-0000-0000-0000-000000000001"),
+                            AutoDeclineConflicts = false,
                             CreatedAt = new DateTime(2026, 8, 31, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Department = "",
                             Email = "admin@bookingsystem.local",
+                            EmailAlertsEnabled = true,
                             IsActive = true,
                             PasswordHash = "$2a$11$wvqCJFb6sIzKGvEDm1DLwuqLLMXHixMb5nbebuuDZ5aMXtO8gKwwK",
                             Role = 1,
+                            TimeZoneId = "UTC",
                             Username = "admin"
                         });
+                });
+
+            modelBuilder.Entity("Booking.Domain.Entities.MaintenanceIssue", b =>
+                {
+                    b.HasOne("Booking.Domain.Entities.User", null)
+                        .WithMany()
+                        .HasForeignKey("ReporterUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Booking.Domain.Entities.Room", null)
+                        .WithMany()
+                        .HasForeignKey("RoomId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Booking.Domain.Entities.Notification", b =>

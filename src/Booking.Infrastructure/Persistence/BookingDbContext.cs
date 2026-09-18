@@ -1,4 +1,4 @@
-﻿using Booking.Domain.Entities;
+using Booking.Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Booking.Infrastructure.Persistence;
@@ -10,6 +10,9 @@ public class BookingDbContext(DbContextOptions<BookingDbContext> options) : DbCo
     public DbSet<Reservation> Reservations => Set<Reservation>();
     public DbSet<ReservationAttendee> ReservationAttendees => Set<ReservationAttendee>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<SystemSettings> SystemSettings => Set<SystemSettings>();
+    public DbSet<MaintenanceIssue> MaintenanceIssues => Set<MaintenanceIssue>();
+    public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

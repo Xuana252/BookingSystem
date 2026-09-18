@@ -47,6 +47,7 @@ export const getReservations = () => apiClient.get<Reservation[]>("/reservations
 export const createReservation = (request: CreateReservationRequest) =>
   apiClient.post<Reservation>("/reservations", request);
 export const cancelReservation = (id: string) => apiClient.post<void>(`/reservations/${id}/cancel`);
+export const checkInReservation = (id: string) => apiClient.post<void>(`/reservations/${id}/check-in`);
 
 // User endpoints
 export const getUsers = () => apiClient.get<UserSummary[]>("/users");
@@ -74,3 +75,26 @@ export interface UserNotification {
 export const getNotifications = () => apiClient.get<UserNotification[]>("/notifications");
 export const markNotificationAsRead = (id: string) => apiClient.post<void>(`/notifications/${id}/read`);
 export const markAllNotificationsAsRead = () => apiClient.post<void>("/notifications/read-all");
+
+import type { SystemSettings, MaintenanceIssue, AuditLog, UserPreferences, ColleagueDirectoryItem } from "./types";
+
+// Feature 1: System Settings
+export const getSystemSettings = () => apiClient.get<SystemSettings>("/systemsettings");
+export const updateSystemSettings = (settings: SystemSettings) => apiClient.put<SystemSettings>("/systemsettings", settings);
+
+// Feature 2: Maintenance Issues
+export const getMaintenanceIssues = () => apiClient.get<MaintenanceIssue[]>("/maintenance");
+export const createMaintenanceIssue = (request: { roomId: string; description: string; priority: number }) => 
+  apiClient.post<MaintenanceIssue>("/maintenance", request);
+export const updateMaintenanceStatus = (id: string, status: number) => 
+  apiClient.patch<MaintenanceIssue>(`/maintenance/${id}/status`, { status });
+
+// Feature 3: Audit Logs
+export const getAuditLogs = () => apiClient.get<AuditLog[]>("/auditlogs");
+
+// Feature 4: My Preferences
+export const getMyPreferences = () => apiClient.get<UserPreferences>("/users/me/preferences");
+export const updateMyPreferences = (prefs: UserPreferences) => apiClient.put<UserPreferences>("/users/me/preferences", prefs);
+
+// Feature 5: Colleague Directory
+export const getDirectory = () => apiClient.get<ColleagueDirectoryItem[]>("/users/directory");

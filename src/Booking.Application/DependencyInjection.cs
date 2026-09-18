@@ -34,6 +34,8 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IReservationService, ReservationService>();
+        services.AddScoped<IMaintenanceService, MaintenanceService>();
+        services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IBookingRuleEngine, BookingRuleEngine>();
         services.AddSingleton(TimeProvider.System);
