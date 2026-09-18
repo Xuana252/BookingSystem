@@ -1,4 +1,5 @@
-﻿using Booking.Application.DTOs;
+using System.Security.Claims;
+using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -49,5 +50,25 @@ public class UsersController(IUserService userService) : ControllerBase
     {
         await userService.DemoteAsync(id, ct);
         return NoContent();
+    }
+
+    [HttpGet("me/preferences")]
+    public async Task<ActionResult<UserPreferencesDto>> GetMyPreferences(CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)!);
+        return Ok(await userService.GetPreferencesAsync(userId, ct));
+    }
+
+    [HttpPut("me/preferences")]
+    public async Task<ActionResult<UserPreferencesDto>> UpdateMyPreferences(UpdateUserPreferencesRequest request, CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(System.IdentityModel.Tokens.Jwt.JwtRegisteredClaimNames.Sub)!);
+        return Ok(await userService.UpdatePreferencesAsync(userId, request, ct));
+    }
+
+    [HttpGet("directory")]
+    public async Task<ActionResult<IEnumerable<ColleagueDirectoryDto>>> GetDirectory(CancellationToken ct)
+    {
+        return Ok(await userService.GetDirectoryAsync(ct));
     }
 }
