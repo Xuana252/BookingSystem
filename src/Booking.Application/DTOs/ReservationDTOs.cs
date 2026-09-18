@@ -1,4 +1,4 @@
-﻿using Booking.Domain.Entities;
+using Booking.Domain.Entities;
 
 namespace Booking.Application.DTOs;
 
@@ -24,4 +24,5 @@ public record ReservationResponse(
     DateTime EndTime,
     ReservationStatus Status,
     DateTime CreatedAt,
-    IReadOnlyList<AttendeeSummary> Attendees);
+    IReadOnlyList<AttendeeSummary> Attendees,
+    DateTime? CheckedInAt = null);

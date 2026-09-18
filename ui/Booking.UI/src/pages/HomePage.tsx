@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
-import { cancelReservation, createReservation, getReservations, getRooms } from "../lib/api";
+import { cancelReservation, createReservation, getReservations, getRooms, checkInReservation } from "../lib/api";
 import type { Reservation, Room } from "../lib/types";
 import { addDays, combineDateAndTime, hourToTimeValue, startOfDay, toDateInputValue } from "../lib/dates";
 import { useReservationHub } from "../hooks/useReservationHub";
@@ -194,6 +194,21 @@ export function HomePage() {
       setLoadError(err instanceof ApiError ? err.message : "Could not cancel that reservation.");
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  const [checkingInId, setCheckingInId] = useState<string | null>(null);
+
+  async function handleCheckIn(reservationId: string) {
+    setCheckingInId(reservationId);
+    try {
+      await checkInReservation(reservationId);
+      setSelectedReservation(null);
+      await loadData();
+    } catch (err) {
+      setFormError(err instanceof ApiError ? err.message : "Could not check in.");
+    } finally {
+      setCheckingInId(null);
     }
   }
 
@@ -468,7 +483,9 @@ export function HomePage() {
           room={rooms.find((r) => r.id === selectedReservation.roomId)}
           isMine={selectedReservation.userId === currentUserId}
           isCancelling={cancellingId === selectedReservation.id}
+          isCheckingIn={checkingInId === selectedReservation.id}
           onCancel={() => handleCancel(selectedReservation.id)}
+          onCheckIn={() => handleCheckIn(selectedReservation.id)}
           onClose={() => setSelectedReservation(null)}
         />
       )}

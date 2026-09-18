@@ -1,4 +1,4 @@
-﻿using Booking.Application.DTOs;
+using Booking.Application.DTOs;
 using Booking.Application.Services;
 using Booking.Domain.Entities;
 using Booking.Domain.Events;
@@ -20,6 +20,7 @@ public class ReservationServiceTests
     private readonly Mock<ICorrelationIdAccessor> _correlationIdAccessor = new();
     private readonly Mock<IRealtimeNotifier> _realtimeNotifier = new();
     private readonly Mock<ILogger<ReservationService>> _logger = new();
+    private readonly Mock<ISystemSettingsRepository> _systemSettings = new();
 
     private const string TestCorrelationId = "test-correlation-id";
     private const string TestUsername = "alice";
@@ -49,11 +50,14 @@ public class ReservationServiceTests
 
         _attendees.Setup(a => a.GetForReservationsAsync(It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new List<ReservationAttendee>());
+
+        _systemSettings.Setup(s => s.GetSettingsAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new SystemSettings { MaxBookingLeadTimeDays = 30, AutoCancelMinutes = 15 });
     }
 
     private ReservationService CreateSut() => new(
         _reservations.Object, _users.Object, _rooms.Object, _attendees.Object, _eventPublisher.Object, _ruleEngine.Object,
-        _correlationIdAccessor.Object, _realtimeNotifier.Object, _logger.Object);
+        _correlationIdAccessor.Object, _realtimeNotifier.Object, _logger.Object, _systemSettings.Object);
 
     private static CreateReservationRequest ValidRequest(IReadOnlyList<Guid>? attendeeUserIds = null) => new(
         RoomId: Guid.NewGuid(),

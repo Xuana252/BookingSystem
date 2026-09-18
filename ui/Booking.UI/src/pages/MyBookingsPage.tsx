@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Loader2, Calendar, Clock, MapPin, XCircle, SearchX, ArrowRight } from "lucide-react";
-import { getReservations, getRooms, cancelReservation } from "../lib/api";
+import { getReservations, getRooms, cancelReservation, checkInReservation } from "../lib/api";
 import { getCurrentUserId } from "../lib/auth";
 import { type Reservation, type Room, ReservationStatus } from "../lib/types";
 import { ApiError } from "../lib/apiClient";
@@ -19,6 +19,7 @@ export function MyBookingsPage() {
   
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const [checkingInId, setCheckingInId] = useState<string | null>(null);
 
   const loadData = async () => {
     try {
@@ -46,6 +47,20 @@ export function MyBookingsPage() {
       setError(err instanceof ApiError ? err.message : "Could not cancel that reservation.");
     } finally {
       setCancellingId(null);
+    }
+  }
+
+  async function handleCheckIn(reservationId: string) {
+    setCheckingInId(reservationId);
+    try {
+      await checkInReservation(reservationId);
+      // Optimistically update locally or reload
+      setSelectedReservation(null);
+      await loadData();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Could not check in.");
+    } finally {
+      setCheckingInId(null);
     }
   }
 
@@ -156,6 +171,12 @@ export function MyBookingsPage() {
                    {isMine ? 'Hosting' : 'Attending'}
                  </span>
                  
+                 {reservation.checkedInAt && (
+                   <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-600">
+                     Checked In
+                   </span>
+                 )}
+
                  {/* Attendees Stack */}
                  <div className="flex -space-x-1.5 ml-1">
                    {displayAvatars.map((a, i) => (
@@ -188,10 +209,10 @@ export function MyBookingsPage() {
   return (
     <div className="space-y-8 max-w-[1400px] mx-auto pb-12">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/50 pb-6">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground">My Itinerary</h1>
-          <p className="text-sm font-medium text-muted-foreground mt-1.5 max-w-xl">
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">My Itinerary</h1>
+          <p className="text-sm text-muted-foreground mt-1 max-w-xl">
             Keep track of the meetings you are hosting or attending. Click on any card to view details or manage your reservation.
           </p>
         </div>
@@ -291,7 +312,9 @@ export function MyBookingsPage() {
           room={rooms.find((r) => r.id === selectedReservation.roomId)}
           isMine={selectedReservation.userId === currentUserId}
           isCancelling={cancellingId === selectedReservation.id}
+          isCheckingIn={checkingInId === selectedReservation.id}
           onCancel={() => handleCancel(selectedReservation.id)}
+          onCheckIn={() => handleCheckIn(selectedReservation.id)}
           onClose={() => setSelectedReservation(null)}
         />
       )}

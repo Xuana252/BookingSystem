@@ -1,4 +1,4 @@
-﻿using System.IdentityModel.Tokens.Jwt;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
@@ -29,6 +29,14 @@ public class ReservationsController(IReservationService reservationService) : Co
     {
         var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
         await reservationService.CancelAsync(id, userId, ct);
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/check-in")]
+    public async Task<IActionResult> CheckIn(Guid id, CancellationToken ct)
+    {
+        var userId = Guid.Parse(User.FindFirstValue(JwtRegisteredClaimNames.Sub)!);
+        await reservationService.CheckInAsync(id, userId, ct);
         return NoContent();
     }
 }

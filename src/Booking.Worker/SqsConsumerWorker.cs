@@ -148,35 +148,53 @@ public class SqsConsumerWorker(
             }
         }
 
+        var repo = scope.ServiceProvider.GetRequiredService<Booking.Domain.Interfaces.IReservationRepository>();
+        var dbReservation = await repo.GetByIdAsync(reservation.Id, ct);
+        if (dbReservation == null) return;
+
         var settings = scope.ServiceProvider.GetRequiredService<ReservationReminderSettings>();
         
         var scheduledTime = reservation.StartTime.AddMinutes(-settings.WindowMinutes);
-        string? jobId = null;
+        string? reminderJobId = null;
 
         if (scheduledTime > DateTime.UtcNow)
         {
-            jobId = Hangfire.BackgroundJob.Schedule<INotificationDispatchService>(
+            reminderJobId = Hangfire.BackgroundJob.Schedule<INotificationDispatchService>(
                 svc => svc.DispatchReminderAsync(reservation, CancellationToken.None),
                 scheduledTime);
         }
         else if (reservation.StartTime > DateTime.UtcNow)
         {
             // Edge case: Booked within the reminder window. Fire it immediately!
-            jobId = Hangfire.BackgroundJob.Enqueue<INotificationDispatchService>(
+            reminderJobId = Hangfire.BackgroundJob.Enqueue<INotificationDispatchService>(
                 svc => svc.DispatchReminderAsync(reservation, CancellationToken.None));
         }
 
-        if (jobId != null)
+        if (reminderJobId != null)
         {
-            var repo = scope.ServiceProvider.GetRequiredService<Booking.Domain.Interfaces.IReservationRepository>();
-            var dbReservation = await repo.GetByIdAsync(reservation.Id, ct);
-            if (dbReservation != null)
-            {
-                dbReservation.ReminderJobId = jobId;
-                await repo.SaveChangesAsync(ct);
-            }
-            logger.LogInformation("[SqsConsumerWorker] Scheduled reminder job {JobId} for Reservation {ReservationId}", jobId, reservation.Id);
+            dbReservation.ReminderJobId = reminderJobId;
+            logger.LogInformation("[SqsConsumerWorker] Scheduled reminder job {JobId} for Reservation {ReservationId}", reminderJobId, reservation.Id);
         }
+
+        // Schedule Auto-Cancel Job
+        var systemSettingsRepo = scope.ServiceProvider.GetRequiredService<Booking.Domain.Interfaces.ISystemSettingsRepository>();
+        var sysSettings = await systemSettingsRepo.GetSettingsAsync(ct);
+
+        if (sysSettings.AutoCancelMinutes > 0)
+        {
+            var cancelTime = reservation.StartTime.AddMinutes(sysSettings.AutoCancelMinutes);
+            if (cancelTime > DateTime.UtcNow)
+            {
+                var cancelJobId = Hangfire.BackgroundJob.Schedule<Booking.Application.Interfaces.IReservationService>(
+                    svc => svc.SystemCancelAsync(reservation.Id, "Auto-cancelled due to no-show", CancellationToken.None),
+                    cancelTime);
+                
+                dbReservation.AutoCancelJobId = cancelJobId;
+                logger.LogInformation("[SqsConsumerWorker] Scheduled auto-cancel job {JobId} for Reservation {ReservationId}", cancelJobId, reservation.Id);
+            }
+        }
+
+        await repo.SaveChangesAsync(ct);
     }
 
     private async Task CancelReminderJobAsync(EventEnvelope envelope, CancellationToken ct)
@@ -188,10 +206,18 @@ public class SqsConsumerWorker(
         var repo = scope.ServiceProvider.GetRequiredService<Booking.Domain.Interfaces.IReservationRepository>();
         var dbReservation = await repo.GetByIdAsync(reservation.Id, ct);
         
-        if (dbReservation?.ReminderJobId != null)
+        if (dbReservation != null)
         {
-            Hangfire.BackgroundJob.Delete(dbReservation.ReminderJobId);
-            logger.LogInformation("[SqsConsumerWorker] Deleted scheduled reminder job {JobId} for Reservation {ReservationId}", dbReservation.ReminderJobId, reservation.Id);
+            if (dbReservation.ReminderJobId != null)
+            {
+                Hangfire.BackgroundJob.Delete(dbReservation.ReminderJobId);
+                logger.LogInformation("[SqsConsumerWorker] Deleted scheduled reminder job {JobId} for Reservation {ReservationId}", dbReservation.ReminderJobId, reservation.Id);
+            }
+            if (dbReservation.AutoCancelJobId != null)
+            {
+                Hangfire.BackgroundJob.Delete(dbReservation.AutoCancelJobId);
+                logger.LogInformation("[SqsConsumerWorker] Deleted scheduled auto-cancel job {JobId} for Reservation {ReservationId}", dbReservation.AutoCancelJobId, reservation.Id);
+            }
         }
     }
 

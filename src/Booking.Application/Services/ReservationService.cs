@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
@@ -18,18 +18,19 @@ public class ReservationService(
     ICorrelationIdAccessor correlationIdAccessor,
     IRealtimeNotifier realtimeNotifier,
     ILogger<ReservationService> logger,
+    Booking.Domain.Interfaces.ISystemSettingsRepository systemSettings,
     TimeProvider? timeProvider = null) : IReservationService
 {
     public async Task<IReadOnlyList<ReservationResponse>> GetAllAsync(CancellationToken ct = default)
     {
         var all = await reservations.GetAllAsync(ct);
 
-        // One GetAllAsync for the whole list rather than a lookup per reservation — avoids N+1
+        // One GetAllAsync for the whole list rather than a lookup per reservation - avoids N+1
         // against the Users table. Fine at this project's scale; would need revisiting (a batched
         // GetByIdsAsync, say) if the user table ever got large.
         var usernameById = (await users.GetAllAsync(ct)).ToDictionary(u => u.Id, u => u.Username);
 
-        // Same reasoning as the username dictionary above — one bulk query across every returned
+        // Same reasoning as the username dictionary above - one bulk query across every returned
         // reservation's attendees, not one query per reservation.
         var attendeesByReservation = (await attendees.GetForReservationsAsync(all.Select(r => r.Id), ct))
             .GroupBy(a => a.ReservationId)
@@ -49,6 +50,13 @@ public class ReservationService(
         if (!Reservation.IsValidTimeRange(request.StartTime, request.EndTime))
         {
             throw new ArgumentException("EndTime must be after StartTime.");
+        }
+
+        var settings = await systemSettings.GetSettingsAsync(ct);
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        if ((request.StartTime - now).TotalDays > settings.MaxBookingLeadTimeDays)
+        {
+            throw new ArgumentException($"Cannot book more than {settings.MaxBookingLeadTimeDays} days in advance.");
         }
 
         var room = await rooms.GetByIdAsync(request.RoomId, ct)
@@ -79,7 +87,7 @@ public class ReservationService(
         };
 
         var existingForRoom = await reservations.GetByRoomIdAsync(request.RoomId, ct);
-        ruleEngine.Validate(reservation, existingForRoom, room.Capacity, attendeeIds.Count);
+        ruleEngine.Validate(reservation, existingForRoom, room.Capacity, attendeeIds.Count, settings);
 
         await reservations.AddAsync(reservation, ct);
         if (attendeeIds.Count > 0)
@@ -118,6 +126,50 @@ public class ReservationService(
             throw new UnauthorizedAccessException("You do not have permission to cancel this reservation.");
         }
 
+        await ExecuteCancelAsync(reservation, ct);
+    }
+
+    public async Task SystemCancelAsync(Guid reservationId, string reason, CancellationToken ct = default)
+    {
+        var reservation = await reservations.GetByIdAsync(reservationId, ct)
+            ?? throw new KeyNotFoundException($"Reservation '{reservationId}' not found.");
+            
+        if (reservation.CheckedInAt.HasValue) return;
+
+        logger.LogInformation("System canceling reservation {ReservationId}. Reason: {Reason}", reservationId, reason);
+        await ExecuteCancelAsync(reservation, ct);
+    }
+
+    public async Task CheckInAsync(Guid reservationId, Guid userId, CancellationToken ct = default)
+    {
+        var reservation = await reservations.GetByIdAsync(reservationId, ct)
+            ?? throw new KeyNotFoundException($"Reservation '{reservationId}' not found.");
+
+        var attendeeIds = await attendees.GetAttendeeUserIdsAsync(reservationId, ct);
+        if (reservation.UserId != userId && !attendeeIds.Contains(userId))
+        {
+            throw new UnauthorizedAccessException("Only the organizer or an attendee can check in.");
+        }
+
+        var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
+        if (now < reservation.StartTime.AddMinutes(-15))
+        {
+            throw new InvalidOperationException("You can only check in up to 15 minutes before the reservation starts.");
+        }
+
+        if (reservation.Status == ReservationStatus.Cancelled)
+        {
+            throw new InvalidOperationException("Cannot check in to a cancelled reservation.");
+        }
+
+        if (reservation.CheckedInAt.HasValue) return;
+
+        reservation.CheckedInAt = now;
+        await reservations.SaveChangesAsync(ct);
+    }
+
+    private async Task ExecuteCancelAsync(Reservation reservation, CancellationToken ct)
+    {
         if (reservation.Status == ReservationStatus.Cancelled)
         {
             return;
@@ -177,5 +229,6 @@ public class ReservationService(
         reservation.EndTime,
         reservation.Status,
         reservation.CreatedAt,
-        attendeeSummaries);
+        attendeeSummaries,
+        reservation.CheckedInAt);
 }

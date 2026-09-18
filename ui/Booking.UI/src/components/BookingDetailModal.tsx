@@ -5,12 +5,14 @@ import { getCurrentUserId } from "../lib/auth";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
 
-interface BookingDetailModalProps {
+export interface BookingDetailModalProps {
   reservation: Reservation;
   room: Room | undefined;
   isMine: boolean;
   isCancelling: boolean;
+  isCheckingIn: boolean;
   onCancel: () => void;
+  onCheckIn: () => void;
   onClose: () => void;
 }
 
@@ -18,10 +20,10 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-export function BookingDetailModal({ reservation, room, isMine, isCancelling, onCancel, onClose }: BookingDetailModalProps) {
+export function BookingDetailModal({ reservation, room, isMine, isCancelling, isCheckingIn, onCancel, onCheckIn, onClose }: BookingDetailModalProps) {
   const currentUserId = getCurrentUserId();
   const isAttending = !isMine && Boolean(reservation.attendees?.some((a) => a.userId === currentUserId));
-  const isPast = new Date(reservation.startTime) < new Date();
+  const isEnded = new Date(reservation.endTime) < new Date();
   const isCancelled = reservation.status === ReservationStatus.Cancelled;
   return (
     <Modal onClose={onClose}>
@@ -148,7 +150,52 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
         )}
       </div>
 
-      {isMine && !isPast && !isCancelled && (
+      {(isMine || isAttending) && !isEnded && !isCancelled && !reservation.checkedInAt && (
+        <div className="mt-5 border-t border-border pt-4 space-y-2">
+          <Button
+            onClick={onCheckIn}
+            disabled={isCheckingIn}
+            className="w-full gap-2 font-semibold bg-emerald-600 hover:bg-emerald-700 text-white"
+            size="lg"
+          >
+            {isCheckingIn ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                <span>Checking In...</span>
+              </>
+            ) : (
+              <>
+                <Building2 className="size-4" />
+                <span>Check In to Room</span>
+              </>
+            )}
+          </Button>
+
+          {isMine && (
+            <Button
+              onClick={onCancel}
+              disabled={isCancelling}
+              variant="destructive"
+              size="lg"
+              className="w-full gap-2 font-semibold"
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Cancelling...</span>
+                </>
+              ) : (
+                <>
+                  <Trash2 className="size-4" />
+                  <span>Cancel Reservation</span>
+                </>
+              )}
+            </Button>
+          )}
+        </div>
+      )}
+
+      {isMine && !isEnded && !isCancelled && reservation.checkedInAt && (
         <div className="mt-5 border-t border-border pt-4">
           <Button
             onClick={onCancel}
@@ -160,7 +207,7 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
             {isCancelling ? (
               <>
                 <Loader2 className="size-4 animate-spin" />
-                <span>Cancelling Reservation...</span>
+                <span>Cancelling...</span>
               </>
             ) : (
               <>
@@ -172,7 +219,7 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, on
         </div>
       )}
 
-      {isMine && isPast && !isCancelled && (
+      {isMine && isEnded && !isCancelled && (
         <div className="mt-5 border-t border-border pt-4">
           <div className="flex items-center justify-center gap-2 rounded-lg border border-border/80 bg-muted/40 py-2.5 px-3 text-xs text-muted-foreground">
             <Clock className="size-3.5" />
