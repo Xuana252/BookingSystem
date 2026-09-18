@@ -150,7 +150,7 @@ public class ReservationServiceTests
             It.IsAny<CancellationToken>()), Times.Once);
         _ruleEngine.Verify(e => e.Validate(
             It.Is<Reservation>(x => x.RoomId == request.RoomId),
-            It.IsAny<IReadOnlyList<Reservation>>(), It.IsAny<int>(), It.IsAny<int>()), Times.Once);
+            It.IsAny<IReadOnlyList<Reservation>>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SystemSettings>()), Times.Once);
         _realtimeNotifier.Verify(n => n.RoomAvailabilityChangedAsync(request.RoomId, It.IsAny<CancellationToken>()), Times.Once);
         _attendees.Verify(a => a.AddRangeAsync(It.IsAny<Guid>(), It.IsAny<IEnumerable<Guid>>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -178,7 +178,7 @@ public class ReservationServiceTests
         // Arrange
         var request = ValidRequest();
         _ruleEngine.Setup(e => e.Validate(
-                It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>(), It.IsAny<int>(), It.IsAny<int>()))
+                It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>(), It.IsAny<int>(), It.IsAny<int>(), It.IsAny<SystemSettings>()))
             .Throws(new ArgumentException("Room is already booked for an overlapping time range."));
 
         // Act
@@ -239,7 +239,7 @@ public class ReservationServiceTests
 
         // Assert
         _ruleEngine.Verify(e => e.Validate(
-            It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>(), 7, 2), Times.Once);
+            It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>(), 7, 2, It.IsAny<SystemSettings>()), Times.Once);
     }
 
     [Fact]
@@ -295,7 +295,7 @@ public class ReservationServiceTests
         // Assert
         response.Attendees.Should().BeEmpty();
         _ruleEngine.Verify(e => e.Validate(
-            It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>(), It.IsAny<int>(), 0), Times.Once);
+            It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>(), It.IsAny<int>(), 0, It.IsAny<SystemSettings>()), Times.Once);
     }
 
     [Fact]
@@ -312,7 +312,7 @@ public class ReservationServiceTests
         // Assert
         response.Attendees.Should().ContainSingle();
         _ruleEngine.Verify(e => e.Validate(
-            It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>(), It.IsAny<int>(), 1), Times.Once);
+            It.IsAny<Reservation>(), It.IsAny<IReadOnlyList<Reservation>>(), It.IsAny<int>(), 1, It.IsAny<SystemSettings>()), Times.Once);
     }
 
     [Fact]

@@ -283,10 +283,10 @@ public class BookingRuleEngineTests
         var candidate = Candidate(
             new DateTime(2026, 8, 20, 2, 0, 0, DateTimeKind.Utc),
             new DateTime(2026, 8, 20, 3, 0, 0, DateTimeKind.Utc));
-        var businessSettings = new BusinessSettings { TimeZoneId = "Asia/Ho_Chi_Minh" };
+        var settings = new SystemSettings { BusinessHoursStart = TimeSpan.FromHours(8), BusinessHoursEnd = TimeSpan.FromHours(18), MaxDurationHours = 4, TimeZoneId = "Asia/Ho_Chi_Minh" };
 
         // Act
-        var act = () => CreateSut(businessSettings: businessSettings).Validate(candidate, [], 100, 0, DefaultSettings);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0, settings);
 
         // Assert
         act.Should().NotThrow();
@@ -300,10 +300,10 @@ public class BookingRuleEngineTests
         var candidate = Candidate(
             new DateTime(2026, 8, 20, 12, 0, 0, DateTimeKind.Utc),
             new DateTime(2026, 8, 20, 13, 0, 0, DateTimeKind.Utc));
-        var businessSettings = new BusinessSettings { TimeZoneId = "Asia/Ho_Chi_Minh" };
+        var settings = new SystemSettings { BusinessHoursStart = TimeSpan.FromHours(8), BusinessHoursEnd = TimeSpan.FromHours(18), MaxDurationHours = 4, TimeZoneId = "Asia/Ho_Chi_Minh" };
 
         // Act
-        var act = () => CreateSut(businessSettings: businessSettings).Validate(candidate, [], 100, 0, DefaultSettings);
+        var act = () => CreateSut().Validate(candidate, [], 100, 0, settings);
 
         // Assert
         act.Should().Throw<ArgumentException>().WithMessage("*business hours*");

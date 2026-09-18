@@ -1,5 +1,4 @@
 using Booking.Application.Services;
-using Booking.Domain.Configuration;
 using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
 using FluentAssertions;
@@ -16,17 +15,18 @@ public class NotificationDispatchServiceTests
     private readonly Mock<IReservationAttendeeRepository> _attendees = new();
     private readonly Mock<INotificationSender> _sender = new();
     private readonly Mock<IRealtimeNotifier> _realtimeNotifier = new();
+    private readonly Mock<ISystemSettingsRepository> _systemSettings = new();
     private readonly Mock<ILogger<NotificationDispatchService>> _logger = new();
-    private readonly BusinessSettings _businessSettings = new() { TimeZoneId = "UTC" };
 
     public NotificationDispatchServiceTests()
     {
         _rooms.Setup(r => r.GetByIdAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync((Room?)null);
         _attendees.Setup(a => a.GetAttendeeUserIdsAsync(It.IsAny<Guid>(), It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        _systemSettings.Setup(s => s.GetSettingsAsync(It.IsAny<CancellationToken>())).ReturnsAsync(new SystemSettings { TimeZoneId = "UTC" });
     }
 
     private NotificationDispatchService CreateSut() =>
-        new(_notifications.Object, _users.Object, _rooms.Object, _attendees.Object, _sender.Object, _realtimeNotifier.Object, _businessSettings, _logger.Object);
+        new(_notifications.Object, _users.Object, _rooms.Object, _attendees.Object, _sender.Object, _realtimeNotifier.Object, _systemSettings.Object, _logger.Object);
 
     private static Reservation SomeReservation() => new()
     {
