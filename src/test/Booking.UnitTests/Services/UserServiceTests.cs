@@ -1,4 +1,4 @@
-﻿using Booking.Application.Services;
+using Booking.Application.Services;
 using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
 using FluentAssertions;
@@ -9,8 +9,10 @@ namespace Booking.UnitTests.Services;
 public class UserServiceTests
 {
     private readonly Mock<IUserRepository> _users = new();
+    private readonly Mock<IReservationRepository> _reservations = new();
+    private readonly Mock<IReservationAttendeeRepository> _attendees = new();
 
-    private UserService CreateSut() => new(_users.Object);
+    private UserService CreateSut() => new(_users.Object, _reservations.Object, _attendees.Object);
 
     [Fact]
     public async Task GetAllAsync_ProjectsIdAndUsernameOnly()

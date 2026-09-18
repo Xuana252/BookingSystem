@@ -1,4 +1,4 @@
-﻿namespace Booking.Domain.Entities;
+namespace Booking.Domain.Entities;
 
 public enum UserRole
 {
@@ -14,5 +14,12 @@ public class User
     public string PasswordHash { get; set; } = string.Empty;
     public UserRole Role { get; set; } = UserRole.Employee;
     public bool IsActive { get; set; } = true;
+    public string Department { get; set; } = string.Empty;
+    
+    // Preferences
+    public string TimeZoneId { get; set; } = "UTC";
+    public bool EmailAlertsEnabled { get; set; } = true;
+    public bool AutoDeclineConflicts { get; set; } = false;
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

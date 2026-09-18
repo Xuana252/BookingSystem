@@ -1,11 +1,14 @@
-﻿using Booking.Application.DTOs;
+using Booking.Application.DTOs;
 using Booking.Application.Interfaces;
 using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
 
 namespace Booking.Application.Services;
 
-public class UserService(IUserRepository users) : IUserService
+public class UserService(
+    IUserRepository users, 
+    IReservationRepository reservations,
+    IReservationAttendeeRepository attendees) : IUserService
 {
     public async Task<IReadOnlyList<UserSummaryResponse>> GetAllAsync(CancellationToken ct = default)
         => (await users.GetAllAsync(ct))
@@ -95,5 +98,64 @@ public class UserService(IUserRepository users) : IUserService
         {
             throw new InvalidOperationException("Can't remove the last remaining Admin.");
         }
+    }
+
+    public async Task<UserPreferencesDto> GetPreferencesAsync(Guid id, CancellationToken ct = default)
+    {
+        var user = await users.GetByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException($"User '{id}' not found.");
+
+        return new UserPreferencesDto(user.TimeZoneId, user.EmailAlertsEnabled, user.AutoDeclineConflicts);
+    }
+
+    public async Task<UserPreferencesDto> UpdatePreferencesAsync(Guid id, UpdateUserPreferencesRequest request, CancellationToken ct = default)
+    {
+        var user = await users.GetByIdAsync(id, ct)
+            ?? throw new KeyNotFoundException($"User '{id}' not found.");
+
+        user.TimeZoneId = request.TimeZoneId;
+        user.EmailAlertsEnabled = request.EmailAlertsEnabled;
+        user.AutoDeclineConflicts = request.AutoDeclineConflicts;
+
+        await users.SaveChangesAsync(ct);
+
+        return new UserPreferencesDto(user.TimeZoneId, user.EmailAlertsEnabled, user.AutoDeclineConflicts);
+    }
+
+    public async Task<IReadOnlyList<ColleagueDirectoryDto>> GetDirectoryAsync(CancellationToken ct = default)
+    {
+        var allUsers = await users.GetAllAsync(ct);
+        var allReservations = await reservations.GetAllAsync(ct);
+        
+        var now = DateTime.UtcNow;
+
+        // Find active meetings right now
+        var activeMeetings = allReservations
+            .Where(r => r.StartTime <= now && r.EndTime > now && r.Status != ReservationStatus.Cancelled && r.CheckedInAt.HasValue)
+            .ToList();
+
+        var activeMeetingIds = activeMeetings.Select(m => m.Id).ToList();
+        var activeAttendees = await attendees.GetForReservationsAsync(activeMeetingIds, ct);
+
+        var result = new List<ColleagueDirectoryDto>();
+
+        foreach (var user in allUsers.Where(u => u.IsActive))
+        {
+            var currentMeeting = activeMeetings.FirstOrDefault(m => 
+                m.UserId == user.Id || 
+                activeAttendees.Any(a => a.ReservationId == m.Id && a.UserId == user.Id));
+
+            var isAvailable = currentMeeting == null;
+
+            result.Add(new ColleagueDirectoryDto(
+                user.Id,
+                user.Username,
+                user.Department,
+                isAvailable,
+                currentMeeting?.RoomId
+            ));
+        }
+
+        return result.OrderBy(r => r.Username).ToList();
     }
 }
