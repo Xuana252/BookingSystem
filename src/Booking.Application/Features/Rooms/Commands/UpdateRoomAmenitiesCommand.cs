@@ -1,9 +1,13 @@
+using Booking.Application.Features.Common.Caching;
 using Booking.Domain.Interfaces;
 using MediatR;
 
 namespace Booking.Application.Features.Rooms.Commands;
 
-public record UpdateRoomAmenitiesCommand(Guid Id, List<string> Amenities) : IRequest;
+public record UpdateRoomAmenitiesCommand(Guid Id, List<string> Amenities) : ICacheInvalidatorCommand
+{
+    public string[] CacheKeysToInvalidate => ["Rooms_All_True", "Rooms_All_False"];
+}
 
 public class UpdateRoomAmenitiesCommandHandler : IRequestHandler<UpdateRoomAmenitiesCommand>
 {

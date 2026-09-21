@@ -162,7 +162,9 @@ export function ManageUsersPage() {
     const total = users.length;
     const admins = users.filter((u) => checkIsAdmin(u)).length;
     const employees = total - admins;
-    return { total, admins, employees };
+    const active = users.filter((u) => u.isActive).length;
+    const deactivated = total - active;
+    return { total, admins, employees, active, deactivated };
   }, [users]);
 
   if (!isAdmin()) {
@@ -488,11 +490,13 @@ export function ManageUsersPage() {
                           <Button
                             variant="outline"
                             size="sm"
-                            disabled={isPending}
+                            disabled={isPending || user.id === currentUserId}
                             onClick={() => handleToggleRole(user)}
                             className="h-7 gap-1 px-2.5 text-[11px]"
                             title={
-                              userIsAdmin
+                              user.id === currentUserId
+                                ? "You cannot alter your own admin role"
+                                : userIsAdmin
                                 ? "Demote to standard Employee"
                                 : "Promote to Administrator"
                             }
@@ -516,15 +520,17 @@ export function ManageUsersPage() {
                           <Button
                             variant={user.isActive ? "outline" : "default"}
                             size="sm"
-                            disabled={isPending}
-                            onClick={() => handleToggleActive(user)}
+                            disabled={isPending || user.id === currentUserId}
+                            onClick={() => handleToggleStatus(user)}
                             className={`h-7 gap-1 px-2.5 text-[11px] ${
                               user.isActive
                                 ? "text-destructive hover:bg-destructive/10 hover:text-destructive border-border"
                                 : "bg-emerald-600 text-white hover:bg-emerald-700 dark:bg-emerald-500 dark:hover:bg-emerald-600"
                             }`}
                             title={
-                              user.isActive
+                              user.id === currentUserId
+                                ? "You cannot deactivate your own account"
+                                : user.isActive
                                 ? "Deactivate user account"
                                 : "Reactivate user account"
                             }
