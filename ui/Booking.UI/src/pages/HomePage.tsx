@@ -101,7 +101,7 @@ export function HomePage() {
           isActive: false,
           createdAt: new Date().toISOString(),
         })),
-      ];
+      ].sort((a, b) => a.name.localeCompare(b.name));
 
       setRooms(allRooms);
       setReservations(reservationsResult);

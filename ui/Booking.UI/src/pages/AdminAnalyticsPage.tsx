@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
 import { 
   Loader2, Download, BarChart3, TrendingUp, AlertTriangle, 
-  Calendar, Clock, Users, XCircle, Sparkles
+  Calendar, Clock, Users, XCircle, Sparkles, ArrowLeft
 } from "lucide-react";
 import { getReservations, getRooms } from "../lib/api";
 import { type Reservation, type Room, ReservationStatus } from "../lib/types";
 import { ApiError } from "../lib/apiClient";
 import { Button } from "../components/ui/button";
+import { Link } from "react-router-dom";
 import { 
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   AreaChart, Area, PieChart, Pie, Cell, LineChart, Line, Legend
@@ -289,9 +290,16 @@ export function AdminAnalyticsPage() {
   const ghostPercentage = totalPast > 0 ? Math.round((ghostRate / totalPast) * 100) : 0;
 
   return (
-    <div className="space-y-6 max-w-[1200px] mx-auto">
+    <div className="space-y-6 max-w-[1200px] mx-auto pb-12">
       <div className="flex flex-col sm:flex-row justify-between gap-4 border-b border-border/50 pb-6">
         <div>
+          <Link
+            to="/"
+            className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-3.5" />
+            <span>Back to calendar</span>
+          </Link>
           <h1 className="text-2xl font-semibold tracking-tight text-foreground">
             Analytics Overview
           </h1>

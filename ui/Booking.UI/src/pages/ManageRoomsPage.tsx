@@ -55,7 +55,7 @@ export function ManageRoomsPage() {
     try {
       setError(null);
       const data = await getAllRooms();
-      setRooms(data);
+      setRooms(data.sort((a, b) => a.name.localeCompare(b.name)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to load rooms.");
     }

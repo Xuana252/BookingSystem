@@ -4,6 +4,8 @@ import {
   AlertCircle,
   ArrowLeft,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Filter,
   Loader2,
   Mail,
@@ -61,6 +63,13 @@ export function ManageUsersPage() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, roleFilter, statusFilter]);
+
   useEffect(() => {
     if (location.state && typeof location.state === "object" && "successMessage" in location.state) {
       window.history.replaceState({}, document.title);
@@ -71,7 +80,7 @@ export function ManageUsersPage() {
     try {
       setError(null);
       const data = await getAllUsers();
-      setUsers(data);
+      setUsers(data.sort((a, b) => a.username.localeCompare(b.username)));
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to load users.");
     }
@@ -82,17 +91,18 @@ export function ManageUsersPage() {
     loadUsers().finally(() => setIsLoading(false));
   }, [loadUsers]);
 
-  async function handleToggleActive(user: UserManagementItem) {
+  async function handleToggleStatus(user: UserManagementItem) {
+    if (user.id === currentUserId) return;
     setActionLoadingId(user.id);
     setError(null);
     setSuccessMessage(null);
     try {
       if (user.isActive) {
         await deactivateUser(user.id);
-        setSuccessMessage(`Account for "${user.username}" deactivated.`);
+        setSuccessMessage(`User "${user.username}" deactivated.`);
       } else {
         await activateUser(user.id);
-        setSuccessMessage(`Account for "${user.username}" reactivated.`);
+        setSuccessMessage(`User "${user.username}" reactivated.`);
       }
       await loadUsers();
     } catch (err) {
@@ -103,17 +113,18 @@ export function ManageUsersPage() {
   }
 
   async function handleToggleRole(user: UserManagementItem) {
-    const userIsAdmin = checkIsAdmin(user);
+    if (user.id === currentUserId) return;
     setActionLoadingId(user.id);
     setError(null);
     setSuccessMessage(null);
     try {
+      const userIsAdmin = checkIsAdmin(user);
       if (userIsAdmin) {
         await demoteUser(user.id);
-        setSuccessMessage(`"${user.username}" demoted to Employee.`);
+        setSuccessMessage(`User "${user.username}" demoted to Employee.`);
       } else {
         await promoteUser(user.id);
-        setSuccessMessage(`"${user.username}" promoted to Administrator.`);
+        setSuccessMessage(`User "${user.username}" promoted to Administrator.`);
       }
       await loadUsers();
     } catch (err) {
@@ -144,13 +155,14 @@ export function ManageUsersPage() {
     });
   }, [users, searchQuery, roleFilter, statusFilter]);
 
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / pageSize));
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const stats = useMemo(() => {
     const total = users.length;
     const admins = users.filter((u) => checkIsAdmin(u)).length;
     const employees = total - admins;
-    const active = users.filter((u) => u.isActive).length;
-    const deactivated = total - active;
-    return { total, admins, employees, active, deactivated };
+    return { total, admins, employees };
   }, [users]);
 
   if (!isAdmin()) {
@@ -160,7 +172,7 @@ export function ManageUsersPage() {
           <ShieldAlert className="size-6" />
         </div>
         <h2 className="text-lg font-semibold text-foreground">Access Restricted</h2>
-        <p className="mt-1 text-xs text-muted-foreground">Only system administrators are authorized to manage user accounts.</p>
+        <p className="mt-1 text-xs text-muted-foreground">Only system administrators are authorized to manage users.</p>
         <Link
           to="/"
           className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
@@ -174,6 +186,15 @@ export function ManageUsersPage() {
 
   return (
     <div className="space-y-6">
+      <UserModal
+        isOpen={isUserModalOpen}
+        onClose={() => setIsUserModalOpen(false)}
+        onSuccess={() => {
+          setSuccessMessage("New user registered successfully.");
+          loadUsers();
+        }}
+      />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between gap-4 border-b border-border/50 pb-6">
         <div>
@@ -184,7 +205,7 @@ export function ManageUsersPage() {
             <ArrowLeft className="size-3.5" />
             <span>Back to calendar</span>
           </Link>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">User Management</h1>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">Manage Users</h1>
           <p className="text-sm text-muted-foreground mt-1">
             Manage employee access, promote or demote administrators, and toggle account activation.
           </p>
@@ -370,7 +391,7 @@ export function ManageUsersPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
-                {filteredUsers.map((user) => {
+                {paginatedUsers.map((user) => {
                   const userIsAdmin = checkIsAdmin(user);
                   const isCurrent = user.id === currentUserId;
                   const isPending = actionLoadingId === user.id;
@@ -529,6 +550,37 @@ export function ManageUsersPage() {
                 })}
               </tbody>
             </table>
+          </div>
+        )}
+
+        {/* Pagination Footer */}
+        {!isLoading && filteredUsers.length > 0 && (
+          <div className="flex items-center justify-between border-t border-border bg-muted/20 px-4 py-3">
+            <p className="text-xs text-muted-foreground font-medium">
+              Showing <span className="font-bold text-foreground">{(currentPage - 1) * pageSize + 1}</span> to <span className="font-bold text-foreground">{Math.min(currentPage * pageSize, filteredUsers.length)}</span> of <span className="font-bold text-foreground">{filteredUsers.length}</span> results
+            </p>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="h-8 border-border bg-card shadow-xs"
+              >
+                <ChevronLeft className="size-4 mr-1" />
+                Prev
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="h-8 border-border bg-card shadow-xs"
+              >
+                Next
+                <ChevronRight className="size-4 ml-1" />
+              </Button>
+            </div>
           </div>
         )}
       </div>

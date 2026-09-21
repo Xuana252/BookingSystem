@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Loader2, Calendar, Clock, MapPin, XCircle, SearchX, ArrowRight } from "lucide-react";
+import { Loader2, Calendar, Clock, MapPin, XCircle, SearchX, ArrowRight, ArrowLeft } from "lucide-react";
 import { getReservations, getRooms, cancelReservation, checkInReservation } from "../lib/api";
 import { getCurrentUserId } from "../lib/auth";
 import { type Reservation, type Room, ReservationStatus } from "../lib/types";
@@ -23,9 +23,16 @@ export function MyBookingsPage() {
 
   const loadData = async () => {
     try {
-      const [roomsResult, reservationsResult] = await Promise.all([getRooms(false), getReservations()]);
-      setRooms(roomsResult);
-      setReservations(reservationsResult);
+      const [roomsRes, reservationsRes] = await Promise.all([
+        getRooms(false),
+        getReservations()
+      ]);
+      setRooms(roomsRes);
+      
+      const sorted = reservationsRes.sort((a, b) => 
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+      );
+      setReservations(sorted);
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Failed to load bookings");
     } finally {
@@ -37,32 +44,35 @@ export function MyBookingsPage() {
     loadData();
   }, []);
 
-  async function handleCancel(reservationId: string) {
-    setCancellingId(reservationId);
+  const handleCancel = async (id: string) => {
     try {
-      await cancelReservation(reservationId);
-      setSelectedReservation(null);
+      setCancellingId(id);
+      await cancelReservation(id);
       await loadData();
+      if (selectedReservation?.id === id) {
+        setSelectedReservation(prev => prev ? {...prev, status: ReservationStatus.Cancelled} : null);
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not cancel that reservation.");
+      alert(err instanceof ApiError ? err.message : "Failed to cancel booking");
     } finally {
       setCancellingId(null);
     }
-  }
+  };
 
-  async function handleCheckIn(reservationId: string) {
-    setCheckingInId(reservationId);
+  const handleCheckIn = async (id: string) => {
     try {
-      await checkInReservation(reservationId);
-      // Optimistically update locally or reload
-      setSelectedReservation(null);
+      setCheckingInId(id);
+      await checkInReservation(id);
       await loadData();
+      if (selectedReservation?.id === id) {
+        setSelectedReservation(prev => prev ? {...prev, checkedInAt: new Date().toISOString()} : null);
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Could not check in.");
+      alert(err instanceof ApiError ? err.message : "Failed to check in");
     } finally {
       setCheckingInId(null);
     }
-  }
+  };
 
   if (isLoading) {
     return (
@@ -87,13 +97,9 @@ export function MyBookingsPage() {
 
   const now = new Date();
   
-  // Filter for my bookings (host or attendee)
-  const myBookings = reservations.filter(r => 
-    r.userId === currentUserId || r.attendees?.some(a => a.userId === currentUserId)
-  );
-
-  const upcoming = myBookings.filter(r => new Date(r.endTime) > now && r.status === ReservationStatus.Confirmed).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
-  const past = myBookings.filter(r => new Date(r.endTime) <= now || r.status === ReservationStatus.Cancelled).sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+  // Basic filtering for tabs
+  const upcoming = reservations.filter(r => new Date(r.endTime) >= now && r.status !== ReservationStatus.Cancelled);
+  const past = reservations.filter(r => new Date(r.endTime) < now || r.status === ReservationStatus.Cancelled);
 
   const renderBookingCard = (reservation: Reservation, isHero = false) => {
     const room = rooms.find(r => r.id === reservation.roomId);
@@ -116,90 +122,69 @@ export function MyBookingsPage() {
       <div 
         key={reservation.id} 
         onClick={() => setSelectedReservation(reservation)}
-        className={`group relative overflow-hidden rounded-2xl border ${isHero ? 'border-primary/20 bg-primary/5 shadow-md shadow-primary/5' : 'border-border bg-card shadow-sm'} transition-all hover:-translate-y-1 hover:shadow-lg hover:border-primary/30 cursor-pointer flex flex-col`}
+        className={`group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/30 cursor-pointer ${isCancelled ? 'opacity-60' : ''}`}
       >
-        {/* Top Banner Accent */}
-        <div className={`h-1.5 w-full ${isCancelled ? 'bg-rose-500/50' : isMine ? 'bg-gradient-to-r from-primary to-indigo-500' : 'bg-gradient-to-r from-amber-400 to-amber-600'}`} />
-        
-        {/* Live Indicator (Today only) */}
-        {!isPast && !isCancelled && isToday && (
-          <div className="absolute top-4 right-4 flex items-center gap-1.5">
-            <span className="relative flex size-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-400 opacity-75" />
-              <span className="relative inline-flex size-2 rounded-full bg-rose-500" />
-            </span>
-            <span className="text-[10px] font-bold text-rose-600 uppercase tracking-wider">Today</span>
-          </div>
-        )}
-
-        {isCancelled && (
-           <div className="absolute top-4 right-4 text-[10px] font-bold text-rose-500 uppercase tracking-wider flex items-center gap-1">
-             <XCircle className="size-3" /> Cancelled
-           </div>
-        )}
-
-        <div className={`p-5 flex-1 flex flex-col ${isCancelled ? 'opacity-70 grayscale-[30%]' : ''}`}>
-          <div className="flex items-start gap-4">
-            {/* Calendar Date Block */}
-            <div className="flex flex-col items-center justify-center rounded-xl bg-muted/60 px-3 py-2 text-center shadow-inner ring-1 ring-inset ring-foreground/5 min-w-[3.5rem]">
-               <span className="text-[10px] font-extrabold text-muted-foreground uppercase tracking-widest">{start.toLocaleDateString(undefined, { month: 'short'})}</span>
-               <span className="text-xl font-black text-foreground leading-none mt-0.5">{start.getDate()}</span>
-            </div>
-            
-            <div className="flex-1 pr-10">
-               <h4 className={`font-bold ${isHero ? 'text-lg' : 'text-base'} text-foreground group-hover:text-primary transition-colors line-clamp-1`}>
-                 {room?.name ?? "Unknown Room"}
-               </h4>
-               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1.5">
-                 <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                   <Clock className="size-3.5 text-foreground/40" />
-                   {start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                 </div>
-                 <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                   <MapPin className="size-3.5 text-foreground/40" />
-                   <span className="truncate max-w-[120px]">{room?.location ?? "N/A"}</span>
-                 </div>
-               </div>
+        <div className="flex items-start justify-between gap-4 mb-3">
+          <div>
+            <h4 className="font-semibold text-foreground text-base line-clamp-1">
+              {room?.name ?? "Unknown Room"}
+            </h4>
+            <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-1">
+              <Calendar className="size-3.5" />
+              <span>{start.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric'})}</span>
+              <span className="text-border mx-1">•</span>
+              <Clock className="size-3.5" />
+              <span>{start.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
             </div>
           </div>
           
-          <div className="mt-auto pt-5">
-            <div className="flex items-center justify-between border-t border-border/60 pt-4">
-              <div className="flex items-center gap-2">
-                 {/* Role Badge */}
-                 <span className={`inline-flex px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase ${isMine ? 'bg-primary/10 text-primary' : 'bg-amber-500/10 text-amber-600'}`}>
-                   {isMine ? 'Hosting' : 'Attending'}
-                 </span>
-                 
-                 {reservation.checkedInAt && (
-                   <span className="inline-flex px-2 py-0.5 rounded text-[10px] font-bold tracking-wide uppercase bg-emerald-500/10 text-emerald-600">
-                     Checked In
-                   </span>
-                 )}
-
-                 {/* Attendees Stack */}
-                 <div className="flex -space-x-1.5 ml-1">
-                   {displayAvatars.map((a, i) => (
-                      <div 
-                        key={i} 
-                        title={`${a.name} ${a.isHost ? '(Host)' : ''}`}
-                        className={`flex size-6 items-center justify-center rounded-full border-2 border-card text-[9px] font-bold ${a.isHost ? 'bg-primary text-primary-foreground z-10' : 'bg-muted text-muted-foreground z-0'}`}
-                      >
-                         {a.name.substring(0, 2).toUpperCase()}
-                      </div>
-                   ))}
-                   {extraAvatars > 0 && (
-                      <div className="flex size-6 items-center justify-center rounded-full border-2 border-card bg-muted text-[9px] font-bold text-muted-foreground z-0">
-                         +{extraAvatars}
-                      </div>
-                   )}
-                 </div>
-              </div>
-              
-              <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/5 text-primary opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
-                 <ArrowRight className="size-3.5" />
-              </div>
-            </div>
+          <div className="flex flex-col items-end gap-2">
+            {isCancelled ? (
+              <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/10 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20">
+                Cancelled
+              </span>
+            ) : isToday ? (
+              <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
+                Today
+              </span>
+            ) : null}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-5">
+          <MapPin className="size-3.5" />
+          <span className="truncate">{room?.location ?? "Location N/A"}</span>
+        </div>
+        
+        <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
+          <div className="flex items-center gap-2">
+             <span className="inline-flex items-center rounded-md bg-muted px-2 py-1 text-xs font-medium text-muted-foreground">
+               {isMine ? 'Host' : 'Attendee'}
+             </span>
+             
+             {reservation.checkedInAt && (
+               <span className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/10 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20">
+                 Checked In
+               </span>
+             )}
+          </div>
+          
+          {/* Attendees Stack */}
+          <div className="flex -space-x-1.5">
+            {displayAvatars.map((a, i) => (
+               <div 
+                 key={i} 
+                 title={`${a.name} ${a.isHost ? '(Host)' : ''}`}
+                 className={`flex size-6 items-center justify-center rounded-full border-2 border-card text-[9px] font-bold ${a.isHost ? 'bg-primary text-primary-foreground z-10' : 'bg-muted text-muted-foreground z-0'}`}
+               >
+                  {a.name.substring(0, 2).toUpperCase()}
+               </div>
+            ))}
+            {extraAvatars > 0 && (
+               <div className="flex size-6 items-center justify-center rounded-full border-2 border-card bg-muted text-[9px] font-bold text-muted-foreground z-0">
+                  +{extraAvatars}
+               </div>
+            )}
           </div>
         </div>
       </div>
@@ -211,9 +196,16 @@ export function MyBookingsPage() {
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 border-b border-border/50 pb-6">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight text-foreground">My Itinerary</h1>
+          <Link
+            to="/"
+            className="mb-1 inline-flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground"
+          >
+            <ArrowLeft className="size-3.5" />
+            <span>Back to calendar</span>
+          </Link>
+          <h1 className="text-2xl font-semibold tracking-tight text-foreground">My Bookings</h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-xl">
-            Keep track of the meetings you are hosting or attending. Click on any card to view details or manage your reservation.
+            Keep track of the meetings you are hosting or attending. Click on any booking to view details or manage your reservation.
           </p>
         </div>
         
