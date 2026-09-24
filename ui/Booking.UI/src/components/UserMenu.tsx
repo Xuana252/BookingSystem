@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Monitor, Moon, Sun, User, Calendar, Sliders, LifeBuoy } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun, User, Calendar, Sliders, LifeBuoy, PieChart } from "lucide-react";
 import { clearToken, getCurrentUsername, isAdmin } from "../lib/auth";
 import { useTheme } from "../hooks/useTheme";
 import { Badge } from "./ui/badge";
@@ -70,6 +70,16 @@ export function UserMenu() {
             >
               <Calendar className="size-3.5" />
               <span>My Bookings</span>
+            </button>
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate("/insights");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <PieChart className="size-3.5" />
+              <span>My Insights</span>
             </button>
             <button
               onClick={() => {
