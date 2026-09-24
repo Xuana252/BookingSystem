@@ -1,5 +1,5 @@
 export const getAvatar = (name: string | null) => {
-  if (!name) return '/avatars/1.jpg';
-  const sum = name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  return `/avatars/${(sum % 9) + 1}.jpg`;
+  const seed = name ? encodeURIComponent(name) : 'Guest';
+  // Using 'notionists' style for clean, minimal people avatars
+  return `https://api.dicebear.com/9.x/notionists/svg?seed=${seed}&backgroundColor=transparent`;
 };

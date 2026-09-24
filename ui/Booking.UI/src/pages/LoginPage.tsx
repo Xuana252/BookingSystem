@@ -158,14 +158,14 @@ export function LoginPage() {
           </p>
           <div className="flex items-center gap-4 text-sm text-white/90">
             <div className="flex -space-x-2">
-              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30">
-                <img src="/avatars/1.jpg" alt="User 1" className="h-full w-full object-cover" />
+              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30 bg-white/20">
+                <img src={getAvatar("Alice")} alt="User 1" className="h-full w-full object-cover" />
               </div>
-              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30">
-                <img src="/avatars/2.jpg" alt="User 2" className="h-full w-full object-cover" />
+              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30 bg-white/20">
+                <img src={getAvatar("Bob")} alt="User 2" className="h-full w-full object-cover" />
               </div>
-              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30">
-                <img src="/avatars/3.jpg" alt="User 3" className="h-full w-full object-cover" />
+              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30 bg-white/20">
+                <img src={getAvatar("Charlie")} alt="User 3" className="h-full w-full object-cover" />
               </div>
             </div>
             <p className="drop-shadow-sm font-medium">Trusted by 10,000+ teams worldwide</p>
