@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -16,6 +16,8 @@ import type { SystemSettings } from "../lib/types";
 export function AdminSettingsPage() {
   const [settings, setSettings] = useState<SystemSettings | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     getSystemSettings().then(res => {
@@ -26,9 +28,15 @@ export function AdminSettingsPage() {
 
   const handleSave = () => {
     if (settings) {
+      setSaveStatus("saving");
       updateSystemSettings(settings).then(res => {
         setSettings(res);
-        alert("Settings saved successfully!");
+        setSaveStatus("success");
+        setTimeout(() => setSaveStatus("idle"), 3000);
+      }).catch(err => {
+        setSaveStatus("error");
+        setErrorMessage(err.message || "Failed to save settings.");
+        setTimeout(() => setSaveStatus("idle"), 5000);
       });
     }
   };
@@ -146,8 +154,29 @@ export function AdminSettingsPage() {
           </div>
         </div>
         
-        <div className="flex justify-end pt-2">
-          <Button onClick={handleSave}>Save Settings</Button>
+        <div className="flex items-center justify-end gap-3 pt-2">
+          {saveStatus === "success" && (
+            <span className="text-sm font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5 animate-in fade-in slide-in-from-right-4">
+              <CheckCircle2 className="size-4" />
+              Saved successfully!
+            </span>
+          )}
+          {saveStatus === "error" && (
+            <span className="text-sm font-medium text-destructive flex items-center gap-1.5 animate-in fade-in slide-in-from-right-4">
+              <AlertCircle className="size-4" />
+              {errorMessage}
+            </span>
+          )}
+          <Button onClick={handleSave} disabled={saveStatus === "saving"}>
+            {saveStatus === "saving" ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              "Save Settings"
+            )}
+          </Button>
         </div>
       </div>
     </div>
