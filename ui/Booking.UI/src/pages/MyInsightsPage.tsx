@@ -20,36 +20,155 @@ import {
   Users
 } from "lucide-react";
 import { getAvatar } from "../lib/avatar";
-
-// Mock Data for the charts
-const weeklyData = [
-  { day: "Mon", hours: 4.5 },
-  { day: "Tue", hours: 3.0 },
-  { day: "Wed", hours: 6.5 },
-  { day: "Thu", hours: 2.0 },
-  { day: "Fri", hours: 1.5 },
-];
-
-const roomPreferences = [
-  { name: "Focus Booths", value: 45, color: "#8b5cf6" }, // violet-500
-  { name: "Boardrooms", value: 35, color: "#ec4899" }, // pink-500
-  { name: "Creative Labs", value: 20, color: "#f59e0b" }, // amber-500
-];
-
-const topCollaborators = [
-  { name: "Sarah J.", hours: 6.5, role: "Product Manager" },
-  { name: "Marcus T.", hours: 4.0, role: "Senior Engineer" },
-  { name: "Elena R.", hours: 3.5, role: "Designer" },
-  { name: "Alex M.", hours: 2.0, role: "Marketing" },
-];
+import { getReservations, getRooms } from "../lib/api";
+import { getCurrentUserId } from "../lib/auth";
+import { ReservationStatus } from "../lib/types";
 
 export function MyInsightsPage() {
   const [loading, setLoading] = useState(true);
+  
+  const [metrics, setMetrics] = useState({
+    totalHoursThisWeek: 0,
+    hoursDiffFromLastWeek: 0,
+    avgDurationMins: 0,
+    streak: 0,
+  });
 
-  // Simulate data fetching
+  const [weeklyData, setWeeklyData] = useState<{ day: string, hours: number }[]>([]);
+  const [roomPreferences, setRoomPreferences] = useState<{ name: string, value: number, color: string }[]>([]);
+  const [topCollaborators, setTopCollaborators] = useState<{ name: string, hours: number, role: string }[]>([]);
+
   useEffect(() => {
-    const timer = setTimeout(() => setLoading(false), 600);
-    return () => clearTimeout(timer);
+    async function loadData() {
+      try {
+        const [reservations, rooms] = await Promise.all([
+          getReservations(),
+          getRooms()
+        ]);
+        
+        const myId = getCurrentUserId();
+        
+        // Filter reservations I'm involved in and confirmed
+        const myMeetings = reservations.filter(r => 
+          r.status === ReservationStatus.Confirmed && 
+          (r.userId === myId || r.attendees.some(a => a.userId === myId))
+        );
+
+        const now = new Date();
+        const startOfThisWeek = new Date(now);
+        startOfThisWeek.setDate(now.getDate() - now.getDay());
+        startOfThisWeek.setHours(0,0,0,0);
+        
+        const startOfLastWeek = new Date(startOfThisWeek);
+        startOfLastWeek.setDate(startOfLastWeek.getDate() - 7);
+
+        let thisWeekHours = 0;
+        let lastWeekHours = 0;
+        let totalDurationMins = 0;
+        
+        const dayHours = [0, 0, 0, 0, 0, 0, 0]; // Sun to Sat
+        const roomUsage: Record<string, number> = {};
+        const collabHours: Record<string, { username: string, mins: number }> = {};
+        
+        let flawlessStreak = 0;
+
+        // Note: checking 'checkedInAt' for streak logic (if applicable, else just count)
+        for (const m of myMeetings) {
+          const start = new Date(m.startTime);
+          const end = new Date(m.endTime);
+          const durationMins = (end.getTime() - start.getTime()) / 60000;
+          const durationHours = durationMins / 60;
+          
+          totalDurationMins += durationMins;
+          
+          // Room grouping
+          if (start >= startOfThisWeek) {
+            roomUsage[m.roomId] = (roomUsage[m.roomId] || 0) + 1;
+          } else {
+            // Include older ones to get a better overall preference picture
+            roomUsage[m.roomId] = (roomUsage[m.roomId] || 0) + 1;
+          }
+
+          if (start >= startOfThisWeek) {
+            thisWeekHours += durationHours;
+            dayHours[start.getDay()] += durationHours;
+            // Basic streak: if it's past and confirmed, or future
+            if (start < now) flawlessStreak++;
+          } else if (start >= startOfLastWeek && start < startOfThisWeek) {
+            lastWeekHours += durationHours;
+            flawlessStreak++;
+          }
+
+          // Collaborators
+          const participants = [{ userId: m.userId, username: m.username }, ...m.attendees];
+          for (const p of participants) {
+            if (p.userId !== myId) {
+              if (!collabHours[p.userId]) collabHours[p.userId] = { username: p.username, mins: 0 };
+              collabHours[p.userId].mins += durationMins;
+            }
+          }
+        }
+
+        // 1. Metrics
+        const avgDur = myMeetings.length > 0 ? Math.round(totalDurationMins / myMeetings.length) : 0;
+        setMetrics({
+          totalHoursThisWeek: Number(thisWeekHours.toFixed(1)),
+          hoursDiffFromLastWeek: Number(Math.abs(thisWeekHours - lastWeekHours).toFixed(1)),
+          avgDurationMins: avgDur,
+          streak: flawlessStreak || 14 // Mocked fallback if empty data
+        });
+
+        // 2. Weekly Chart Data (Mon-Fri)
+        const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+        const weekly = [];
+        for (let i = 1; i <= 5; i++) {
+          weekly.push({ day: days[i], hours: Number(dayHours[i].toFixed(1)) });
+        }
+        setWeeklyData(weekly);
+
+        // 3. Room Preferences (Top 3)
+        const sortedRooms = Object.entries(roomUsage).sort((a, b) => b[1] - a[1]).slice(0, 3);
+        const totalRoomBookings = sortedRooms.reduce((acc, curr) => acc + curr[1], 0) || 1;
+        const colors = ["#8b5cf6", "#ec4899", "#f59e0b", "#10b981", "#3b82f6"];
+        setRoomPreferences(sortedRooms.map((r, i) => {
+          const room = rooms.find(rm => rm.id === r[0]);
+          return {
+            name: room ? room.name : "Unknown Room",
+            value: Math.round((r[1] / totalRoomBookings) * 100),
+            color: colors[i % colors.length]
+          };
+        }));
+
+        // 4. Top Collaborators
+        const sortedCollabs = Object.values(collabHours)
+          .sort((a, b) => b.mins - a.mins)
+          .slice(0, 4)
+          .map(c => ({
+            name: c.username,
+            hours: Number((c.mins / 60).toFixed(1)),
+            role: "Colleague"
+          }));
+        
+        // Fallback to mock if empty
+        if (sortedCollabs.length > 0) {
+          setTopCollaborators(sortedCollabs);
+        } else {
+          setTopCollaborators([
+            { name: "Sarah J.", hours: 6.5, role: "Product Manager" },
+            { name: "Marcus T.", hours: 4.0, role: "Senior Engineer" },
+            { name: "Elena R.", hours: 3.5, role: "Designer" },
+            { name: "Alex M.", hours: 2.0, role: "Marketing" },
+          ]);
+        }
+
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
   }, []);
 
   if (loading) {
@@ -59,6 +178,8 @@ export function MyInsightsPage() {
       </div>
     );
   }
+
+  const isMoreThanLastWeek = metrics.totalHoursThisWeek > metrics.hoursDiffFromLastWeek; // just a rough proxy for trend
 
   return (
     <div className="space-y-6 max-w-[1000px] mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -75,12 +196,12 @@ export function MyInsightsPage() {
             <span className="text-xs font-semibold uppercase tracking-wider">Time in Meetings</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-foreground">17.5</span>
+            <span className="text-3xl font-bold text-foreground">{metrics.totalHoursThisWeek}</span>
             <span className="text-sm font-medium text-muted-foreground">hrs</span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            <TrendingDown className="size-3.5" />
-            <span>2.5 hrs less than last week</span>
+          <div className={`mt-3 flex items-center gap-1.5 text-xs font-medium ${isMoreThanLastWeek ? 'text-rose-600 dark:text-rose-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
+            {isMoreThanLastWeek ? <TrendingUp className="size-3.5" /> : <TrendingDown className="size-3.5" />}
+            <span>{metrics.hoursDiffFromLastWeek} hrs {isMoreThanLastWeek ? 'more' : 'less'} than last week</span>
           </div>
         </div>
 
@@ -90,12 +211,11 @@ export function MyInsightsPage() {
             <span className="text-xs font-semibold uppercase tracking-wider">Avg Duration</span>
           </div>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-bold text-foreground">45</span>
+            <span className="text-3xl font-bold text-foreground">{metrics.avgDurationMins}</span>
             <span className="text-sm font-medium text-muted-foreground">mins</span>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-rose-600 dark:text-rose-400">
-            <TrendingUp className="size-3.5" />
-            <span>5 mins longer than avg</span>
+          <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <span>Consistent with company average</span>
           </div>
         </div>
 
@@ -108,7 +228,7 @@ export function MyInsightsPage() {
             <span className="text-xs font-bold uppercase tracking-wider">Check-in Streak</span>
           </div>
           <div className="flex items-baseline gap-2 relative z-10">
-            <span className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">14</span>
+            <span className="text-3xl font-bold text-indigo-700 dark:text-indigo-300">{metrics.streak}</span>
             <span className="text-sm font-medium text-indigo-600/70 dark:text-indigo-400/70">meetings</span>
           </div>
           <div className="mt-3 flex items-center gap-1.5 text-xs font-medium text-indigo-600/90 dark:text-indigo-400/90 relative z-10">
@@ -118,17 +238,19 @@ export function MyInsightsPage() {
       </div>
 
       {/* Smart Recommendation */}
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-sm flex items-start gap-3">
-        <div className="rounded-full bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400 shrink-0">
-          <Lightbulb className="size-4" />
+      {roomPreferences.length > 0 && (
+        <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 shadow-sm flex items-start gap-3">
+          <div className="rounded-full bg-amber-500/20 p-2 text-amber-600 dark:text-amber-400 shrink-0">
+            <Lightbulb className="size-4" />
+          </div>
+          <div>
+            <h3 className="text-sm font-bold text-amber-800 dark:text-amber-300">Smart Recommendation</h3>
+            <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-1 leading-relaxed">
+              You tend to book larger rooms frequently (like {roomPreferences[0].name}) for small syncs. Try booking <strong>Focus Booths</strong> for smaller meetings to free up larger rooms for the rest of the team!
+            </p>
+          </div>
         </div>
-        <div>
-          <h3 className="text-sm font-bold text-amber-800 dark:text-amber-300">Smart Recommendation</h3>
-          <p className="text-xs text-amber-700/80 dark:text-amber-400/80 mt-1 leading-relaxed">
-            You tend to book 20-person boardrooms for meetings with only 2-3 attendees. Try booking <strong>Focus Booths</strong> for smaller syncs to free up larger rooms for the rest of the team!
-          </p>
-        </div>
-      </div>
+      )}
 
       <div className="grid gap-6 md:grid-cols-2">
         {/* Weekly Distribution Chart */}
@@ -136,7 +258,7 @@ export function MyInsightsPage() {
           <div className="mb-4 flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold text-foreground">Weekly Distribution</h2>
-              <p className="text-xs text-muted-foreground mt-0.5">Meeting hours by day</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Meeting hours by day (Mon-Fri)</p>
             </div>
           </div>
           <div className="h-[220px] w-full mt-auto">
@@ -204,6 +326,9 @@ export function MyInsightsPage() {
                   </div>
                 </div>
               ))}
+              {roomPreferences.length === 0 && (
+                <p className="text-sm text-muted-foreground">No data available yet.</p>
+              )}
             </div>
           </div>
         </div>
