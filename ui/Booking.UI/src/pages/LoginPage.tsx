@@ -19,6 +19,7 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { useTheme } from "../hooks/useTheme";
+import { getAvatar } from "../lib/avatar";
 
 export function LoginPage() {
   const [username, setUsername] = useState("");
@@ -71,7 +72,9 @@ export function LoginPage() {
             <div className="flex-1 relative h-14 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden">
               {/* Booking block: "My Booking" (Primary Gradient) */}
               <div className="absolute top-2 bottom-2 left-[10%] w-[40%] bg-gradient-to-r from-indigo-500 to-violet-600 shadow-md ring-1 ring-white/20 rounded-lg px-2.5 flex items-center gap-2 animate-in slide-in-from-left-4 duration-1000 delay-100 hover:scale-[1.02] hover:brightness-110 transition-all cursor-pointer">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm">Y</span>
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm overflow-hidden">
+                  <img src={getAvatar("You")} alt="You" className="h-full w-full object-cover" />
+                </span>
                 <span className="text-[11px] font-bold text-white truncate drop-shadow-sm">You</span>
               </div>
             </div>
@@ -83,7 +86,9 @@ export function LoginPage() {
             <div className="flex-1 relative h-14 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden">
               {/* Booking block: "Someone Else" (Rose Gradient) */}
               <div className="absolute top-2 bottom-2 left-[50%] w-[25%] bg-gradient-to-r from-rose-500 to-red-600 shadow-md ring-1 ring-white/20 rounded-lg px-2.5 flex items-center gap-2 animate-in slide-in-from-left-4 duration-1000 delay-200 hover:scale-[1.02] hover:brightness-110 transition-all cursor-pointer">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm">E</span>
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm overflow-hidden">
+                  <img src={getAvatar("Elena")} alt="Elena" className="h-full w-full object-cover" />
+                </span>
                 <span className="text-[11px] font-bold text-white truncate drop-shadow-sm">Elena R.</span>
               </div>
             </div>
@@ -100,7 +105,9 @@ export function LoginPage() {
               
               {/* Booking block: "Attending" (Amber Gradient) */}
               <div className="absolute top-2 bottom-2 left-[20%] w-[30%] bg-gradient-to-r from-amber-500 to-yellow-500 shadow-md ring-1 ring-white/20 rounded-lg px-2.5 flex items-center gap-2 animate-in slide-in-from-left-4 duration-1000 delay-300 hover:scale-[1.02] hover:brightness-110 transition-all cursor-pointer">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm">M</span>
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm overflow-hidden">
+                  <img src={getAvatar("Marcus")} alt="Marcus" className="h-full w-full object-cover" />
+                </span>
                 <span className="text-[11px] font-bold text-white truncate drop-shadow-sm">Marcus T.</span>
               </div>
             </div>
@@ -112,7 +119,9 @@ export function LoginPage() {
             <div className="flex-1 relative h-14 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden">
               {/* Booking block: "Someone Else" (Rose Gradient) */}
               <div className="absolute top-2 bottom-2 left-[70%] w-[25%] bg-gradient-to-r from-rose-500 to-red-600 shadow-md ring-1 ring-white/20 rounded-lg px-2.5 flex items-center gap-2 animate-in slide-in-from-left-4 duration-1000 delay-500 hover:scale-[1.02] hover:brightness-110 transition-all cursor-pointer">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm">S</span>
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm overflow-hidden">
+                  <img src={getAvatar("Sarah")} alt="Sarah" className="h-full w-full object-cover" />
+                </span>
                 <span className="text-[11px] font-bold text-white truncate drop-shadow-sm">Sarah J.</span>
               </div>
             </div>
@@ -124,7 +133,9 @@ export function LoginPage() {
             <div className="flex-1 relative h-14 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm overflow-hidden">
               {/* Booking block: "Someone Else" (Rose Gradient) */}
               <div className="absolute top-2 bottom-2 left-[0%] w-[20%] bg-gradient-to-r from-rose-500 to-red-600 shadow-md ring-1 ring-white/20 rounded-lg px-2.5 flex items-center gap-2 animate-in slide-in-from-left-4 duration-1000 delay-700 hover:scale-[1.02] hover:brightness-110 transition-all cursor-pointer">
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm">A</span>
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-sm overflow-hidden">
+                  <img src={getAvatar("Alex")} alt="Alex" className="h-full w-full object-cover" />
+                </span>
                 <span className="text-[11px] font-bold text-white truncate drop-shadow-sm">Alex M.</span>
               </div>
             </div>
@@ -132,10 +143,10 @@ export function LoginPage() {
         </div>
 
         <div className="relative z-10 flex items-center gap-3 font-bold text-xl tracking-tight">
-          <div className="flex size-10 items-center justify-center rounded-xl bg-white/20 backdrop-blur-md border border-white/30 text-white shadow-lg">
-            <Calendar className="size-5" />
+          <div className="flex size-10 items-center justify-center transition-transform hover:scale-105">
+            <img src="/logo.svg" alt="BookSpace Logo" className="h-full w-full object-contain" />
           </div>
-          BookingSystem
+          BookSpace
         </div>
 
         <div className="relative z-10 max-w-md">
@@ -147,9 +158,15 @@ export function LoginPage() {
           </p>
           <div className="flex items-center gap-4 text-sm text-white/90">
             <div className="flex -space-x-2">
-              <div className="size-8 rounded-full bg-white/20 backdrop-blur-sm border-2 border-white/30" />
-              <div className="size-8 rounded-full bg-white/30 backdrop-blur-sm border-2 border-white/30" />
-              <div className="size-8 rounded-full bg-white/40 backdrop-blur-sm border-2 border-white/30" />
+              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30">
+                <img src="/avatars/1.jpg" alt="User 1" className="h-full w-full object-cover" />
+              </div>
+              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30">
+                <img src="/avatars/2.jpg" alt="User 2" className="h-full w-full object-cover" />
+              </div>
+              <div className="size-8 rounded-full overflow-hidden border-2 border-white/30">
+                <img src="/avatars/3.jpg" alt="User 3" className="h-full w-full object-cover" />
+              </div>
             </div>
             <p className="drop-shadow-sm font-medium">Trusted by 10,000+ teams worldwide</p>
           </div>

@@ -219,7 +219,7 @@ export function HomePage() {
           <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-violet-500 text-white shadow-lg shadow-primary/20">
             <Calendar className="size-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to BookingSystem</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to BookSpace</h1>
           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
             Reserve conference rooms, review real-time availability, and coordinate meetings seamlessly across your team.
           </p>

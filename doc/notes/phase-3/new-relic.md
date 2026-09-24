@@ -24,6 +24,7 @@ All telemetry ingested by New Relic falls into four primary data types:
 | **Events**  | Individual timestamped records containing rich key-value attributes | `Transaction` (e.g. `POST /api/reservations`), `TransactionError`, alert triggers            |
 | **Logs**    | Structured or unstructured text events correlated with traces       | Serilog JSON output from `Booking.Api` & `Booking.Worker` matching current `trace.id`        |
 | **Traces**  | The distributed execution path of a request through microservices   | Tracing a reservation request from `Booking.UI` → `Booking.Api` → SNS/SQS → `Booking.Worker` |
+|             |                                                                     |                                                                                              |
 
 ---
 

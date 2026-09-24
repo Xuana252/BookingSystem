@@ -17,13 +17,13 @@ export function Layout() {
         <header className="sticky top-0 z-30 flex h-14 shrink-0 items-center justify-between border-b border-violet-800 bg-violet-900 px-4 sm:px-6 shadow-md">
           <div className="flex items-center gap-3">
             <Link to="/" className="group flex items-center gap-2.5 focus:outline-none">
-              <div className="flex size-9 items-center justify-center rounded-xl bg-white/10 text-white shadow-md shadow-black/10 transition-transform group-hover:scale-105 border border-white/20">
-                <Calendar className="size-4.5" />
+              <div className="flex size-9 items-center justify-center transition-transform group-hover:scale-105">
+                <img src="/logo.svg" alt="BookSpace Logo" className="h-full w-full object-contain" />
               </div>
               <div className="flex flex-col">
                 <div className="flex items-center gap-1.5">
                   <span className="text-base font-bold tracking-tight text-white">
-                    Booking<span className="text-violet-300">System</span>
+                    Book<span className="text-violet-300">Space</span>
                   </span>
                 </div>
               </div>

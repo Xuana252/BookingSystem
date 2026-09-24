@@ -1,8 +1,11 @@
 # BookingSystem — Real-Time Room & Facility Booking Platform
 
 A room/facility reservation system: users browse available rooms, book time slots, and see live
-availability updates as other users book or cancel. Built as an OJT learning project, layered on
-.NET, PostgreSQL, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto), SignalR, and React.
+availability updates as other users book or cancel. Recent additions include a drag-and-drop Kanban
+board for maintenance, a team directory with real-time status, dynamic system preferences, an audit
+log viewer, webhooks, and an AI-powered conversational assistant. Built as an OJT learning project,
+layered on .NET (with MediatR CQRS), PostgreSQL, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto),
+SignalR, and React.
 
 See [`doc/plan.md`](doc/plan.md) for the full sprint-by-sprint build plan and current status.
 
@@ -107,7 +110,7 @@ To pick up a code change on an already-running container, add `--force-recreate 
 
 ## Tech stack
 
-- Backend: C# 13, .NET 10, EF Core, Hangfire, AWSSDK (SNS/SQS via Moto), SignalR
-- Frontend: React 19, Vite, TypeScript, Tailwind CSS
+- Backend: C# 13, .NET 10, EF Core, MediatR (CQRS & Caching), Hangfire, AWSSDK (SNS/SQS via Moto), SignalR, OpenAI integration
+- Frontend: React 19, Vite, TypeScript, Tailwind CSS, shadcn/ui
 - Infra: PostgreSQL, Redis, Moto (AWS emulator), Splunk + Fluent Bit (log shipping)
 - Testing: xUnit, WireMock.Net
