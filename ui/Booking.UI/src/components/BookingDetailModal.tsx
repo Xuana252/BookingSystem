@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Building2, Calendar, Clock, Loader2, MapPin, Trash2, User, Users, X } from "lucide-react";
 import { Modal } from "./Modal";
 import { ReservationStatus, type Reservation, type Room } from "../lib/types";
@@ -23,9 +24,28 @@ function formatTime(iso: string): string {
 
 export function BookingDetailModal({ reservation, room, isMine, isCancelling, isCheckingIn, onCancel, onCheckIn, onClose }: BookingDetailModalProps) {
   const currentUserId = getCurrentUserId();
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 30000);
+    return () => clearInterval(timer);
+  }, []);
+
   const isAttending = !isMine && Boolean(reservation.attendees?.some((a) => a.userId === currentUserId));
-  const isEnded = new Date(reservation.endTime) < new Date();
+  const isEnded = new Date(reservation.endTime) < currentTime;
   const isCancelled = reservation.status === ReservationStatus.Cancelled;
+  
+  const start = new Date(reservation.startTime);
+  const end = new Date(reservation.endTime);
+  const isOngoing = currentTime >= start && currentTime <= end && !isCancelled;
+  
+  let progress = 0;
+  if (isOngoing) {
+    const totalDuration = end.getTime() - start.getTime();
+    const elapsed = currentTime.getTime() - start.getTime();
+    progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+  }
+
   return (
     <Modal onClose={onClose}>
       <div className="flex items-center justify-between border-b border-border pb-3">
@@ -62,14 +82,29 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, is
           </div>
         </div>
 
-        <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/60 p-3">
-          <Clock className="size-4 text-primary shrink-0" />
-          <div className="text-xs">
-            <div className="font-semibold text-foreground">
-              {formatTime(reservation.startTime)} – {formatTime(reservation.endTime)}
+        <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/60 p-3">
+          <div className="flex items-center gap-3">
+            <Clock className="size-4 text-primary shrink-0" />
+            <div className="text-xs w-full">
+              <div className="flex justify-between items-center w-full">
+                <span className="font-semibold text-foreground">
+                  {formatTime(reservation.startTime)} – {formatTime(reservation.endTime)}
+                </span>
+                {isOngoing && (
+                  <span className="font-bold text-emerald-600 dark:text-emerald-400">{Math.round(progress)}%</span>
+                )}
+              </div>
+              <div className="text-muted-foreground">{isOngoing ? "In Progress" : "Reserved Time Slot"}</div>
             </div>
-            <div className="text-muted-foreground">Reserved Time Slot</div>
           </div>
+          {isOngoing && (
+            <div className="h-1.5 w-full mt-1 overflow-hidden rounded-full bg-emerald-500/20">
+              <div 
+                className="h-full bg-emerald-500 transition-all duration-1000 ease-linear"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+          )}
         </div>
 
         {room?.location && (

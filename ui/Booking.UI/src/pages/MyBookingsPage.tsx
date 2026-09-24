@@ -21,6 +21,12 @@ export function MyBookingsPage() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [checkingInId, setCheckingInId] = useState<string | null>(null);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 30000); // Update every 30s
+    return () => clearInterval(timer);
+  }, []);
 
   const loadData = async () => {
     try {
@@ -95,21 +101,28 @@ export function MyBookingsPage() {
       </div>
     );
   }
-
-  const now = new Date();
   
   // Basic filtering for tabs
-  const upcoming = reservations.filter(r => new Date(r.endTime) >= now && r.status !== ReservationStatus.Cancelled);
-  const past = reservations.filter(r => new Date(r.endTime) < now || r.status === ReservationStatus.Cancelled);
+  const upcoming = reservations.filter(r => new Date(r.endTime) >= currentTime && r.status !== ReservationStatus.Cancelled);
+  const past = reservations.filter(r => new Date(r.endTime) < currentTime || r.status === ReservationStatus.Cancelled);
 
   const renderBookingCard = (reservation: Reservation, isHero = false) => {
     const room = rooms.find(r => r.id === reservation.roomId);
     const isMine = reservation.userId === currentUserId;
     const start = new Date(reservation.startTime);
     const end = new Date(reservation.endTime);
-    const isToday = isSameLocalDay(start, now);
+    const isToday = isSameLocalDay(start, currentTime);
     const isPast = activeTab === "past";
     const isCancelled = reservation.status === ReservationStatus.Cancelled;
+    
+    // Check if it is currently happening
+    const isOngoing = currentTime >= start && currentTime <= end && !isCancelled;
+    let progress = 0;
+    if (isOngoing) {
+       const totalDuration = end.getTime() - start.getTime();
+       const elapsed = currentTime.getTime() - start.getTime();
+       progress = Math.min(100, Math.max(0, (elapsed / totalDuration) * 100));
+    }
     
     // Avatar placeholders
     const avatars = [
@@ -123,7 +136,7 @@ export function MyBookingsPage() {
       <div 
         key={reservation.id} 
         onClick={() => setSelectedReservation(reservation)}
-        className={`group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/30 cursor-pointer ${isCancelled ? 'opacity-60' : ''}`}
+        className={`group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/30 cursor-pointer ${isCancelled ? 'opacity-60' : ''} ${isOngoing ? 'ring-1 ring-emerald-500/50' : ''}`}
       >
         <div className="flex items-start justify-between gap-4 mb-3">
           <div>
@@ -139,10 +152,15 @@ export function MyBookingsPage() {
             </div>
           </div>
           
-          <div className="flex flex-col items-end gap-2">
+          <div className="flex flex-col items-end gap-2 shrink-0">
             {isCancelled ? (
               <span className="inline-flex items-center rounded-md bg-rose-50 px-2 py-1 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/10 dark:bg-rose-500/10 dark:text-rose-400 dark:ring-rose-500/20">
                 Cancelled
+              </span>
+            ) : isOngoing ? (
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/10 dark:bg-emerald-500/10 dark:text-emerald-400 dark:ring-emerald-500/20 animate-in fade-in">
+                <span className="size-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Live Now
               </span>
             ) : isToday ? (
               <span className="inline-flex items-center rounded-md bg-primary/10 px-2 py-1 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
@@ -152,10 +170,26 @@ export function MyBookingsPage() {
           </div>
         </div>
         
-        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-5">
+        <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-4">
           <MapPin className="size-3.5" />
           <span className="truncate">{room?.location ?? "Location N/A"}</span>
         </div>
+
+        {/* Live Reservation Progress Bar */}
+        {isOngoing && (
+          <div className="mb-4 space-y-1.5 animate-in fade-in slide-in-from-top-2">
+             <div className="flex justify-between text-[10px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+               <span>Meeting Progress</span>
+               <span>{Math.round(progress)}%</span>
+             </div>
+             <div className="h-1.5 w-full overflow-hidden rounded-full bg-emerald-500/20">
+               <div 
+                 className="h-full bg-emerald-500 transition-all duration-1000 ease-linear"
+                 style={{ width: `${progress}%` }}
+               />
+             </div>
+          </div>
+        )}
         
         <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
           <div className="flex items-center gap-2">
