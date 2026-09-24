@@ -4,6 +4,7 @@ import { LogOut, Monitor, Moon, Sun, User } from "lucide-react";
 import { clearToken, getCurrentUsername, isAdmin } from "../lib/auth";
 import { useTheme } from "../hooks/useTheme";
 import { Badge } from "./ui/badge";
+import { getAvatar } from "../lib/avatar";
 
 export function UserMenu() {
   const navigate = useNavigate();
@@ -35,19 +36,19 @@ export function UserMenu() {
       <button
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Account menu"
-        className="flex size-8.5 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-violet-500 p-0.5 text-white shadow-sm ring-2 ring-primary/20 transition-all hover:ring-primary/40 focus:outline-none"
+        className="flex size-8.5 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-violet-500 p-0.5 text-white shadow-sm ring-2 ring-primary/20 transition-all hover:ring-primary/40 focus:outline-none overflow-hidden"
       >
-        <span className="flex size-full items-center justify-center rounded-full bg-card text-xs font-bold text-foreground">
-          {username ? username[0]!.toUpperCase() : "?"}
-        </span>
+        <div className="flex size-full items-center justify-center rounded-full bg-white overflow-hidden">
+          <img src={getAvatar(username)} alt={username || "User"} className="h-full w-full object-cover" />
+        </div>
       </button>
 
       {isOpen && (
         <div className="absolute right-0 z-50 mt-2 w-60 animate-in fade-in-0 zoom-in-95 duration-100 rounded-xl border border-border bg-popover p-1.5 text-popover-foreground shadow-2xl">
           {/* User profile header */}
           <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-border">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <User className="size-4" />
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-white overflow-hidden">
+              <img src={getAvatar(username)} alt={username || "User"} className="h-full w-full object-cover" />
             </div>
             <div className="min-w-0 flex-1">
               <div className="truncate text-sm font-semibold text-foreground">{username ?? "Account"}</div>

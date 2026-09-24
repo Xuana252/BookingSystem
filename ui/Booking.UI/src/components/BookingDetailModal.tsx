@@ -4,6 +4,7 @@ import { ReservationStatus, type Reservation, type Room } from "../lib/types";
 import { getCurrentUserId } from "../lib/auth";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
+import { getAvatar } from "../lib/avatar";
 
 export interface BookingDetailModalProps {
   reservation: Reservation;
@@ -84,11 +85,11 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, is
         <div className="flex items-center justify-between rounded-lg border border-border bg-muted/60 p-3">
           <div className="flex items-center gap-2.5">
             <div
-              className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-xs ${
+              className={`flex size-7 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-xs overflow-hidden ${
                 isMine ? "bg-primary" : "bg-rose-500"
               }`}
             >
-              {reservation.username[0]?.toUpperCase() ?? <User className="size-3.5" />}
+              <img src={getAvatar(reservation.username)} alt={reservation.username} className="h-full w-full object-cover" />
             </div>
             <div className="text-xs">
               <div className="font-semibold text-foreground">{reservation.username}</div>
@@ -128,13 +129,13 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, is
                     }`}
                   >
                     <span
-                      className={`flex size-4 items-center justify-center rounded-full text-[9px] font-bold ${
+                      className={`flex size-4 items-center justify-center rounded-full text-[9px] font-bold overflow-hidden ${
                         isCurrent
                           ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
                           : "bg-primary/10 text-primary"
                       }`}
                     >
-                      {attendee.username[0]?.toUpperCase() ?? "U"}
+                      <img src={getAvatar(attendee.username)} alt={attendee.username} className="h-full w-full object-cover" />
                     </span>
                     <span>{attendee.username}</span>
                     {isCurrent && (

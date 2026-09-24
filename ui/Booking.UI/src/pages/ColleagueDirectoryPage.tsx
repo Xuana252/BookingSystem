@@ -5,6 +5,7 @@ import { Button } from "../components/ui/button";
 import { getDirectory } from "../lib/api";
 import type { ColleagueDirectoryItem } from "../lib/types";
 import { Link } from "react-router-dom";
+import { getAvatar } from "../lib/avatar";
 
 export function ColleagueDirectoryPage() {
   const [colleagues, setColleagues] = useState<ColleagueDirectoryItem[]>([]);
@@ -88,8 +89,8 @@ export function ColleagueDirectoryPage() {
                 <tr key={colleague.id} className="hover:bg-muted/30 transition-colors group">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs ring-1 ring-primary/20 shadow-sm group-hover:scale-105 transition-transform">
-                        {colleague.username[0]?.toUpperCase() ?? <User className="size-4" />}
+                      <div className="flex size-9 items-center justify-center rounded-full bg-white ring-1 ring-primary/20 shadow-sm group-hover:scale-105 transition-transform overflow-hidden">
+                        <img src={getAvatar(colleague.username)} alt={colleague.username} className="h-full w-full object-cover" />
                       </div>
                       <span className="font-semibold text-foreground">{colleague.username}</span>
                     </div>

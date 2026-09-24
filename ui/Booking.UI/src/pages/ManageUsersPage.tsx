@@ -35,6 +35,7 @@ import { Badge } from "../components/ui/badge";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { UserModal } from "../components/UserModal";
+import { getAvatar } from "../lib/avatar";
 
 type RoleFilter = "all" | "admin" | "employee";
 type StatusFilter = "all" | "active" | "inactive";
@@ -409,11 +410,11 @@ export function ManageUsersPage() {
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-3">
                           <div
-                            className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-xs ${
+                            className={`flex size-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white shadow-xs overflow-hidden ${
                               userIsAdmin ? "bg-indigo-600" : "bg-primary"
                             }`}
                           >
-                            {user.username[0]?.toUpperCase() ?? "U"}
+                            <img src={getAvatar(user.username)} alt={user.username} className="h-full w-full object-cover" />
                           </div>
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5 font-semibold text-foreground">

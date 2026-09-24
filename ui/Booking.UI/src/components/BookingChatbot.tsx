@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   Bot,
   Building2,
@@ -18,6 +18,7 @@ import { createReservation, getUsers, cancelReservation } from "../lib/api";
 import { apiClient } from "../lib/apiClient";
 import type { UserSummary } from "../lib/types";
 import { getCurrentUserId } from "../lib/auth";
+import { getAvatar } from "../lib/avatar";
 
 interface RecommendedRoom {
   id: string;
@@ -636,7 +637,7 @@ export function BookingChatbot() {
                                 type="button"
                                 disabled={isFull}
                                 onClick={() => toggleAttendeeInPending(msg.id, user.id)}
-                                className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium transition-all ${
+                                className={`inline-flex items-center gap-1.5 rounded-lg pr-2.5 py-0.5 text-xs font-medium transition-all ${
                                   isSelected
                                     ? "bg-primary text-primary-foreground shadow-xs ring-2 ring-primary/30"
                                     : isFull
@@ -644,7 +645,11 @@ export function BookingChatbot() {
                                     : "border border-border bg-muted/60 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
                                 }`}
                               >
-                                {isSelected ? <Check className="size-3" /> : <UserPlus className="size-3" />}
+                                {isSelected ? (
+                                  <div className="flex size-5 items-center justify-center rounded-md bg-white/20 ml-0.5"><Check className="size-3" /></div>
+                                ) : (
+                                  <img src={getAvatar(user.username)} alt={user.username} className="size-5 rounded-md object-cover ml-0.5" />
+                                )}
                                 <span>{user.username}</span>
                               </button>
                             );

@@ -8,6 +8,7 @@ import { BookingDetailModal } from "../components/BookingDetailModal";
 import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import { isSameLocalDay } from "../lib/dates";
+import { getAvatar } from "../lib/avatar";
 
 export function MyBookingsPage() {
   const currentUserId = getCurrentUserId();
@@ -175,9 +176,9 @@ export function MyBookingsPage() {
                <div 
                  key={i} 
                  title={`${a.name} ${a.isHost ? '(Host)' : ''}`}
-                 className={`flex size-6 items-center justify-center rounded-full border-2 border-card text-[9px] font-bold ${a.isHost ? 'bg-primary text-primary-foreground z-10' : 'bg-muted text-muted-foreground z-0'}`}
+                 className={`flex size-6 items-center justify-center rounded-full border-2 border-card text-[9px] font-bold overflow-hidden ${a.isHost ? 'bg-primary text-primary-foreground z-10' : 'bg-muted text-muted-foreground z-0'}`}
                >
-                  {a.name.substring(0, 2).toUpperCase()}
+                  <img src={getAvatar(a.name)} alt={a.name} className="h-full w-full object-cover" />
                </div>
             ))}
             {extraAvatars > 0 && (

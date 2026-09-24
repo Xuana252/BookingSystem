@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { DoorClosed, Users, Wrench } from "lucide-react";
 import { ReservationStatus, type Reservation, type Room } from "../lib/types";
 import { BUSINESS_HOURS_END, BUSINESS_HOURS_START, hourLabel, isSameLocalDay } from "../lib/dates";
+import { getAvatar } from "../lib/avatar";
 
 const CALENDAR_START_HOUR = BUSINESS_HOURS_START;
 const CALENDAR_END_HOUR = BUSINESS_HOURS_END;
@@ -313,10 +314,10 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
                       style={{ left, width }}
                     >
                       <span
-                        className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-2xs"
+                        className="flex size-4.5 shrink-0 items-center justify-center rounded-full bg-black/20 text-[10px] font-bold text-white shadow-2xs overflow-hidden"
                         aria-hidden="true"
                       >
-                        {reservation.username[0]?.toUpperCase() ?? "?"}
+                        <img src={getAvatar(reservation.username)} alt={reservation.username} className="h-full w-full object-cover" />
                       </span>
                       <span className="truncate font-medium">{isMine ? "You" : reservation.username}</span>
                       {isAttending && (
