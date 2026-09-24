@@ -146,6 +146,22 @@ export function BookingFormModal({
         </button>
       </div>
 
+      {/* Progress Bar */}
+      <div className="mt-4 space-y-1.5 px-1">
+        <div className="flex justify-between text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+          <span>Booking Progress</span>
+          <span className={roomId && date && duration ? "text-emerald-500" : "text-primary"}>
+            {Math.round((roomId ? 33 : 0) + (date ? 33 : 0) + (duration ? 34 : 0))}%
+          </span>
+        </div>
+        <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted shadow-inner">
+          <div 
+            className={`h-full transition-all duration-500 ease-out ${roomId && date && duration ? "bg-emerald-500" : "bg-gradient-to-r from-primary to-violet-500"}`}
+            style={{ width: `${Math.round((roomId ? 33 : 0) + (date ? 33 : 0) + (duration ? 34 : 0))}%` }}
+          />
+        </div>
+      </div>
+
       <form onSubmit={onSubmit} className="mt-4 space-y-4">
         {formError && (
           <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-2.5 text-xs text-destructive">
@@ -344,9 +360,13 @@ export function BookingFormModal({
         <div className="pt-2">
           <Button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !(roomId && date && duration)}
             size="lg"
-            className="w-full gap-2 bg-gradient-to-r from-primary to-indigo-600 font-semibold text-primary-foreground shadow-sm shadow-primary/25 hover:opacity-95"
+            className={`w-full gap-2 font-semibold shadow-sm transition-all duration-300 ${
+              roomId && date && duration
+                ? "bg-emerald-600 text-white shadow-emerald-600/25 hover:bg-emerald-500 hover:shadow-md hover:-translate-y-0.5"
+                : "bg-gradient-to-r from-primary to-indigo-600 text-primary-foreground opacity-50 cursor-not-allowed"
+            }`}
           >
             {isSubmitting ? (
               <>
@@ -354,7 +374,7 @@ export function BookingFormModal({
                 <span>Confirming Booking...</span>
               </>
             ) : (
-              <span>Confirm Booking</span>
+              <span>{roomId && date && duration ? "Confirm Booking" : "Complete Required Fields"}</span>
             )}
           </Button>
         </div>
