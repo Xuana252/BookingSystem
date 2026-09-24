@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Monitor, Moon, Sun, User } from "lucide-react";
+import { LogOut, Monitor, Moon, Sun, User, Calendar, Sliders, LifeBuoy } from "lucide-react";
 import { clearToken, getCurrentUsername, isAdmin } from "../lib/auth";
 import { useTheme } from "../hooks/useTheme";
 import { Badge } from "./ui/badge";
@@ -36,11 +36,12 @@ export function UserMenu() {
       <button
         onClick={() => setIsOpen((open) => !open)}
         aria-label="Account menu"
-        className="flex size-8.5 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-violet-500 p-0.5 text-white shadow-sm ring-2 ring-primary/20 transition-all hover:ring-primary/40 focus:outline-none overflow-hidden"
+        className="relative flex size-8.5 items-center justify-center rounded-full bg-gradient-to-tr from-primary to-violet-500 p-0.5 text-white shadow-sm ring-2 ring-primary/20 transition-all hover:ring-primary/40 focus:outline-none"
       >
         <div className="flex size-full items-center justify-center rounded-full bg-white overflow-hidden">
           <img src={getAvatar(username)} alt={username || "User"} className="h-full w-full object-cover" />
         </div>
+        <span className="absolute -bottom-0.5 -right-0.5 size-3 rounded-full bg-emerald-500 border-2 border-background z-10" title="Online" />
       </button>
 
       {isOpen && (
@@ -56,6 +57,37 @@ export function UserMenu() {
                 {admin ? "Administrator" : "Employee"}
               </Badge>
             </div>
+          </div>
+
+          {/* Quick Links */}
+          <div className="px-1 py-1.5 border-b border-border">
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate("/my-bookings");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Calendar className="size-3.5" />
+              <span>My Bookings</span>
+            </button>
+            <button
+              onClick={() => {
+                setIsOpen(false);
+                navigate("/preferences");
+              }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Sliders className="size-3.5" />
+              <span>My Preferences</span>
+            </button>
+            <button
+              onClick={() => setIsOpen(false)}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <LifeBuoy className="size-3.5" />
+              <span>Help & Support</span>
+            </button>
           </div>
 
           {/* Theme switcher */}
