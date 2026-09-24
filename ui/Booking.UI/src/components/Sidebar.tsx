@@ -54,6 +54,10 @@ export function Sidebar() {
               <Sliders className="size-4 shrink-0 transition-transform group-hover:scale-110" />
               <span>My Preferences</span>
             </NavLink>
+            <NavLink to="/insights" className={navItemClass}>
+              <PieChart className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+              <span>My Insights</span>
+            </NavLink>
             <button
               type="button"
               onClick={() =>
