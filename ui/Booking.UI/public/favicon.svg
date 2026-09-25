@@ -1,18 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 105 105">
   <defs>
-    <style>
-      .solid { fill: #6366f1; }
-      .outline { stroke: #6366f1; }
-      @media (prefers-color-scheme: dark) {
-        .solid { fill: #818cf8; }
-        .outline { stroke: #818cf8; }
-      }
-    </style>
     <mask id="cutout">
       <rect x="0" y="0" width="105" height="105" fill="white" />
       <rect x="33" y="8" width="62" height="64" fill="black" />
     </mask>
   </defs>
-  <rect x="15" y="35" width="55" height="55" class="solid" mask="url(#cutout)" />
-  <rect x="40" y="15" width="50" height="50" fill="none" class="outline" stroke-width="6" />
+  
+  <!-- Solid white rounded background for guaranteed contrast -->
+  <rect x="0" y="0" width="105" height="105" rx="24" fill="#ffffff" />
+  
+  <!-- Logo in primary indigo color -->
+  <rect x="15" y="35" width="55" height="55" fill="#6366f1" mask="url(#cutout)" />
+  <rect x="40" y="15" width="50" height="50" fill="none" stroke="#6366f1" stroke-width="6" />
 </svg>
