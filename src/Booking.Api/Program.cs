@@ -28,6 +28,11 @@ builder.Host.UseSerilog((context, config) => config
 builder.Services.AddControllers(options => options.Filters.Add<FluentValidationActionFilter>());
 builder.Services.AddHealthChecks();
 
+builder.Services.AddStackExchangeRedisCache(options => 
+{
+    options.Configuration = builder.Configuration.GetSection("Redis")["ConnectionString"] ?? "localhost:6379";
+});
+
 // Booking.UI is served from a different origin (Vite dev server or the dockerized nginx build
 // both land on localhost:5173 — see docker-compose.yml's ui service) than the Api (5133/8080),
 // so browser fetch() calls need an explicit CORS policy or they're blocked client-side even
@@ -134,3 +139,5 @@ if (app.Environment.IsDevelopment())
 }
 
 app.Run();
+
+public partial class Program { }
