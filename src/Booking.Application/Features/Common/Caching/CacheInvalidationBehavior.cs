@@ -1,5 +1,5 @@
 using MediatR;
-using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 
 namespace Booking.Application.Features.Common.Caching;
@@ -7,10 +7,10 @@ namespace Booking.Application.Features.Common.Caching;
 public class CacheInvalidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
 {
-    private readonly IMemoryCache _cache;
+    private readonly IDistributedCache _cache;
     private readonly ILogger<CacheInvalidationBehavior<TRequest, TResponse>> _logger;
 
-    public CacheInvalidationBehavior(IMemoryCache cache, ILogger<CacheInvalidationBehavior<TRequest, TResponse>> logger)
+    public CacheInvalidationBehavior(IDistributedCache cache, ILogger<CacheInvalidationBehavior<TRequest, TResponse>> logger)
     {
         _cache = cache;
         _logger = logger;
@@ -24,22 +24,22 @@ public class CacheInvalidationBehavior<TRequest, TResponse> : IPipelineBehavior<
         // Check if the request implements either of the invalidation interfaces.
         if (request is ICacheInvalidatorCommand invalidator)
         {
-            InvalidateKeys(invalidator.CacheKeysToInvalidate);
+            await InvalidateKeysAsync(invalidator.CacheKeysToInvalidate, cancellationToken);
         }
         else if (request is ICacheInvalidatorCommand<TResponse> invalidatorWithResponse)
         {
-            InvalidateKeys(invalidatorWithResponse.CacheKeysToInvalidate);
+            await InvalidateKeysAsync(invalidatorWithResponse.CacheKeysToInvalidate, cancellationToken);
         }
 
         return response;
     }
 
-    private void InvalidateKeys(string[] keys)
+    private async Task InvalidateKeysAsync(string[] keys, CancellationToken cancellationToken)
     {
         foreach (var key in keys)
         {
             _logger.LogInformation("Invalidating cache key: {CacheKey}", key);
-            _cache.Remove(key);
+            await _cache.RemoveAsync(key, cancellationToken);
         }
     }
 }

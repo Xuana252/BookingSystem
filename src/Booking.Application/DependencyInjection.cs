@@ -23,7 +23,7 @@ public static class DependencyInjection
     /// </summary>
     public static IServiceCollection AddBookingApplication(this IServiceCollection services)
     {
-        services.AddMemoryCache();
+        services.AddDistributedMemoryCache();
         
         services.AddMediatR(cfg => {
             cfg.RegisterServicesFromAssembly(typeof(DependencyInjection).Assembly);
