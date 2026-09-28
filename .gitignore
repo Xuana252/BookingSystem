@@ -509,3 +509,9 @@ next-env.d.ts
 ## Local secrets
 #####################
 appsettings.*.local.json
+
+#####################
+## Playwright
+#####################
+playwright-report/
+test-results/
