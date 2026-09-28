@@ -4,31 +4,48 @@ import {
   AlertCircle,
   ArrowRight,
   Calendar,
+  CalendarDays,
   ChevronLeft,
   ChevronRight,
   Filter,
   Info,
+  LayoutGrid,
+  LayoutList,
   Loader2,
   Plus,
   X,
 } from "lucide-react";
 import { getCurrentUserId, isAuthenticated } from "../lib/auth";
 import { ApiError } from "../lib/apiClient";
-import { cancelReservation, createReservation, getReservations, getRooms, checkInReservation } from "../lib/api";
+import {
+  cancelReservation,
+  createReservation,
+  getReservations,
+  getRooms,
+  checkInReservation,
+} from "../lib/api";
 import type { Reservation, Room } from "../lib/types";
-import { addDays, combineDateAndTime, hourToTimeValue, startOfDay, toDateInputValue } from "../lib/dates";
+import {
+  addDays,
+  combineDateAndTime,
+  hourToTimeValue,
+  startOfDay,
+  toDateInputValue,
+} from "../lib/dates";
 import { useReservationHub } from "../hooks/useReservationHub";
 import { RoomCalendar } from "../components/RoomCalendar";
 import { WeekCalendar } from "../components/WeekCalendar";
 import { MonthCalendar } from "../components/MonthCalendar";
 import { StatsPanel } from "../components/StatsPanel";
+import { MiniCalendar } from "../components/MiniCalendar";
 import { BookingFormModal } from "../components/BookingFormModal";
 import { BookingDetailModal } from "../components/BookingDetailModal";
 import { RoomDetailModal } from "../components/RoomDetailModal";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
+import { AgendaView } from "../components/AgendaView";
 
-type ViewMode = "day" | "week" | "month";
+type ViewMode = "day" | "week" | "month" | "agenda";
 
 export function HomePage() {
   const authenticated = isAuthenticated();
@@ -39,9 +56,11 @@ export function HomePage() {
   const [reservations, setReservations] = useState<Reservation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => startOfDay(new Date()));
+  const [selectedDate, setSelectedDate] = useState(() =>
+    startOfDay(new Date()),
+  );
   const [viewMode, setViewMode] = useState<ViewMode>("day");
-  
+
   const [searchQuery, setSearchQuery] = useState("");
   const [minCapacity, setMinCapacity] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -55,14 +74,18 @@ export function HomePage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
+  const [selectedReservation, setSelectedReservation] =
+    useState<Reservation | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
-  
+
   const [selectedRoom, setSelectedRoom] = useState<Room | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      const [roomsResult, reservationsResult] = await Promise.all([getRooms(true), getReservations()]);
+      const [roomsResult, reservationsResult] = await Promise.all([
+        getRooms(true),
+        getReservations(),
+      ]);
 
       // Ensure any room referenced by an existing reservation is present in rooms, even if
       // deactivated or omitted by an older API response, so its schedule and reservations
@@ -86,9 +109,9 @@ export function HomePage() {
         // ignore storage errors
       }
 
-      const missingRoomIds = [...new Set(reservationsResult.map((r) => r.roomId))].filter(
-        (id) => !knownRoomIds.has(id),
-      );
+      const missingRoomIds = [
+        ...new Set(reservationsResult.map((r) => r.roomId)),
+      ].filter((id) => !knownRoomIds.has(id));
       const allRooms: Room[] = [
         ...roomsResult,
         ...missingRoomIds.map((id) => ({
@@ -107,7 +130,11 @@ export function HomePage() {
       setReservations(reservationsResult);
       setLoadError(null);
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not load rooms and reservations.");
+      setLoadError(
+        err instanceof ApiError
+          ? err.message
+          : "Could not load rooms and reservations.",
+      );
     }
   }, []);
 
@@ -117,7 +144,10 @@ export function HomePage() {
   }, [loadData]);
 
   // Covers changes made from another tab/user too, not just this one's own actions below.
-  useEffect(() => onRoomAvailabilityChanged(() => loadData()), [onRoomAvailabilityChanged, loadData]);
+  useEffect(
+    () => onRoomAvailabilityChanged(() => loadData()),
+    [onRoomAvailabilityChanged, loadData],
+  );
 
   // Instant refresh when AI chatbot completes a booking
   useEffect(() => {
@@ -125,10 +155,15 @@ export function HomePage() {
       loadData();
     }
     window.addEventListener("refresh-reservations", handleRefresh);
-    return () => window.removeEventListener("refresh-reservations", handleRefresh);
+    return () =>
+      window.removeEventListener("refresh-reservations", handleRefresh);
   }, [loadData]);
 
-  function openBookingForm(prefillRoomId?: string, prefillStartHour?: number, prefillEndHour?: number) {
+  function openBookingForm(
+    prefillRoomId?: string,
+    prefillStartHour?: number,
+    prefillEndHour?: number,
+  ) {
     if (prefillRoomId) {
       const targetRoom = rooms.find((r) => r.id === prefillRoomId);
       if (targetRoom && !targetRoom.isActive) {
@@ -137,8 +172,12 @@ export function HomePage() {
     }
     setRoomId(prefillRoomId ?? "");
     setBookingDate(toDateInputValue(selectedDate));
-    setStartTime(prefillStartHour !== undefined ? hourToTimeValue(prefillStartHour) : "");
-    setEndTime(prefillEndHour !== undefined ? hourToTimeValue(prefillEndHour) : "");
+    setStartTime(
+      prefillStartHour !== undefined ? hourToTimeValue(prefillStartHour) : "",
+    );
+    setEndTime(
+      prefillEndHour !== undefined ? hourToTimeValue(prefillEndHour) : "",
+    );
     setAttendeeUserIds([]);
     setFormError(null);
     setIsFormOpen(true);
@@ -173,12 +212,17 @@ export function HomePage() {
         roomId,
         startTime: combineDateAndTime(bookingDate, startTime).toISOString(),
         endTime: combineDateAndTime(bookingDate, endTime).toISOString(),
-        attendeeUserIds: attendeeUserIds.length > 0 ? attendeeUserIds : undefined,
+        attendeeUserIds:
+          attendeeUserIds.length > 0 ? attendeeUserIds : undefined,
       });
       setIsFormOpen(false);
       await loadData();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Something went wrong. Please try again.");
+      setFormError(
+        err instanceof ApiError
+          ? err.message
+          : "Something went wrong. Please try again.",
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -191,7 +235,11 @@ export function HomePage() {
       setSelectedReservation(null);
       await loadData();
     } catch (err) {
-      setLoadError(err instanceof ApiError ? err.message : "Could not cancel that reservation.");
+      setLoadError(
+        err instanceof ApiError
+          ? err.message
+          : "Could not cancel that reservation.",
+      );
     } finally {
       setCancellingId(null);
     }
@@ -206,7 +254,9 @@ export function HomePage() {
       setSelectedReservation(null);
       await loadData();
     } catch (err) {
-      setFormError(err instanceof ApiError ? err.message : "Could not check in.");
+      setFormError(
+        err instanceof ApiError ? err.message : "Could not check in.",
+      );
     } finally {
       setCheckingInId(null);
     }
@@ -219,9 +269,12 @@ export function HomePage() {
           <div className="mx-auto mb-4 flex size-14 items-center justify-center rounded-2xl bg-gradient-to-tr from-primary to-violet-500 text-white shadow-lg shadow-primary/20">
             <Calendar className="size-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Welcome to BookSpace</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">
+            Welcome to BookSpace
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-            Reserve conference rooms, review real-time availability, and coordinate meetings seamlessly across your team.
+            Reserve conference rooms, review real-time availability, and
+            coordinate meetings seamlessly across your team.
           </p>
           <div className="mt-6 flex justify-center">
             <Link
@@ -239,83 +292,102 @@ export function HomePage() {
 
   const dateLabel =
     viewMode === "day"
-      ? selectedDate.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })
+      ? selectedDate.toLocaleDateString(undefined, {
+          weekday: "short",
+          month: "short",
+          day: "numeric",
+        })
       : viewMode === "week"
-      ? `Week of ${selectedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
-      : selectedDate.toLocaleDateString(undefined, { month: "long", year: "numeric" });
+        ? `Week of ${selectedDate.toLocaleDateString(undefined, { month: "short", day: "numeric" })}`
+        : selectedDate.toLocaleDateString(undefined, {
+            month: "long",
+            year: "numeric",
+          });
   const isToday = selectedDate.getTime() === startOfDay(new Date()).getTime();
 
   const filteredRooms = rooms.filter((r) => {
-    if (searchQuery && !r.name.toLowerCase().includes(searchQuery.toLowerCase())) return false;
+    if (
+      searchQuery &&
+      !r.name.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+      return false;
     if (minCapacity && r.capacity < parseInt(minCapacity, 10)) return false;
     return true;
   });
 
   return (
     <div className="space-y-4">
-      {/* Modern Control Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card p-3.5 shadow-sm">
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Date navigator */}
-          <div className="flex items-center rounded-lg border border-border bg-muted p-0.5">
-            <button
-              onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? -1 : viewMode === "week" ? -7 : -30))}
-              aria-label="Previous"
-              className="flex size-7.5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus:outline-none"
-            >
-              <ChevronLeft className="size-4" />
-            </button>
-            <div className="flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-foreground">
-              <Calendar className="size-3.5 text-primary" />
-              <span>{dateLabel}</span>
-            </div>
-            <button
-              onClick={() => setSelectedDate((d) => addDays(d, viewMode === "day" ? 1 : viewMode === "week" ? 7 : 30))}
-              aria-label="Next"
-              className="flex size-7.5 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-card hover:text-foreground focus:outline-none"
-            >
-              <ChevronRight className="size-4" />
-            </button>
-          </div>
+      {/* Outlook-style Ribbon Header */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 border-b border-border/60 bg-card p-2   shadow-sm rounded-t-lg ">
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Primary CTA (Left aligned like Outlook) */}
+          <Button
+            onClick={() => openBookingForm()}
+            className="gap-2 bg-[#0f6cbd] hover:bg-[#0f6cbd]/90 text-white shadow-none h-8 px-3 rounded-md"
+          >
+            <Plus className="size-4" />
+            <span className="font-semibold text-sm">New event</span>
+          </Button>
 
-          {!isToday && (
+          <div className="h-5 w-px bg-border hidden sm:block" />
+
+          {/* Date controls */}
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setSelectedDate(startOfDay(new Date()))}
-              className="rounded-lg border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="rounded text-sm font-medium text-foreground hover:bg-muted px-2.5 py-1.5 transition-colors"
             >
               Today
             </button>
-          )}
-
-          {/* View mode segmented switcher */}
-          <div className="flex rounded-lg border border-border bg-muted p-0.5">
-            {(["day", "week", "month"] as const).map((mode) => (
+            <div className="flex items-center ml-1">
               <button
-                key={mode}
-                onClick={() => setViewMode(mode)}
-                className={`rounded-md px-3 py-1 text-xs font-medium capitalize transition-all ${
-                  viewMode === mode
-                    ? "bg-card text-foreground font-semibold shadow-xs"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                onClick={() =>
+                  setSelectedDate((d) =>
+                    addDays(
+                      d,
+                      viewMode === "day" ? -1 : viewMode === "week" ? -7 : -30,
+                    ),
+                  )
+                }
+                aria-label="Previous"
+                className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none"
               >
-                {mode}
+                <ChevronLeft className="size-4" />
               </button>
-            ))}
+              <button
+                onClick={() =>
+                  setSelectedDate((d) =>
+                    addDays(
+                      d,
+                      viewMode === "day" ? 1 : viewMode === "week" ? 7 : 30,
+                    ),
+                  )
+                }
+                aria-label="Next"
+                className="flex size-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </div>
+            <span className="ml-2 text-sm font-semibold text-foreground min-w-[130px]">
+              {dateLabel}
+            </span>
           </div>
+        </div>
 
+        <div className="flex flex-wrap items-center gap-3">
           {/* Filter Popover Toggle */}
           <div className="relative">
             <button
               onClick={() => setIsFilterOpen(!isFilterOpen)}
-              className={`flex h-8 items-center gap-1.5 rounded-lg border px-3 text-xs font-medium transition-colors ${
+              className={`flex h-8 items-center gap-1.5 rounded-md px-2.5 text-sm font-medium transition-colors ${
                 isFilterOpen || searchQuery || minCapacity
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground"
+                  ? "bg-primary/10 text-primary"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <Filter className="size-3.5" />
-              <span>Filters</span>
+              <span className="hidden sm:inline">Filter</span>
               {(searchQuery || minCapacity) && (
                 <span className="flex size-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold">
                   {(searchQuery ? 1 : 0) + (minCapacity ? 1 : 0)}
@@ -326,26 +398,28 @@ export function HomePage() {
             {isFilterOpen && (
               <>
                 {/* Backdrop to close when clicking outside */}
-                <div 
-                  className="fixed inset-0 z-40" 
+                <div
+                  className="fixed inset-0 z-40"
                   onClick={() => setIsFilterOpen(false)}
                 />
-                
+
                 {/* Popover container */}
-                <div className="absolute left-0 top-full z-50 mt-2 w-64 rounded-xl border border-border bg-card p-4 shadow-xl">
+                <div className="absolute right-0 top-full z-50 mt-2 w-64 rounded-xl border border-border bg-card p-4 shadow-xl">
                   <div className="flex items-center justify-between mb-3 border-b border-border pb-2">
                     <h3 className="text-sm font-semibold">Filter Rooms</h3>
-                    <button 
+                    <button
                       onClick={() => setIsFilterOpen(false)}
                       className="text-muted-foreground hover:text-foreground"
                     >
                       <X className="size-4" />
                     </button>
                   </div>
-                  
+
                   <div className="space-y-4">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-foreground">Search Room</label>
+                      <label className="text-xs font-semibold text-foreground">
+                        Search Room
+                      </label>
                       <Input
                         type="text"
                         className="h-8 text-xs bg-background"
@@ -355,7 +429,9 @@ export function HomePage() {
                       />
                     </div>
                     <div className="space-y-1.5 flex flex-col">
-                      <label className="text-xs font-semibold text-foreground">Min Capacity</label>
+                      <label className="text-xs font-semibold text-foreground">
+                        Min Capacity
+                      </label>
                       <Input
                         type="number"
                         className="h-8 text-xs bg-background"
@@ -366,7 +442,7 @@ export function HomePage() {
                       />
                     </div>
                   </div>
-                  
+
                   {(searchQuery || minCapacity) && (
                     <button
                       onClick={() => {
@@ -382,16 +458,32 @@ export function HomePage() {
               </>
             )}
           </div>
-        </div>
 
-        {/* Primary CTA */}
-        <Button
-          onClick={() => openBookingForm()}
-          className="gap-1.5 bg-gradient-to-r from-primary to-indigo-600 text-primary-foreground shadow-sm shadow-primary/25 hover:opacity-95"
-        >
-          <Plus className="size-4" />
-          <span>New booking</span>
-        </Button>
+          <div className="h-5 w-px bg-border hidden sm:block" />
+
+          {/* View mode segmented switcher */}
+          <div className="flex rounded-md bg-muted/50 p-0.5 border border-border/50">
+            {[
+              { id: "day", label: "Day", icon: Calendar },
+              { id: "week", label: "Week", icon: CalendarDays },
+              { id: "month", label: "Month", icon: LayoutGrid },
+              { id: "agenda", label: "Agenda", icon: LayoutList }
+            ].map((mode) => (
+              <button
+                key={mode.id}
+                onClick={() => setViewMode(mode.id as ViewMode)}
+                className={`flex items-center gap-1.5 rounded-sm px-3 py-1 text-xs font-medium capitalize transition-all ${
+                  viewMode === mode.id
+                    ? "bg-background text-foreground shadow-sm border border-border/50"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                <mode.icon className="size-3.5" />
+                <span className="hidden sm:inline">{mode.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Legend and tips */}
@@ -412,7 +504,13 @@ export function HomePage() {
         </div>
         <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/80">
           <Info className="size-3.5" />
-          <span>{viewMode === "day" ? "Click or drag an open slot to book, or click a booking to view details." : viewMode === "week" ? "Click a booking to view details, or click a day to jump to its schedule." : "Click any day in the grid to jump to its schedule."}</span>
+          <span>
+            {viewMode === "day"
+              ? "Click or drag an open slot to book, or click a booking to view details."
+              : viewMode === "week"
+                ? "Click a booking to view details, or click a day to jump to its schedule."
+                : "Click any day in the grid to jump to its schedule."}
+          </span>
         </div>
       </div>
 
@@ -437,7 +535,9 @@ export function HomePage() {
               rooms={filteredRooms}
               reservations={reservations}
               currentUserId={currentUserId}
-              onSlotSelect={(clickedRoomId, startHour, endHour) => openBookingForm(clickedRoomId, startHour, endHour)}
+              onSlotSelect={(clickedRoomId, startHour, endHour) =>
+                openBookingForm(clickedRoomId, startHour, endHour)
+              }
               onBlockClick={setSelectedReservation}
               onRoomClick={setSelectedRoom}
             />
@@ -449,12 +549,40 @@ export function HomePage() {
               onSelectDay={handleSelectMonthDay}
               onBlockClick={setSelectedReservation}
             />
+          ) : viewMode === "agenda" ? (
+            <AgendaView
+              reservations={reservations}
+              rooms={filteredRooms}
+              currentUserId={currentUserId}
+              startDate={selectedDate}
+              onBlockClick={setSelectedReservation}
+            />
           ) : (
-            <MonthCalendar month={selectedDate} rooms={filteredRooms} reservations={reservations} onSelectDay={handleSelectMonthDay} />
+            <MonthCalendar
+              month={selectedDate}
+              rooms={filteredRooms}
+              reservations={reservations}
+              onSelectDay={handleSelectMonthDay}
+            />
           )}
         </div>
 
-        {!isLoading && <StatsPanel rooms={filteredRooms} reservations={reservations} currentUserId={currentUserId} />}
+        {!isLoading && (
+          <aside className="w-full shrink-0 flex flex-col gap-4 lg:w-76">
+            <MiniCalendar 
+              value={selectedDate} 
+              viewMode={viewMode}
+              onChange={(d) => {
+                setSelectedDate(startOfDay(d));
+              }} 
+            />
+            <StatsPanel
+              rooms={filteredRooms}
+              reservations={reservations}
+              currentUserId={currentUserId}
+            />
+          </aside>
+        )}
       </div>
 
       {isFormOpen && (

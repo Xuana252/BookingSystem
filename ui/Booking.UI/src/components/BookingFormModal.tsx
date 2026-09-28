@@ -15,6 +15,7 @@ import type { Room, UserSummary } from "../lib/types";
 import { BUSINESS_HOURS_END_TIME, BUSINESS_HOURS_START_TIME, toDateInputValue } from "../lib/dates";
 import { getCurrentUserId } from "../lib/auth";
 import { getUsers } from "../lib/api";
+import { getAvatar } from "../lib/avatar";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
@@ -307,7 +308,14 @@ export function BookingFormModal({
                   <SelectContent>
                     {unselectedUsers.map((user) => (
                       <SelectItem key={user.id} value={user.id}>
-                        {user.username}
+                        <div className="flex items-center gap-2">
+                          <img 
+                            src={getAvatar(user.username)} 
+                            alt={user.username} 
+                            className="size-4 shrink-0 rounded-full bg-muted object-cover ring-1 ring-border/50" 
+                          />
+                          <span>{user.username}</span>
+                        </div>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -332,9 +340,13 @@ export function BookingFormModal({
                     return (
                       <span
                         key={id}
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-card py-1 pr-1.5 pl-2.5 text-xs font-medium text-foreground shadow-2xs"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card py-0.5 pr-1.5 pl-0.5 text-xs font-medium text-foreground shadow-2xs"
                       >
-                        <UserPlus className="size-3 text-primary" />
+                        <img 
+                          src={getAvatar(name)} 
+                          alt={name} 
+                          className="size-4 shrink-0 rounded-full bg-muted object-cover ring-1 ring-border/50" 
+                        />
                         <span>{name}</span>
                         <button
                           type="button"

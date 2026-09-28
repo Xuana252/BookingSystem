@@ -59,7 +59,7 @@ export function StatsPanel({ rooms, reservations, currentUserId }: StatsPanelPro
   const roomNameById = new Map(rooms.map((r) => [r.id, r.name]));
 
   return (
-    <aside className="w-full shrink-0 space-y-4 lg:w-76">
+    <aside className="w-full space-y-4">
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-2 gap-2.5">
         <StatCard

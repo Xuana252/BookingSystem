@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import {
   Building2,
   Calendar,
@@ -11,122 +12,149 @@ import {
   ShieldAlert,
   Wrench,
   Contact,
-  Sliders
+  Sliders,
+  Menu
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 import { getCurrentUsername, isAdmin } from "../lib/auth";
 import { Badge } from "./ui/badge";
 import { getAvatar } from "../lib/avatar";
 
-function navItemClass({ isActive }: { isActive: boolean }): string {
-  return `group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all duration-150 ${
-    isActive
-      ? "border border-sidebar-border bg-sidebar-accent font-semibold text-primary shadow-xs"
-      : "text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground"
-  }`;
-}
-
 export function Sidebar() {
   const admin = isAdmin();
   const username = getCurrentUsername();
+  
+  const [collapsed, setCollapsed] = useState(() => {
+    return localStorage.getItem("sidebarCollapsed") === "true";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("sidebarCollapsed", String(collapsed));
+  }, [collapsed]);
+
+  function navItemClass({ isActive }: { isActive: boolean }): string {
+    return `relative group flex items-center ${
+      collapsed ? "justify-center w-10 h-10 mx-auto" : "gap-3 w-full px-3 py-2"
+    } rounded-lg text-sm transition-colors duration-150 ${
+      isActive
+        ? "text-primary font-semibold before:absolute before:-left-2 before:top-1/2 before:-translate-y-1/2 before:h-6 before:w-[3px] before:rounded-r-full before:bg-primary"
+        : "text-muted-foreground font-medium hover:bg-sidebar-accent/50 hover:text-foreground"
+    }`;
+  }
 
   return (
-    <aside className="hidden w-60 shrink-0 flex-col justify-between border-r border-sidebar-border bg-sidebar px-3 py-5 sm:flex">
-      <div className="space-y-5">
-        <div>
-          <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
-            Navigation
-          </div>
+    <aside className={`relative hidden shrink-0 flex-col justify-between border-r border-sidebar-border bg-sidebar sm:flex transition-all duration-300 ${collapsed ? 'w-14' : 'w-60'}`}>
+      
+      <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Top Toggle Area */}
+        <div className={`flex items-center ${collapsed ? "justify-center" : "px-4 justify-between"} h-14 shrink-0 border-b border-border/30`}>
+          {!collapsed && <span className="text-[11px] font-bold tracking-wider text-muted-foreground/70 uppercase">Navigation</span>}
+          <button 
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors focus:outline-none"
+            aria-label="Toggle Sidebar"
+          >
+            <Menu className="size-4" />
+          </button>
+        </div>
+
+        {/* Scrollable Nav Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-2 space-y-6">
           <nav className="space-y-1">
-            <NavLink to="/" end className={navItemClass}>
+            <NavLink to="/" end className={navItemClass} title="Calendar">
               <CalendarDays className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-              <span>Calendar</span>
+              {!collapsed && <span>Calendar</span>}
             </NavLink>
-            <NavLink to="/my-bookings" className={navItemClass}>
+            <NavLink to="/my-bookings" className={navItemClass} title="My Bookings">
               <Calendar className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-              <span>My Bookings</span>
+              {!collapsed && <span>My Bookings</span>}
             </NavLink>
-            <NavLink to="/directory" className={navItemClass}>
+            <NavLink to="/directory" className={navItemClass} title="Team Directory">
               <Contact className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-              <span>Team Directory</span>
+              {!collapsed && <span>Team Directory</span>}
             </NavLink>
-            <NavLink to="/preferences" className={navItemClass}>
+            <NavLink to="/preferences" className={navItemClass} title="My Preferences">
               <Sliders className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-              <span>My Preferences</span>
+              {!collapsed && <span>My Preferences</span>}
             </NavLink>
-            <NavLink to="/insights" className={navItemClass}>
+            <NavLink to="/insights" className={navItemClass} title="My Insights">
               <PieChart className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-              <span>My Insights</span>
+              {!collapsed && <span>My Insights</span>}
             </NavLink>
             <button
               type="button"
-              onClick={() =>
-                window.dispatchEvent(new CustomEvent("toggle-ai-chat"))
-              }
-              className="w-full group flex items-center justify-between rounded-lg px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-all duration-150 cursor-pointer"
+              onClick={() => window.dispatchEvent(new CustomEvent("toggle-ai-chat"))}
+              title="AI Concierge"
+              className={`w-full relative group flex items-center ${collapsed ? "justify-center w-10 h-10 mx-auto" : "justify-between px-3 py-2"} rounded-lg text-sm font-medium text-muted-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-all duration-150 cursor-pointer`}
             >
               <div className="flex items-center gap-3">
                 <Sparkles className="size-4 shrink-0 text-indigo-500 transition-transform group-hover:scale-110" />
-                <span>AI Concierge</span>
+                {!collapsed && <span>AI Concierge</span>}
               </div>
-              <span className="rounded-full bg-indigo-500/15 border border-indigo-500/25 px-1.5 py-0.2 text-[9px] font-bold text-indigo-500 dark:text-indigo-400">
-                AI
-              </span>
+              {!collapsed && (
+                <span className="rounded-full bg-indigo-500/15 border border-indigo-500/25 px-1.5 py-0.2 text-[9px] font-bold text-indigo-500 dark:text-indigo-400">
+                  AI
+                </span>
+              )}
             </button>
           </nav>
-        </div>
 
-        {admin && (
-          <div>
-            <div className="px-3 pb-2 text-[11px] font-semibold tracking-wider text-muted-foreground/70 uppercase">
-              Admin Area
+          {admin && (
+            <div>
+              <div className={`px-2 pb-2 text-[10px] font-semibold tracking-wider text-muted-foreground/70 uppercase transition-all duration-300 ${collapsed ? "opacity-0 h-0 overflow-hidden" : "opacity-100"}`}>
+                {!collapsed && "Admin"}
+              </div>
+              <nav className="space-y-1">
+                <NavLink to="/admin/analytics" className={navItemClass} title="Analytics">
+                  <PieChart className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                  {!collapsed && <span>Analytics</span>}
+                </NavLink>
+                <NavLink to="/admin/rooms" className={navItemClass} title="Manage Rooms">
+                  <Building2 className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                  {!collapsed && <span>Manage Rooms</span>}
+                </NavLink>
+                <NavLink to="/admin/users" className={navItemClass} title="Manage Users">
+                  <Users className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                  {!collapsed && <span>Manage Users</span>}
+                </NavLink>
+                <NavLink to="/admin/settings" className={navItemClass} title="Global Settings">
+                  <Settings className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                  {!collapsed && <span>Global Settings</span>}
+                </NavLink>
+                <NavLink to="/admin/logs" className={navItemClass} title="Audit Logs">
+                  <ShieldAlert className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                  {!collapsed && <span>Audit Logs</span>}
+                </NavLink>
+                <NavLink to="/admin/maintenance" className={navItemClass} title="Maintenance">
+                  <Wrench className="size-4 shrink-0 transition-transform group-hover:scale-110" />
+                  {!collapsed && <span>Maintenance</span>}
+                </NavLink>
+              </nav>
             </div>
-            <nav className="space-y-1">
-              <NavLink to="/admin/analytics" className={navItemClass}>
-                <PieChart className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-                <span>Analytics</span>
-              </NavLink>
-              <NavLink to="/admin/rooms" className={navItemClass}>
-                <Building2 className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-                <span>Manage Rooms</span>
-              </NavLink>
-              <NavLink to="/admin/users" className={navItemClass}>
-                <Users className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-                <span>Manage Users</span>
-              </NavLink>
-              <NavLink to="/admin/settings" className={navItemClass}>
-                <Settings className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-                <span>Global Settings</span>
-              </NavLink>
-              <NavLink to="/admin/logs" className={navItemClass}>
-                <ShieldAlert className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-                <span>Audit Logs</span>
-              </NavLink>
-              <NavLink to="/admin/maintenance" className={navItemClass}>
-                <Wrench className="size-4 shrink-0 transition-transform group-hover:scale-110" />
-                <span>Maintenance</span>
-              </NavLink>
-            </nav>
-          </div>
-        )}
+          )}
+        </div>
       </div>
 
       {/* Footer info card */}
-      <div className="rounded-xl border border-sidebar-border bg-card p-3 shadow-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="flex size-8 items-center justify-center rounded-lg bg-white overflow-hidden shadow-xs ring-1 ring-border">
-            <img src={getAvatar(username)} alt={username || "User"} className="h-full w-full object-cover" />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-xs font-semibold text-foreground">
-              {username ?? "User"}
+      <div className={`p-2 shrink-0 border-t border-border/30`}>
+        <div className={`rounded-xl bg-card border border-sidebar-border shadow-xs transition-all duration-300 ${collapsed ? "p-1.5 flex justify-center" : "p-2.5"}`}>
+          <div className={`flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
+            <div className={`flex shrink-0 items-center justify-center rounded-lg bg-white overflow-hidden shadow-xs ring-1 ring-border ${collapsed ? "size-6" : "size-8"}`}>
+              <img src={getAvatar(username)} alt={username || "User"} className="h-full w-full object-cover" />
             </div>
-            <Badge
-              variant={admin ? "indigo" : "secondary"}
-              className="mt-0.5 text-[10px] py-0 px-1.5 h-4"
-            >
-              {admin ? "Administrator" : "Employee"}
-            </Badge>
+            {!collapsed && (
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-xs font-semibold text-foreground">
+                  {username ?? "User"}
+                </div>
+                <Badge
+                  variant={admin ? "indigo" : "secondary"}
+                  className="mt-0.5 text-[9px] py-0 px-1 h-3.5 leading-none"
+                >
+                  {admin ? "Administrator" : "Employee"}
+                </Badge>
+              </div>
+            )}
           </div>
         </div>
       </div>
