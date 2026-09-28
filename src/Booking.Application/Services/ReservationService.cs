@@ -151,10 +151,11 @@ public class ReservationService(
             throw new UnauthorizedAccessException("Only the organizer or an attendee can check in.");
         }
 
+        var settings = await systemSettings.GetSettingsAsync(ct);
         var now = (timeProvider ?? TimeProvider.System).GetUtcNow().UtcDateTime;
-        if (now < reservation.StartTime.AddMinutes(-15))
+        if (now < reservation.StartTime.AddMinutes(-settings.CheckinWindowMinutes))
         {
-            throw new InvalidOperationException("You can only check in up to 15 minutes before the reservation starts.");
+            throw new InvalidOperationException($"You can only check in up to {settings.CheckinWindowMinutes} minutes before the reservation starts.");
         }
 
         if (reservation.Status == ReservationStatus.Cancelled)

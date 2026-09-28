@@ -72,6 +72,7 @@ export interface SystemSettings {
   id: string;
   maxBookingLeadTimeDays: number;
   autoCancelMinutes: number;
+  checkinWindowMinutes?: number;
   businessHoursStart: string;
   businessHoursEnd: string;
   maxDurationHours: number;

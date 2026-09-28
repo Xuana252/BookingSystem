@@ -22,6 +22,7 @@ public class SystemSettingsController(ISystemSettingsRepository settingsRepo) : 
         var settings = await settingsRepo.GetSettingsAsync(ct);
         settings.MaxBookingLeadTimeDays = request.MaxBookingLeadTimeDays;
         settings.AutoCancelMinutes = request.AutoCancelMinutes;
+        settings.CheckinWindowMinutes = request.CheckinWindowMinutes;
         settings.BusinessHoursStart = request.BusinessHoursStart;
         settings.BusinessHoursEnd = request.BusinessHoursEnd;
         settings.MaxDurationHours = request.MaxDurationHours;

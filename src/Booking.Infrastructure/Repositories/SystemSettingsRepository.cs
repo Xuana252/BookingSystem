@@ -17,6 +17,7 @@ public class SystemSettingsRepository(BookingDbContext dbContext) : ISystemSetti
                 Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
                 MaxBookingLeadTimeDays = 30,
                 AutoCancelMinutes = 15,
+                CheckinWindowMinutes = 15,
                 BusinessHoursStart = new TimeSpan(8, 0, 0),
                 BusinessHoursEnd = new TimeSpan(18, 0, 0),
                 MaxDurationHours = 4,
@@ -33,6 +34,7 @@ public class SystemSettingsRepository(BookingDbContext dbContext) : ISystemSetti
         var existing = await GetSettingsAsync(ct);
         existing.MaxBookingLeadTimeDays = settings.MaxBookingLeadTimeDays;
         existing.AutoCancelMinutes = settings.AutoCancelMinutes;
+        existing.CheckinWindowMinutes = settings.CheckinWindowMinutes;
         existing.BusinessHoursStart = settings.BusinessHoursStart;
         existing.BusinessHoursEnd = settings.BusinessHoursEnd;
         existing.MaxDurationHours = settings.MaxDurationHours;

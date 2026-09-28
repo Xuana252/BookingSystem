@@ -15,6 +15,11 @@ public class SystemSettings
     /// </summary>
     public int AutoCancelMinutes { get; set; } = 15;
 
+    /// <summary>
+    /// How many minutes before the start time a user is allowed to check in.
+    /// </summary>
+    public int CheckinWindowMinutes { get; set; } = 15;
+
     public TimeSpan BusinessHoursStart { get; set; } = new TimeSpan(8, 0, 0); // 08:00
     public TimeSpan BusinessHoursEnd { get; set; } = new TimeSpan(18, 0, 0);  // 18:00
     public int MaxDurationHours { get; set; } = 4;
