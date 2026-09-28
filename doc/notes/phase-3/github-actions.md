@@ -50,7 +50,7 @@ flowchart TD
   - Workflows are defined as YAML files stored in `.github/workflows/`.
   - A single repository can host multiple independent workflows targeting distinct lifecycle concerns (e.g. CI testing, automated releases, scheduled security analysis, dependency vulnerability triage).
 - **Event Triggers & Path Filtering (`on:`)**:
-  - Workflows execute in response to Git events (`push`, `pull_request`, `release`, `schedule`, or manual `workflow_dispatch`).
+  - W orkflows execute in response to Git events (`push`, `pull_request`, `release`, `schedule`, or manual `workflow_dispatch`).
   - Triggers can be scoped by branch patterns (e.g. `branches: [main, develop]` or wildcards `branches: ["**"]`) and file paths (e.g. `paths: ["src/**"]`).
 - **Jobs & Parallelism (`jobs:`)**:
   - A workflow consists of one or more jobs. By default, jobs run **concurrently** on separate virtual runners.
@@ -76,42 +76,86 @@ flowchart TD
 ### Core Workflow Syntax Reference
 
 ```yaml
-name: CI Workflow Example
+name: CI
 
 on:
   push:
     branches: ["**"]
   pull_request:
     branches: [main, develop]
-    paths:
-      - "src/**"
-      - "ui/**"
 
 jobs:
-  job-name:
-    name: Human Readable Name
+  backend:
+    name: Backend (.NET 10)
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: path/to/project
-        shell: bash
-    env:
-      CI: "true"
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+        working-directory: src
 
-      - name: Step with Action
-        uses: actions/setup-node@v4
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('src/Directory.Packages.props', 'src/**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --no-restore --configuration Release
+
+      - name: Unit tests
+        run: dotnet test test/Booking.UnitTests --no-build --configuration Release
+
+      # Booking.IntegrationTests' current tests (WireMock-backed) don't strictly need this yet,
+      # but this is the shape Phase 2/4's real integration tests (Postgres/Redis-backed
+      # repository tests) will need — bringing it up here now avoids re-touching this workflow
+      # later. Only the infra services, not api/worker/ui/splunk/fluent-bit — nothing here
+      # exercises the running app itself.
+      - name: Start infra (Postgres, Redis, Moto)
+        run: docker compose up -d postgres redis moto moto-init
+
+      - name: Integration tests
+        run: dotnet test test/Booking.IntegrationTests --no-build --configuration Release
+
+      - name: Tear down infra
+        if: always()
+        run: docker compose down -v
+
+  frontend:
+    name: Frontend (React & Vite)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ui/Booking.UI
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: "npm"
+          cache-dependency-path: ui/Booking.UI/package-lock.json
 
-      - name: Step with Shell Command
-        run: npm test
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Cleanup Step (Always Runs)
-        if: always()
-        run: echo "Cleanup completed"
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check and build
+        run: npm run build
+
 ```
 
 ### Useful Contexts & Functions

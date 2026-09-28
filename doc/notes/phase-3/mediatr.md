@@ -42,6 +42,19 @@ public class CreateRoomCommandHandler : IRequestHandler<CreateRoomCommand, Room>
        return new Room();
     }
 }
+
+//3. In Controller
+   public async Task<ActionResult<Room>> Create(CreateRoomRequest request, CancellationToken ct)
+
+    {
+
+        var command = new CreateRoomCommand(request.Name, request.Location, request.Capacity, request.Amenities, request.WebhookUrls);
+
+        var room = await mediator.Send(command, ct);
+
+        return CreatedAtAction(nameof(GetAll), new { id = room.Id }, room);
+
+    }
 ```
 
 ## Applied In This Project
@@ -51,6 +64,7 @@ The project extensively uses MediatR with Feature-Based Folders (Vertical Slicin
 *   `src/Booking.Api/Controllers/RoomsController.cs` — The controller relies solely on the `IMediator` interface to dispatch commands, keeping it thin and decoupled from business logic.
 *   `src/Booking.Application/Features/Rooms/Commands/CreateRoomCommand.cs` — An example of the Single-File pattern where the `CreateRoomCommand` record and its `CreateRoomCommandHandler` are co-located.
 *   `src/Booking.Application/Features/Rooms/Queries/GetRoomsQuery.cs` — Demonstrates separation of read concerns (Queries) from write concerns (Commands).
+*   `src/Booking.Application/Features/Common/Caching/CachingBehavior.cs` and `CacheInvalidationBehavior.cs` — Examples of Pipeline Behaviors (`IPipelineBehavior`) used to automatically apply Distributed Caching (via `IDistributedCache`) and cache invalidation around MediatR requests.
 *   `src/Booking.Application/DependencyInjection.cs` — Where MediatR is registered with the ASP.NET Core DI container using `services.AddMediatR(...)`.
 
 ## Related Notes

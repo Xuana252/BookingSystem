@@ -1,4 +1,4 @@
-# AWS EC2 (Elastic Compute Cloud)
+ # AWS EC2 (Elastic Compute Cloud)
 
 **Status:** Research only (not yet built)
 **OJT tracker category:** DevOps
