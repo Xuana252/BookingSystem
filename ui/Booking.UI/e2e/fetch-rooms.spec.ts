@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-test.describe('Data Fetching', () => {
+test.describe('Fetch Rooms', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate and log in as an Admin
     await page.goto('/login');
@@ -22,19 +22,5 @@ test.describe('Data Fetching', () => {
     // Ensure the room has a name displayed
     const roomName = await roomCard.locator('h3').innerText();
     expect(roomName.length).toBeGreaterThan(0);
-  });
-
-  test('Admin can fetch and view the users list', async ({ page }) => {
-    // Navigate to Manage Users page
-    await page.goto('/admin/users'); 
-
-    // Wait for the users table to load
-    // Check that at least one user row is rendered in the tbody
-    const userRow = page.locator('tbody tr').first();
-    await expect(userRow).toBeVisible();
-
-    // Ensure the row has user data (first column contains the username and avatar)
-    const usernameCell = await userRow.locator('td').first().innerText();
-    expect(usernameCell.length).toBeGreaterThan(0);
   });
 });
