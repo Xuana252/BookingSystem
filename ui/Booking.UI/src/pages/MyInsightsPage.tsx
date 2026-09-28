@@ -279,7 +279,7 @@ export function MyInsightsPage() {
                 <Tooltip 
                   cursor={{ fill: "var(--muted)", opacity: 0.4 }}
                   contentStyle={{ borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--card)", fontSize: "12px", fontWeight: "bold" }}
-                  formatter={(value: number) => [`${value} hours`, 'Duration']}
+                  formatter={(value: any) => [`${value} hours`, 'Duration']}
                 />
                 <Bar dataKey="hours" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
@@ -311,7 +311,7 @@ export function MyInsightsPage() {
                   </Pie>
                   <Tooltip 
                     contentStyle={{ borderRadius: "8px", border: "1px solid var(--border)", backgroundColor: "var(--card)", fontSize: "12px", fontWeight: "bold" }}
-                    formatter={(value: number) => [`${value}%`, 'Usage']}
+                    formatter={(value: any) => [`${value}%`, 'Usage']}
                   />
                 </PieChart>
               </ResponsiveContainer>

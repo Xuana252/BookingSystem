@@ -553,7 +553,7 @@ export function HomePage() {
             <AgendaView
               reservations={reservations}
               rooms={filteredRooms}
-              currentUserId={currentUserId}
+              currentUserId={currentUserId ?? ""}
               startDate={selectedDate}
               onBlockClick={setSelectedReservation}
             />
