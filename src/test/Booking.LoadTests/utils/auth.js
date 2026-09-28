@@ -3,7 +3,7 @@ import { API_BASE_URL, TEST_CREDENTIALS } from './config.js';
 
 export function authenticate() {
     const loginRes = http.post(`${API_BASE_URL}/api/auth/login`, JSON.stringify({
-        email: TEST_CREDENTIALS.email,
+        username: TEST_CREDENTIALS.username,
         password: TEST_CREDENTIALS.password
     }), {
         headers: { 'Content-Type': 'application/json' }
@@ -25,3 +25,4 @@ export function getAuthHeaders(token) {
         }
     };
 }
+
