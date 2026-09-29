@@ -283,8 +283,16 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
                 {roomReservations.map((reservation) => {
                   const start = new Date(reservation.startTime);
                   const end = new Date(reservation.endTime);
-                  const startFrac = Math.max(start.getHours() + start.getMinutes() / 60, CALENDAR_START_HOUR);
-                  const endFrac = Math.min(end.getHours() + end.getMinutes() / 60, CALENDAR_END_HOUR);
+                  const rawStart = start.getHours() + start.getMinutes() / 60;
+                  const rawEnd = end.getHours() + end.getMinutes() / 60;
+
+                  // If the reservation is completely outside the visible calendar hours, skip it
+                  if (rawStart >= CALENDAR_END_HOUR || rawEnd <= CALENDAR_START_HOUR) {
+                    return null;
+                  }
+
+                  const startFrac = Math.max(rawStart, CALENDAR_START_HOUR);
+                  const endFrac = Math.min(rawEnd, CALENDAR_END_HOUR);
                   const left = (startFrac - CALENDAR_START_HOUR) * HOUR_WIDTH_PX + 2;
                   const width = Math.max((endFrac - startFrac) * HOUR_WIDTH_PX - 4, 28);
                   const isMine = reservation.userId === currentUserId;
