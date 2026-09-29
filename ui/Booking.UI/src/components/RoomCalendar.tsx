@@ -104,7 +104,7 @@ export function RoomCalendar({ date, rooms, reservations, currentUserId, onSlotS
     <div className="overflow-x-auto rounded-xl border border-border bg-card shadow-sm">
       <div
         className="grid select-none"
-        style={{ gridTemplateColumns: `${RAIL_WIDTH_PX}px minmax(${hoursWidthPx}px, 1fr)`, minWidth: RAIL_WIDTH_PX + hoursWidthPx }}
+        style={{ width: "100%", gridTemplateColumns: `${RAIL_WIDTH_PX}px minmax(${hoursWidthPx}px, 1fr)`, minWidth: RAIL_WIDTH_PX + hoursWidthPx }}
       >
         {/* Sticky room-name rail header */}
         <div className="sticky left-0 z-30 flex items-center border-b border-r border-border bg-card px-4 text-xs font-bold uppercase tracking-wider text-foreground">
