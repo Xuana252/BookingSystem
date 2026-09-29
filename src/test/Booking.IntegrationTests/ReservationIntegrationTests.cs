@@ -62,7 +62,7 @@ public class ReservationIntegrationTests : IClassFixture<WebApplicationFactory<P
                                 var mockEngine = new Moq.Mock<Booking.Domain.Interfaces.IBookingRuleEngine>();
                 mockEngine.Setup(e => e.Validate(
                     Moq.It.IsAny<Booking.Domain.Entities.Reservation>(),
-                    Moq.It.Is<IReadOnlyList<Booking.Domain.Entities.Reservation>>(list => list.Count > 0),
+                    Moq.It.Is<IReadOnlyList<Booking.Domain.Entities.Reservation>>(list => list.Count > 0), Moq.It.IsAny<IReadOnlyList<Booking.Domain.Entities.Reservation>>(),
                     Moq.It.IsAny<int>(),
                     Moq.It.IsAny<int>(),
                     Moq.It.IsAny<Booking.Domain.Entities.SystemSettings>()))
@@ -120,7 +120,7 @@ public class ReservationIntegrationTests : IClassFixture<WebApplicationFactory<P
                                 var mockEngine = new Moq.Mock<Booking.Domain.Interfaces.IBookingRuleEngine>();
                 mockEngine.Setup(e => e.Validate(
                     Moq.It.IsAny<Booking.Domain.Entities.Reservation>(),
-                    Moq.It.Is<IReadOnlyList<Booking.Domain.Entities.Reservation>>(list => list.Count > 0),
+                    Moq.It.Is<IReadOnlyList<Booking.Domain.Entities.Reservation>>(list => list.Count > 0), Moq.It.IsAny<IReadOnlyList<Booking.Domain.Entities.Reservation>>(),
                     Moq.It.IsAny<int>(),
                     Moq.It.IsAny<int>(),
                     Moq.It.IsAny<Booking.Domain.Entities.SystemSettings>()))
