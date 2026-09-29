@@ -21,6 +21,7 @@ export function MyBookingsPage() {
   const [selectedReservation, setSelectedReservation] = useState<Reservation | null>(null);
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [checkingInId, setCheckingInId] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export function MyBookingsPage() {
         setSelectedReservation(prev => prev ? {...prev, status: ReservationStatus.Cancelled} : null);
       }
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "Failed to cancel booking");
+      setActionError(err instanceof ApiError ? err.message : "Failed to cancel booking");
     } finally {
       setCancellingId(null);
     }
@@ -75,7 +76,7 @@ export function MyBookingsPage() {
         setSelectedReservation(prev => prev ? {...prev, checkedInAt: new Date().toISOString()} : null);
       }
     } catch (err) {
-      alert(err instanceof ApiError ? err.message : "Failed to check in");
+      setActionError(err instanceof ApiError ? err.message : "Failed to check in");
     } finally {
       setCheckingInId(null);
     }
@@ -340,9 +341,13 @@ export function MyBookingsPage() {
           isMine={selectedReservation.userId === currentUserId}
           isCancelling={cancellingId === selectedReservation.id}
           isCheckingIn={checkingInId === selectedReservation.id}
+          error={actionError}
           onCancel={() => handleCancel(selectedReservation.id)}
           onCheckIn={() => handleCheckIn(selectedReservation.id)}
-          onClose={() => setSelectedReservation(null)}
+          onClose={() => {
+            setSelectedReservation(null);
+            setActionError(null);
+          }}
         />
       )}
     </div>
