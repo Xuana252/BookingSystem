@@ -14,12 +14,12 @@ import {
 } from 'recharts';
 
 const PIE_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-const TICK_PROPS = { fontSize: 11, fill: 'hsl(var(--muted-foreground))' };
+const TICK_PROPS = { fontSize: 11, fill: 'var(--muted-foreground)' };
 const TOOLTIP_STYLE = { 
   borderRadius: '6px', 
-  border: '1px solid hsl(var(--border))', 
-  backgroundColor: 'hsl(var(--card))', 
-  color: 'hsl(var(--foreground))',
+  border: '1px solid var(--border)', 
+  backgroundColor: 'var(--card)', 
+  color: 'var(--foreground)',
   fontSize: '12px', 
   boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
   padding: '8px 12px'
@@ -361,7 +361,7 @@ export function AdminAnalyticsPage() {
                   ))}
                 </Pie>
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} itemStyle={{ fontSize: '12px' }} />
-                <Legend verticalAlign="bottom" height={24} iconType="circle" wrapperStyle={{ fontSize: '11px', color: 'hsl(var(--muted-foreground))' }} />
+                <Legend verticalAlign="bottom" height={24} iconType="circle" wrapperStyle={{ fontSize: '11px', color: 'var(--muted-foreground)' }} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -377,10 +377,10 @@ export function AdminAnalyticsPage() {
           <div className="h-[200px] w-full">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={amenitiesData} layout="vertical" margin={{ top: 5, right: 15, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="var(--border)" opacity={0.5} />
                 <XAxis type="number" axisLine={false} tickLine={false} tick={TICK_PROPS} />
                 <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={TICK_PROPS} width={90} />
-                <RechartsTooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={TOOLTIP_STYLE} />
+                <RechartsTooltip cursor={{ fill: 'var(--muted)' }} contentStyle={TOOLTIP_STYLE} />
                 <Bar dataKey="bookings" fill="#f59e0b" radius={[0, 4, 4, 0]} barSize={16} />
               </BarChart>
             </ResponsiveContainer>
@@ -398,10 +398,10 @@ export function AdminAnalyticsPage() {
           <div className="h-[240px] w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={roomUsageData.slice(0, 10)} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={TICK_PROPS} />
                 <YAxis axisLine={false} tickLine={false} tick={TICK_PROPS} />
-                <RechartsTooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={TOOLTIP_STYLE} />
+                <RechartsTooltip cursor={{ fill: 'var(--muted)' }} contentStyle={TOOLTIP_STYLE} />
                 <Bar dataKey="bookings" fill="#6366f1" radius={[4, 4, 0, 0]} maxBarSize={40} />
               </BarChart>
             </ResponsiveContainer>
@@ -418,10 +418,10 @@ export function AdminAnalyticsPage() {
           <div className="h-[240px] w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={busiestDaysData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={TICK_PROPS} />
                 <YAxis axisLine={false} tickLine={false} tick={TICK_PROPS} />
-                <RechartsTooltip cursor={{ fill: 'hsl(var(--muted))' }} contentStyle={TOOLTIP_STYLE} />
+                <RechartsTooltip cursor={{ fill: 'var(--muted)' }} contentStyle={TOOLTIP_STYLE} />
                 <Bar dataKey="bookings" fill="#06b6d4" opacity={0.9} radius={[4, 4, 0, 0]} maxBarSize={30} />
               </BarChart>
             </ResponsiveContainer>
@@ -445,7 +445,7 @@ export function AdminAnalyticsPage() {
                     <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
                 <XAxis dataKey="time" axisLine={false} tickLine={false} tick={TICK_PROPS} />
                 <YAxis axisLine={false} tickLine={false} tick={TICK_PROPS} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} />
@@ -502,11 +502,11 @@ export function AdminAnalyticsPage() {
           <div className="h-[240px] w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={cancellationTrendData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" opacity={0.5} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" opacity={0.5} />
                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={TICK_PROPS} />
                 <YAxis axisLine={false} tickLine={false} tick={TICK_PROPS} />
                 <RechartsTooltip contentStyle={TOOLTIP_STYLE} />
-                <Legend verticalAlign="top" height={24} iconType="circle" wrapperStyle={{ fontSize: '11px', color: 'hsl(var(--muted-foreground))' }} />
+                <Legend verticalAlign="top" height={24} iconType="circle" wrapperStyle={{ fontSize: '11px', color: 'var(--muted-foreground)' }} />
                 <Line type="monotone" dataKey="Confirmed" stroke="#10b981" strokeWidth={2} dot={{ r: 3, strokeWidth: 1 }} activeDot={{ r: 5 }} />
                 <Line type="monotone" dataKey="Cancelled" stroke="#ef4444" strokeWidth={2} dot={{ r: 3, strokeWidth: 1 }} activeDot={{ r: 5 }} />
               </LineChart>
