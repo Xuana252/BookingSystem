@@ -248,12 +248,6 @@ review fundamentals for the company test.
 
 ## Current status
 
-Phase 1 and Phase 2 complete, merged into `develop`, finished ahead of the Aug 31 target
-(2026-08-23). Full task-by-task breakdown — including six real bugs found and fixed via live
-verification against the running stack, beyond the original 11-item plan — in
-`doc/phase-outputs/phase-2.md`. Two Phase 2 verification-checklist items (reminder → Notification
-row end-to-end, exception → visible in Splunk) are flagged there as not yet independently
-exercised, though everything each depends on is confirmed working.
+**All phases (1, 2, and 3) are 100% complete and merged into `develop`.**
 
-Current focus: **Phase 3 (merged Sprint 3 research + integration, CI/CD, and UI completion)**,
-active on `feature/*` and `integration/*` branches.
+The project is fully finished ahead of schedule. A comprehensive breakdown of the final deliverables, bug fixes, and system integrations can be found in `doc/phase-outputs/phase-3.md`. The focus is now entirely on rehearsal and reviewing fundamentals for the company test.

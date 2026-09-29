@@ -65,3 +65,13 @@ Or the non-dockerized flow: `docker compose up -d postgres redis moto moto-init 
 **What:** Automated build and integration testing pipeline.
 **Details:**
 - Added `.github/workflows/ci.yml`. On push, it restores/builds the solution, runs unit tests, spins up the dockerized infrastructure (`docker compose up -d`), executes integration tests against the live mocked AWS/DB stack, and tears it all down.
+
+### 6. Final Polish & Bug Fixes
+
+**What:** Comprehensive bug hunting and final system hardening.
+**Details:**
+- **UI Bug Fixes:** Fixed a massive right-side whitespace gap in the React timeline calendar (RoomCalendar.tsx) caused by CSS grid calculations in infinite scroll containers, and handled out-of-bounds reservations gracefully. Also fixed Recharts tooltip rendering issues caused by Tailwind v4 OKLCH color variables.
+- **Error Handling:** Enhanced error visibility on HomePage and MyBookingsPage by rendering clear, inline red banners within the BookingDetailModal instead of generic browser alerts.
+- **Double-Booking Prevention:** Fixed a critical backend logic flaw in BookingRuleEngine and ReservationService where users could double-book themselves into two different rooms simultaneously. Added new repository queries and validation rules to cross-reference user schedules.
+- **CI/CD Flakiness:** Eliminated a race condition in the GitHub Actions integration test pipeline by disabling xUnit parallelization, preventing concurrent WebApplicationFactory instances from trying to apply EF Core database migrations at the exact same time.
+- **Documentation:** Added the AuditLogs table to the system ERD in HLD.md to accurately reflect the Entity Framework Core interceptor logging system.

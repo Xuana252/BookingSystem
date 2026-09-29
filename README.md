@@ -7,7 +7,7 @@ log viewer, webhooks, and an AI-powered conversational assistant. Built as an OJ
 layered on .NET (with MediatR CQRS), PostgreSQL, Redis, Hangfire, event-driven messaging (SNS/SQS via Moto),
 SignalR, and React.
 
-See [`doc/plan.md`](doc/plan.md) for the full sprint-by-sprint build plan and current status.
+See [`doc/plan.md`](doc/plan.md) for the full sprint-by-sprint build plan and project completion status.
 
 ## Repository layout
 
