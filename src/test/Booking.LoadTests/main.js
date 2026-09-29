@@ -5,8 +5,8 @@ import { browseRooms } from './scenarios/browse-rooms.js';
 // 1. Load Strategy Definition
 export const options = {
   stages: [
-    { duration: '5s', target: 20 }, // Ramp-up to 50 users
-    { duration: '10s', target: 20 },  // Steady state at 50 users
+    { duration: '5s', target: 50 }, // Ramp-up to 50 users
+    { duration: '10s', target: 50 },  // Steady state at 50 users
     { duration: '5s', target: 0 },  // Ramp-down
   ],
   thresholds: THRESHOLDS

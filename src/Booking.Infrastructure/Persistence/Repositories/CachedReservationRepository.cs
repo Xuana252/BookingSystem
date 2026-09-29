@@ -1,4 +1,4 @@
-﻿using System.Text.Json;
+using System.Text.Json;
 using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
 using StackExchange.Redis;
@@ -67,6 +67,9 @@ public class CachedReservationRepository(
         await db.StringSetAsync(key, JsonSerializer.Serialize(reservations), CacheTtl);
         return reservations;
     }
+
+    public Task<IReadOnlyList<Reservation>> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+        => inner.GetByUserIdAsync(userId, ct);
 
     public Task<IReadOnlyList<Reservation>> GetUpcomingAsync(DateTime from, DateTime to, CancellationToken ct = default)
         => inner.GetUpcomingAsync(from, to, ct);

@@ -1,4 +1,4 @@
-﻿using Booking.Domain.Entities;
+using Booking.Domain.Entities;
 using Booking.Domain.Interfaces;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,6 +17,9 @@ public class ReservationRepository(BookingDbContext db) : IReservationRepository
 
     public async Task<IReadOnlyList<Reservation>> GetByRoomIdAsync(Guid roomId, CancellationToken ct = default)
         => await db.Reservations.AsNoTracking().Where(r => r.RoomId == roomId).ToListAsync(ct);
+
+    public async Task<IReadOnlyList<Reservation>> GetByUserIdAsync(Guid userId, CancellationToken ct = default)
+        => await db.Reservations.AsNoTracking().Where(r => r.UserId == userId).ToListAsync(ct);
 
     public async Task<IReadOnlyList<Reservation>> GetUpcomingAsync(DateTime from, DateTime to, CancellationToken ct = default)
         => await db.Reservations.AsNoTracking()

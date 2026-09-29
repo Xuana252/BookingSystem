@@ -87,7 +87,8 @@ public class ReservationService(
         };
 
         var existingForRoom = await reservations.GetByRoomIdAsync(request.RoomId, ct);
-        ruleEngine.Validate(reservation, existingForRoom, room.Capacity, attendeeIds.Count, settings);
+        var existingForUser = await reservations.GetByUserIdAsync(userId, ct);
+        ruleEngine.Validate(reservation, existingForRoom, existingForUser, room.Capacity, attendeeIds.Count, settings);
 
         await reservations.AddAsync(reservation, ct);
         if (attendeeIds.Count > 0)

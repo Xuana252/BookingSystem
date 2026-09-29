@@ -7,7 +7,13 @@ namespace Booking.Application.Services;
 public class BookingRuleEngine(
     TimeProvider timeProvider) : IBookingRuleEngine
 {
-    public void Validate(Reservation candidate, IReadOnlyList<Reservation> existingReservationsForRoom, int roomCapacity, int attendeeCount, SystemSettings settings)
+    public void Validate(
+        Reservation candidate, 
+        IReadOnlyList<Reservation> existingReservationsForRoom, 
+        IReadOnlyList<Reservation> existingReservationsForUser,
+        int roomCapacity, 
+        int attendeeCount, 
+        SystemSettings settings)
     {
         // Both sides are absolute instants (StartTime is UTC, GetUtcNow() is UTC), so this needs
         // no timezone conversion, unlike the business-hours check below — "in the past" means the
@@ -59,6 +65,17 @@ public class BookingRuleEngine(
         if (overlaps)
         {
             throw new ArgumentException("Room is already booked for an overlapping time range.");
+        }
+
+        var userOverlaps = existingReservationsForUser.Any(r =>
+            r.Id != candidate.Id
+            && r.Status == ReservationStatus.Confirmed
+            && r.StartTime < candidate.EndTime
+            && candidate.StartTime < r.EndTime);
+
+        if (userOverlaps)
+        {
+            throw new ArgumentException("You already have another confirmed reservation during this time range.");
         }
     }
 }
