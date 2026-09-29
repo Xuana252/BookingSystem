@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Building2, Calendar, Clock, Loader2, MapPin, Trash2, User, Users, X } from "lucide-react";
+import { AlertCircle, Building2, Calendar, Clock, Loader2, MapPin, Trash2, User, Users, X } from "lucide-react";
 import { Modal } from "./Modal";
 import { ReservationStatus, type Reservation, type Room } from "../lib/types";
 import { getCurrentUserId } from "../lib/auth";
@@ -13,6 +13,7 @@ export interface BookingDetailModalProps {
   isMine: boolean;
   isCancelling: boolean;
   isCheckingIn: boolean;
+  error?: string | null;
   onCancel: () => void;
   onCheckIn: () => void;
   onClose: () => void;
@@ -22,7 +23,7 @@ function formatTime(iso: string): string {
   return new Date(iso).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }
 
-export function BookingDetailModal({ reservation, room, isMine, isCancelling, isCheckingIn, onCancel, onCheckIn, onClose }: BookingDetailModalProps) {
+export function BookingDetailModal({ reservation, room, isMine, isCancelling, isCheckingIn, error, onCancel, onCheckIn, onClose }: BookingDetailModalProps) {
   const currentUserId = getCurrentUserId();
   const [currentTime, setCurrentTime] = useState(new Date());
 
@@ -185,6 +186,13 @@ export function BookingDetailModal({ reservation, room, isMine, isCancelling, is
           </div>
         )}
       </div>
+
+      {error && (
+        <div className="mt-4 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
 
       {(isMine || isAttending) && !isEnded && !isCancelled && !reservation.checkedInAt && (
         <div className="mt-5 border-t border-border pt-4 space-y-2">

@@ -612,9 +612,13 @@ export function HomePage() {
           isMine={selectedReservation.userId === currentUserId}
           isCancelling={cancellingId === selectedReservation.id}
           isCheckingIn={checkingInId === selectedReservation.id}
+          error={formError}
           onCancel={() => handleCancel(selectedReservation.id)}
           onCheckIn={() => handleCheckIn(selectedReservation.id)}
-          onClose={() => setSelectedReservation(null)}
+          onClose={() => {
+            setSelectedReservation(null);
+            setFormError(null);
+          }}
         />
       )}
 
